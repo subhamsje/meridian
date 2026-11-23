@@ -15,7 +15,7 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from models import (
-    Company, Investigation, EvidenceItem, CorporateRelationship, InvestigationEvent
+    Company, Investigation, EvidenceItem, Source, CorporateRelationship, InvestigationEvent
 )
 from company_discovery import CompanyDiscoveryEngine, DiscoveredCompanyCandidate, HIGH_PROFILE_COMPANIES
 
@@ -50,26 +50,61 @@ class ResearchIngestionEngine:
         evidence_records: List[EvidenceItem] = []
         relationships: List[CorporateRelationship] = []
 
+        def add_evidence(
+            title: str,
+            url: str,
+            publisher: str,
+            pub_date: str,
+            category: str,
+            reliability: float,
+            passage: str,
+            location_ref: str,
+            status: str
+        ) -> EvidenceItem:
+            src = Source(
+                id=str(uuid.uuid4()),
+                organization_id=investigation.organization_id,
+                title=title,
+                url=url,
+                publisher=publisher,
+                publication_date=pub_date,
+                source_category=category,
+                reliability_score=reliability
+            )
+            db.add(src)
+            db.flush()
+
+            ev = EvidenceItem(
+                id=str(uuid.uuid4()),
+                investigation_id=investigation.id,
+                source_id=src.id,
+                location_reference=location_ref,
+                extracted_passage=passage,
+                is_verified=(status == "verified"),
+                reliability_assessment=f"Reliability: {int(reliability * 100)}% | Status: {status.upper()}",
+                extraction_method="structured_ingestion"
+            )
+            db.add(ev)
+            db.flush()
+            evidence_records.append(ev)
+            return ev
+
         # Domain A: Regulatory Filings & Disclosures
         is_public = company.ticker is not None or (top_candidate and top_candidate.company_type == "public")
         
         if is_public:
             ticker = company.ticker or (top_candidate.ticker if top_candidate else "PLTR")
-            sec_ev = EvidenceItem(
-                id=str(uuid.uuid4()),
-                investigation_id=investigation.id,
-                source_url=f"https://www.sec.gov/edgar/browse/?CIK={ticker}",
+            add_evidence(
+                title=f"{company.name} Annual Report (Form 10-K)",
+                url=f"https://www.sec.gov/edgar/browse/?CIK={ticker}",
                 publisher="U.S. Securities & Exchange Commission (SEC EDGAR)",
-                publication_date="2025-12-31",
-                retrieval_timestamp=now,
-                document_title=f"{company.name} Annual Report (Form 10-K)",
-                page_or_section="Part I, Item 1 (Business) & Item 7 (MD&A)",
-                extracted_passage=f"{company.name} ({ticker}) filed official audited consolidated balance sheets, cash flow statements, and customer disclosures with Ernst & Young LLP auditing certification.",
-                confidence_score=0.99,
-                verification_status="verified",
-                source_reliability=0.99
+                pub_date="2025-12-31",
+                category="regulatory_filing",
+                reliability=0.99,
+                passage=f"{company.name} ({ticker}) filed official audited consolidated balance sheets, cash flow statements, and customer disclosures with Ernst & Young LLP auditing certification.",
+                location_ref="Part I, Item 1 (Business) & Item 7 (MD&A)",
+                status="verified"
             )
-            evidence_records.append(sec_ev)
 
             # Pull real yfinance stock data if available
             if yf is not None:
@@ -82,79 +117,59 @@ class ResearchIngestionEngine:
                         low_val = round(float(hist["Low"].min()), 2)
                         vol = int(hist["Volume"].mean())
 
-                        stock_ev = EvidenceItem(
-                            id=str(uuid.uuid4()),
-                            investigation_id=investigation.id,
-                            source_url=f"https://finance.yahoo.com/quote/{ticker}",
+                        add_evidence(
+                            title=f"{ticker} Consolidated Market Pricing & Trading Volume",
+                            url=f"https://finance.yahoo.com/quote/{ticker}",
                             publisher="Public Stock Exchange Real-Time Tape",
-                            publication_date=now.strftime("%Y-%m-%d"),
-                            retrieval_timestamp=now,
-                            document_title=f"{ticker} Consolidated Market Pricing & Trading Volume",
-                            page_or_section="Live Exchange Tape",
-                            extracted_passage=f"Last traded price: ${last_close}. 30-day trading range spans ${low_val} to ${high_val} with average daily volume of {vol:,} shares.",
-                            confidence_score=0.98,
-                            verification_status="verified",
-                            source_reliability=0.98
+                            pub_date=now.strftime("%Y-%m-%d"),
+                            category="exchange_tape",
+                            reliability=0.98,
+                            passage=f"Last traded price: ${last_close}. 30-day trading range spans ${low_val} to ${high_val} with average daily volume of {vol:,} shares.",
+                            location_ref="Live Exchange Tape",
+                            status="verified"
                         )
-                        evidence_records.append(stock_ev)
                 except Exception:
                     pass
         else:
             # Private Startup Ingestion
-            startup_ev = EvidenceItem(
-                id=str(uuid.uuid4()),
-                investigation_id=investigation.id,
-                source_url=top_candidate.source_url if top_candidate else f"https://{company.name.lower().replace(' ', '')}.com",
+            total_fund = (top_candidate.total_funding_usd / 1e6) if top_candidate and top_candidate.total_funding_usd else 150.0
+            add_evidence(
+                title=f"{company.name} Corporate Profile & Disclosed Capital Structure",
+                url=top_candidate.source_url if top_candidate else f"https://{company.name.lower().replace(' ', '')}.com",
                 publisher="Verified Institutional Tech Registry & Company Disclosure",
-                publication_date="2026-01-15",
-                retrieval_timestamp=now,
-                document_title=f"{company.name} Corporate Profile & Disclosed Capital Structure",
-                page_or_section="Executive Overview & Capitalization Table",
-                extracted_passage=f"{company.name} operates as a {company.sector or 'technology'} enterprise. Disclosed funding: ${(top_candidate.total_funding_usd / 1e6 if top_candidate and top_candidate.total_funding_usd else 150):.1f}M across verified institutional funding rounds.",
-                confidence_score=0.92,
-                verification_status="reported",
-                source_reliability=0.92
+                pub_date="2026-01-15",
+                category="startup_registry",
+                reliability=0.92,
+                passage=f"{company.name} operates as a {company.sector or 'technology'} enterprise. Disclosed funding: ${total_fund:.1f}M across verified institutional funding rounds.",
+                location_ref="Executive Overview & Capitalization Table",
+                status="reported"
             )
-            evidence_records.append(startup_ev)
 
         # Domain B: Industry & Competitive Intelligence
-        ind_ev = EvidenceItem(
-            id=str(uuid.uuid4()),
-            investigation_id=investigation.id,
-            source_url="https://research.meridian.internal/markets/macro-sector-audit",
+        add_evidence(
+            title=f"Global Market Structure & TAM Evaluation: {company.sector or 'Enterprise Tech'}",
+            url="https://research.meridian.internal/markets/macro-sector-audit",
             publisher="Institutional Industry & Market Structure Monitor",
-            publication_date="2026-02-01",
-            retrieval_timestamp=now,
-            document_title=f"Global Market Structure & TAM Evaluation: {company.sector or 'Enterprise Tech'}",
-            page_or_section="Competitive Intensity & TAM Headroom",
-            extracted_passage=f"Total Addressable Market (TAM) for {company.sector or 'Enterprise Tech'} is modeled at $145B growing at 19.4% CAGR through 2030, with high switching barriers in mission-critical deployments.",
-            confidence_score=0.90,
-            verification_status="calculated",
-            source_reliability=0.90
+            pub_date="2026-02-01",
+            category="market_research",
+            reliability=0.90,
+            passage=f"Total Addressable Market (TAM) for {company.sector or 'Enterprise Tech'} is modeled at $145B growing at 19.4% CAGR through 2030, with high switching barriers in mission-critical deployments.",
+            location_ref="Competitive Intensity & TAM Headroom",
+            status="calculated"
         )
-        evidence_records.append(ind_ev)
 
         # Domain C: Forensic & Risk Register Evidence
-        risk_ev = EvidenceItem(
-            id=str(uuid.uuid4()),
-            investigation_id=investigation.id,
-            source_url="https://research.meridian.internal/forensics/risk-register",
+        add_evidence(
+            title=f"{company.name} Operational Risk & Customer Concentration Audit",
+            url="https://research.meridian.internal/forensics/risk-register",
             publisher="Meridian Forensic Accounting & Fragility Audit",
-            publication_date="2026-02-15",
-            retrieval_timestamp=now,
-            document_title=f"{company.name} Operational Risk & Customer Concentration Audit",
-            page_or_section="Risk Disclosures & Concentration Factor",
-            extracted_passage=f"Top 5 institutional client accounts constitute an estimated 18-24% of annual billings, requiring active monitoring of renewal cadence and procurement friction.",
-            confidence_score=0.88,
-            verification_status="reported",
-            source_reliability=0.88
+            pub_date="2026-02-15",
+            category="risk_audit",
+            reliability=0.88,
+            passage=f"Top 5 institutional client accounts constitute an estimated 18-24% of annual billings, requiring active monitoring of renewal cadence and procurement friction.",
+            location_ref="Risk Disclosures & Concentration Factor",
+            status="reported"
         )
-        evidence_records.append(risk_ev)
-
-        # Commit Evidence Items
-        for ev in evidence_records:
-            db.add(ev)
-        db.flush()
 
         # Build First-Degree Corporate Relationships for Living Knowledge Graph
         # Known benchmarks or dynamic relationships
@@ -246,11 +261,12 @@ class ResearchIngestionEngine:
             id=str(uuid.uuid4()),
             investigation_id=investigation.id,
             event_type="evidence_ingested",
-            severity="INFO",
-            stage_name="Evidence Ingestion",
-            agent_id="research_director",
-            summary=f"Ingested {len(evidence_records)} verified evidence documents and {len(relationships)} corporate network relationships for {company.name}.",
+            sequence=1,
             payload={
+                "severity": "INFO",
+                "stage_name": "Evidence Ingestion",
+                "agent_id": "research_director",
+                "summary": f"Ingested {len(evidence_records)} verified evidence documents and {len(relationships)} corporate network relationships for {company.name}.",
                 "documents_count": len(evidence_records),
                 "relationships_count": len(relationships),
                 "is_public": is_public,
@@ -261,6 +277,8 @@ class ResearchIngestionEngine:
         db.commit()
 
         return {
+            "evidence_ingested": len(evidence_records),
+            "graph_nodes_created": len(relationships),
             "evidence_count": len(evidence_records),
             "relationships_count": len(relationships),
             "evidence_records": [ev.id for ev in evidence_records]
