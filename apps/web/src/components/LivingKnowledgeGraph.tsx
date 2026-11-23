@@ -16,7 +16,13 @@ import {
   Layers,
   Network,
   CircleDot,
-  Compass
+  Compass,
+  X,
+  ChevronRight,
+  Info,
+  ExternalLink,
+  ShieldCheck,
+  Activity
 } from "lucide-react";
 
 export interface GraphNode {
@@ -179,6 +185,36 @@ export default function LivingKnowledgeGraph({
   const [showEdgeLabels, setShowEdgeLabels] = useState(true);
   const [showLegend, setShowLegend] = useState(true);
   const [selectedRelFilter, setSelectedRelFilter] = useState<string>("ALL");
+  const [showLeftExplorer, setShowLeftExplorer] = useState(false);
+  const [localSearch, setLocalSearch] = useState("");
+
+  // Center camera on a specific node
+  const centerOnNode = useCallback((node: GraphNode) => {
+    const simNode = simNodesRef.current.find(n => n.id === node.id) || node;
+    if (simNode.x !== undefined && simNode.y !== undefined) {
+      setCamera({ x: -simNode.x * 1.3, y: -simNode.y * 1.3, zoom: 1.3 });
+    }
+    onSelectNode(node);
+    onSelectEdge(null);
+  }, [onSelectNode, onSelectEdge]);
+
+  // Compute connections for selected node
+  const nodeConnections = useMemo(() => {
+    if (!selectedNode) return { inbound: [], outbound: [] };
+    const inbound: Array<{ edge: GraphEdge; neighbor?: GraphNode }> = [];
+    const outbound: Array<{ edge: GraphEdge; neighbor?: GraphNode }> = [];
+    const nodeMap = new Map<string, GraphNode>();
+    rawNodes.forEach(n => nodeMap.set(n.id, n));
+
+    rawEdges.forEach(e => {
+      if (e.source === selectedNode.id) {
+        outbound.push({ edge: e, neighbor: nodeMap.get(e.target) });
+      } else if (e.target === selectedNode.id) {
+        inbound.push({ edge: e, neighbor: nodeMap.get(e.source) });
+      }
+    });
+    return { inbound, outbound };
+  }, [selectedNode, rawNodes, rawEdges]);
 
   // Local mutable node/edge simulation state
   const simNodesRef = useRef<GraphNode[]>([]);
@@ -1033,6 +1069,18 @@ export default function LivingKnowledgeGraph({
         {/* Viewport & Render Controls */}
         <div className="flex items-center space-x-1">
           <button
+            onClick={() => setShowLeftExplorer(prev => !prev)}
+            title={showLeftExplorer ? "Hide Entity Directory" : "Show Entity Directory"}
+            className={`p-1.5 rounded border transition-colors ${
+              showLeftExplorer
+                ? "bg-[#20242a] text-[#3b82f6] border-[#30353c]"
+                : "bg-[#111315] text-[#737c88] border-[#30353c] hover:text-[#e5e7eb]"
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+          </button>
+
+          <button
             onClick={() => setShowEdgeLabels(prev => !prev)}
             title={showEdgeLabels ? "Hide edge labels" : "Show edge labels"}
             className={`p-1.5 rounded border transition-colors ${
@@ -1080,27 +1128,209 @@ export default function LivingKnowledgeGraph({
         </div>
       </div>
 
-      {/* Main Interactive HTML5 Canvas */}
-      <div className="relative flex-1 w-full h-full cursor-grab active:cursor-grabbing overflow-hidden">
-        <canvas
-          ref={canvasRef}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onWheel={handleWheel}
-          className="absolute inset-0 w-full h-full block"
-        />
+      {/* Main Workstation Graph Body */}
+      <div className="relative flex-1 w-full h-full flex overflow-hidden">
+        {/* Left Entity Explorer (Toggleable) */}
+        {showLeftExplorer && (
+          <div className="w-64 border-r border-[#30353c] bg-[#141619] flex flex-col z-10 shrink-0">
+            <div className="p-2.5 border-b border-[#30353c] flex items-center justify-between">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[#737c88]">Entity Directory</span>
+              <span className="text-[10px] font-mono text-[#a0a7b1]">{rawNodes.length} Total</span>
+            </div>
+            <div className="p-2 border-b border-[#30353c]">
+              <div className="relative">
+                <Search className="w-3 h-3 absolute left-2 top-2 text-[#737c88]" />
+                <input
+                  type="text"
+                  value={localSearch}
+                  onChange={(e) => setLocalSearch(e.target.value)}
+                  placeholder="Filter nodes..."
+                  className="w-full pl-6 pr-2 py-1 text-[11px] rounded bg-[#111315] border border-[#30353c] text-[#e5e7eb] focus:outline-none focus:border-[#3b82f6]"
+                />
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-1.5 space-y-1">
+              {rawNodes
+                .filter(n => !localSearch.trim() || n.label.toLowerCase().includes(localSearch.toLowerCase()))
+                .map(n => {
+                  const cat = INSTITUTIONAL_CATEGORIES[n.type || "default"] || INSTITUTIONAL_CATEGORIES.default;
+                  const isSel = selectedNode?.id === n.id;
+                  return (
+                    <button
+                      key={n.id}
+                      onClick={() => centerOnNode(n)}
+                      className={`w-full text-left p-1.5 rounded text-xs flex items-center justify-between transition-colors ${
+                        isSel ? "bg-[#20242a] text-[#f8fafc] border border-[#3b82f6]" : "text-[#a0a7b1] hover:text-[#e5e7eb] hover:bg-[#181b1f]"
+                      }`}
+                    >
+                      <div className="flex items-center space-x-1.5 truncate">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat.fill, border: `1px solid ${cat.border}` }} />
+                        <span className="truncate text-[11px] font-medium">{n.label}</span>
+                      </div>
+                      <ChevronRight className="w-3 h-3 text-[#737c88] shrink-0" />
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+        )}
 
-        {/* Floating Technical Stats Overlay */}
-        <div className="absolute top-3 left-3 px-2.5 py-1.5 rounded bg-[#181b1f]/90 border border-[#30353c] backdrop-blur text-[10px] font-mono text-[#737c88] pointer-events-none space-x-3 flex items-center">
-          <span>ENTITIES: <strong className="text-[#e5e7eb] font-sans">{rawNodes.length}</strong></span>
-          <span>LINKS: <strong className="text-[#e5e7eb] font-sans">{rawEdges.length}</strong></span>
-          <span>ZOOM: <strong className="text-[#e5e7eb] font-sans">{(camera.zoom * 100).toFixed(0)}%</strong></span>
-          {selectedNode && (
-            <span className="text-[#3b82f6]">ACTIVE: <strong className="text-[#f8fafc] font-sans">{selectedNode.label}</strong></span>
-          )}
+        {/* Center Canvas */}
+        <div className="relative flex-1 w-full h-full cursor-grab active:cursor-grabbing overflow-hidden">
+          <canvas
+            ref={canvasRef}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onWheel={handleWheel}
+            className="absolute inset-0 w-full h-full block"
+          />
+
+          {/* Floating Technical Stats Overlay */}
+          <div className="absolute top-3 left-3 px-2.5 py-1.5 rounded bg-[#181b1f]/90 border border-[#30353c] backdrop-blur text-[10px] font-mono text-[#737c88] pointer-events-none space-x-3 flex items-center">
+            <span>ENTITIES: <strong className="text-[#e5e7eb] font-sans">{rawNodes.length}</strong></span>
+            <span>LINKS: <strong className="text-[#e5e7eb] font-sans">{rawEdges.length}</strong></span>
+            <span>ZOOM: <strong className="text-[#e5e7eb] font-sans">{(camera.zoom * 100).toFixed(0)}%</strong></span>
+            {selectedNode && (
+              <span className="text-[#3b82f6]">ACTIVE: <strong className="text-[#f8fafc] font-sans">{selectedNode.label}</strong></span>
+            )}
+          </div>
         </div>
+
+        {/* Right Entity & Link Inspector (When selected) */}
+        {(selectedNode || selectedEdge) && (
+          <div className="w-80 border-l border-[#30353c] bg-[#141619] flex flex-col z-10 shrink-0 overflow-y-auto">
+            {selectedNode && (
+              <div className="p-4 space-y-4">
+                <div className="flex items-start justify-between border-b border-[#30353c] pb-3">
+                  <div>
+                    <span 
+                      className="text-[9px] font-mono uppercase px-2 py-0.5 rounded border inline-block mb-1"
+                      style={{
+                        backgroundColor: (INSTITUTIONAL_CATEGORIES[selectedNode.type || "default"] || INSTITUTIONAL_CATEGORIES.default).fill,
+                        borderColor: (INSTITUTIONAL_CATEGORIES[selectedNode.type || "default"] || INSTITUTIONAL_CATEGORIES.default).border,
+                        color: (INSTITUTIONAL_CATEGORIES[selectedNode.type || "default"] || INSTITUTIONAL_CATEGORIES.default).accent
+                      }}
+                    >
+                      {(INSTITUTIONAL_CATEGORIES[selectedNode.type || "default"] || INSTITUTIONAL_CATEGORIES.default).label}
+                    </span>
+                    <h3 className="text-sm font-serif font-bold text-[#f8fafc]">{selectedNode.label}</h3>
+                    {selectedNode.ticker && (
+                      <span className="text-[10px] font-mono text-[#737c88]">${selectedNode.ticker}</span>
+                    )}
+                  </div>
+                  <button 
+                    onClick={() => onSelectNode(null)}
+                    className="p-1 rounded text-[#737c88] hover:text-[#e5e7eb] hover:bg-[#20242a]"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {selectedNode.description && (
+                  <div>
+                    <div className="text-[10px] font-mono text-[#737c88] uppercase mb-1">Entity Brief</div>
+                    <p className="text-xs text-[#cbd5e1] font-serif leading-relaxed p-2.5 rounded bg-[#111315] border border-[#30353c]">
+                      {selectedNode.description}
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <div className="text-[10px] font-mono text-[#737c88] uppercase mb-1.5 flex items-center justify-between">
+                    <span>Direct Links</span>
+                    <span>{nodeConnections.outbound.length + nodeConnections.inbound.length} Total</span>
+                  </div>
+                  <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                    {nodeConnections.outbound.map(({ edge, neighbor }) => (
+                      <div 
+                        key={edge.id}
+                        onClick={() => neighbor && centerOnNode(neighbor)}
+                        className="p-2 rounded bg-[#111315] border border-[#30353c] hover:border-[#3b82f6] text-xs cursor-pointer space-y-0.5 transition-colors"
+                      >
+                        <div className="flex items-center justify-between text-[10px] font-mono">
+                          <span className="text-[#3b82f6]">{edge.relationship.replace(/_/g, " ")}</span>
+                          <span className="text-[#737c88]">OUT →</span>
+                        </div>
+                        <div className="text-[#e5e7eb] font-medium text-[11px] truncate">
+                          {neighbor?.label || edge.target}
+                        </div>
+                      </div>
+                    ))}
+                    {nodeConnections.inbound.map(({ edge, neighbor }) => (
+                      <div 
+                        key={edge.id}
+                        onClick={() => neighbor && centerOnNode(neighbor)}
+                        className="p-2 rounded bg-[#111315] border border-[#30353c] hover:border-[#3b82f6] text-xs cursor-pointer space-y-0.5 transition-colors"
+                      >
+                        <div className="flex items-center justify-between text-[10px] font-mono">
+                          <span className="text-[#10b981]">{edge.relationship.replace(/_/g, " ")}</span>
+                          <span className="text-[#737c88]">← IN</span>
+                        </div>
+                        <div className="text-[#e5e7eb] font-medium text-[11px] truncate">
+                          {neighbor?.label || edge.source}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    onClick={() => centerOnNode(selectedNode)}
+                    className="w-full py-1.5 rounded bg-[#20242a] hover:bg-[#282d35] text-[#3b82f6] text-xs font-mono border border-[#30353c] transition-colors"
+                  >
+                    Center in Viewport
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {selectedEdge && !selectedNode && (
+              <div className="p-4 space-y-4">
+                <div className="flex items-start justify-between border-b border-[#30353c] pb-3">
+                  <div>
+                    <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded bg-[#1e293b] text-[#3b82f6] border border-[#3b82f6]/40 inline-block mb-1">
+                      Relationship Link
+                    </span>
+                    <h3 className="text-sm font-serif font-bold text-[#f8fafc]">
+                      {selectedEdge.relationship.replace(/_/g, " ")}
+                    </h3>
+                  </div>
+                  <button 
+                    onClick={() => onSelectEdge(null)}
+                    className="p-1 rounded text-[#737c88] hover:text-[#e5e7eb] hover:bg-[#20242a]"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="space-y-2 text-xs">
+                  <div className="p-2.5 rounded bg-[#111315] border border-[#30353c] space-y-1">
+                    <span className="text-[10px] font-mono text-[#737c88] uppercase block">Source Node</span>
+                    <span className="text-[#e5e7eb] font-medium">{selectedEdge.source}</span>
+                  </div>
+                  <div className="p-2.5 rounded bg-[#111315] border border-[#30353c] space-y-1">
+                    <span className="text-[10px] font-mono text-[#737c88] uppercase block">Target Node</span>
+                    <span className="text-[#e5e7eb] font-medium">{selectedEdge.target}</span>
+                  </div>
+                  {selectedEdge.description && (
+                    <div className="p-2.5 rounded bg-[#111315] border border-[#30353c] space-y-1">
+                      <span className="text-[10px] font-mono text-[#737c88] uppercase block">Description</span>
+                      <p className="text-[#cbd5e1] font-serif leading-relaxed">{selectedEdge.description}</p>
+                    </div>
+                  )}
+                  {selectedEdge.evidence_id && (
+                    <div className="text-[10px] font-mono text-[#737c88]">
+                      Provenance Hash: <span className="text-[#a0a7b1]">{selectedEdge.evidence_id.substring(0, 16)}...</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Bottom Institutional Legend Bar */}
