@@ -231,13 +231,13 @@ export default function LivingKnowledgeGraph({
 
     if (!isFinite(minX) || !isFinite(maxX)) return;
 
-    const spanX = Math.max(120, maxX - minX);
-    const spanY = Math.max(120, maxY - minY);
-    const padding = 70;
+    const spanX = Math.max(260, maxX - minX);
+    const spanY = Math.max(260, maxY - minY);
+    const padding = 65;
 
     const zoomX = (width - padding * 2) / spanX;
     const zoomY = (height - padding * 2) / spanY;
-    const optimalZoom = Math.max(0.45, Math.min(1.2, Math.min(zoomX, zoomY)));
+    const optimalZoom = Math.max(0.65, Math.min(1.05, Math.min(zoomX, zoomY)));
 
     const midX = (minX + maxX) / 2;
     const midY = (minY + maxY) / 2;
@@ -252,7 +252,7 @@ export default function LivingKnowledgeGraph({
   // Center camera on a specific node
   const centerOnNode = useCallback((node: GraphNode) => {
     const simNode = simNodesRef.current.find(n => n.id === node.id) || node;
-    const targetZoom = Math.max(camera.zoom, 1.1);
+    const targetZoom = 1.0;
     if (simNode.x !== undefined && simNode.y !== undefined) {
       setCamera({ 
         x: -simNode.x * targetZoom, 
@@ -262,7 +262,7 @@ export default function LivingKnowledgeGraph({
     }
     onSelectNode(node);
     onSelectEdge(null);
-  }, [camera.zoom, onSelectNode, onSelectEdge]);
+  }, [onSelectNode, onSelectEdge]);
 
   // Initialize and lay out nodes
   useEffect(() => {
@@ -397,7 +397,7 @@ export default function LivingKnowledgeGraph({
       const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
 
       setCamera(prev => {
-        const newZoom = Math.max(0.35, Math.min(2.4, prev.zoom * zoomFactor));
+        const newZoom = Math.max(0.45, Math.min(1.8, prev.zoom * zoomFactor));
         const scaleChange = newZoom / prev.zoom;
         const newX = mouseScreenX - (mouseScreenX - prev.x) * scaleChange;
         const newY = mouseScreenY - (mouseScreenY - prev.y) * scaleChange;
@@ -429,6 +429,10 @@ export default function LivingKnowledgeGraph({
           canvas.height = newHeight;
           width = newWidth;
           height = newHeight;
+          if (!hasAutoFramed && simNodesRef.current.length > 0) {
+            fitToView(simNodesRef.current);
+            setHasAutoFramed(true);
+          }
         }
       }
     });
@@ -980,6 +984,84 @@ export default function LivingKnowledgeGraph({
     setPanStart({ x: clientX - camera.x, y: clientY - camera.y });
   };
 
+  // Touch Handlers for Mobile & Tablet Pan / Pinch-to-Zoom
+  const touchStartDistRef = useRef<number | null>(null);
+  const touchStartZoomRef = useRef<number>(1);
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const clientX = touch.clientX - rect.left;
+      const clientY = touch.clientY - rect.top;
+      const worldX = (clientX - canvas.width / (2 * dpr) - camera.x) / camera.zoom;
+      const worldY = (clientY - canvas.height / (2 * dpr) - camera.y) / camera.zoom;
+
+      const nodes = simNodesRef.current;
+      let hitNode: GraphNode | null = null;
+      for (let i = nodes.length - 1; i >= 0; i--) {
+        const n = nodes[i];
+        const dx = worldX - (n.x || 0);
+        const dy = worldY - (n.y || 0);
+        const r = (n.radius || 14) + 12; // Generous touch target
+        if (dx * dx + dy * dy <= r * r) {
+          hitNode = n;
+          break;
+        }
+      }
+
+      if (hitNode) {
+        onSelectNode(hitNode);
+        onSelectEdge(null);
+        return;
+      }
+
+      setIsPanning(true);
+      setPanStart({ x: clientX - camera.x, y: clientY - camera.y });
+    } else if (e.touches.length === 2) {
+      setIsPanning(false);
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      touchStartDistRef.current = dist;
+      touchStartZoomRef.current = camera.zoom;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.touches.length === 1 && isPanning) {
+      const touch = e.touches[0];
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const clientX = touch.clientX - rect.left;
+      const clientY = touch.clientY - rect.top;
+      setCamera(prev => ({
+        ...prev,
+        x: clientX - panStart.x,
+        y: clientY - panStart.y
+      }));
+    } else if (e.touches.length === 2 && touchStartDistRef.current !== null) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      const factor = dist / touchStartDistRef.current;
+      const newZoom = Math.min(2.5, Math.max(0.3, touchStartZoomRef.current * factor));
+      setCamera(prev => ({
+        ...prev,
+        zoom: newZoom
+      }));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsPanning(false);
+    touchStartDistRef.current = null;
+  };
+
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const { worldX, worldY, clientX, clientY } = getCanvasCoords(e);
 
@@ -1155,7 +1237,11 @@ export default function LivingKnowledgeGraph({
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
-          className="absolute inset-0 w-full h-full block"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
+          className="absolute inset-0 w-full h-full block touch-none outline-none focus:outline-none select-none"
         />
 
         {/* Selected Node Notification Chip (Non-intrusive) */}

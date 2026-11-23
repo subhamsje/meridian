@@ -32,12 +32,15 @@ import {
   Server,
   Share2,
   Sparkles,
-  MessageSquare
+  MessageSquare,
+  Menu,
+  X
 } from "lucide-react";
 
 export default function LandingPage() {
   const [activePreviewTab, setActivePreviewTab] = useState<"graph" | "debate" | "financials" | "provenance">("graph");
   const [activeScenario, setActiveScenario] = useState<"base" | "bull" | "bear" | "stress">("base");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="flex flex-col min-h-screen bg-[#111315] text-[#e5e7eb] font-sans selection:bg-[#2563eb]/30 selection:text-white">
@@ -70,23 +73,54 @@ export default function LandingPage() {
             <Link href="#tiers" className="hover:text-[#e5e7eb] transition-colors">Tiers</Link>
           </nav>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3">
             <Link 
               href="/demo"
-              className="text-xs px-3 py-1.5 rounded bg-[#20242a] hover:bg-[#282d35] text-[#3b82f6] border border-[#3b82f6]/40 font-mono transition-colors flex items-center space-x-1.5"
+              className="text-xs px-2.5 sm:px-3 py-1.5 rounded bg-[#20242a] hover:bg-[#282d35] text-[#3b82f6] border border-[#3b82f6]/40 font-mono transition-colors flex items-center space-x-1"
             >
-              <span>Explore Demo</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>Demo</span>
+              <ArrowRight className="w-3.5 h-3.5 hidden sm:inline" />
             </Link>
             <Link 
               href="/app"
-              className="text-xs px-3.5 py-1.5 rounded bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-medium transition-colors shadow-sm"
+              className="text-xs px-2.5 sm:px-3.5 py-1.5 rounded bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-medium transition-colors shadow-sm whitespace-nowrap"
             >
-              Launch Workspace
+              <span className="hidden sm:inline">Launch </span>Workspace
             </Link>
+            <button
+              onClick={() => setMobileMenuOpen(prev => !prev)}
+              className="md:hidden p-1.5 rounded text-[#a0a7b1] hover:text-[#e5e7eb] hover:bg-[#20242a] transition-colors cursor-pointer"
+              aria-label="Toggle mobile navigation menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
       </header>
+
+      {/* Mobile Slide-Down Navigation Drawer */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-40 md:hidden animate-fadeIn">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
+          <nav className="fixed top-14 inset-x-0 bg-[#141619] border-b border-[#30353c] p-6 shadow-2xl flex flex-col space-y-3 text-sm font-medium z-50">
+            <Link href="#problem" onClick={() => setMobileMenuOpen(false)} className="text-[#a0a7b1] hover:text-white transition-colors py-1.5 border-b border-[#20242a]">Forensic Thesis</Link>
+            <Link href="#graph" onClick={() => setMobileMenuOpen(false)} className="text-[#a0a7b1] hover:text-white transition-colors py-1.5 border-b border-[#20242a]">Knowledge Graph</Link>
+            <Link href="#society" onClick={() => setMobileMenuOpen(false)} className="text-[#a0a7b1] hover:text-white transition-colors py-1.5 border-b border-[#20242a]">Specialist Society</Link>
+            <Link href="#provenance" onClick={() => setMobileMenuOpen(false)} className="text-[#a0a7b1] hover:text-white transition-colors py-1.5 border-b border-[#20242a]">Evidence Standard</Link>
+            <Link href="#financials" onClick={() => setMobileMenuOpen(false)} className="text-[#a0a7b1] hover:text-white transition-colors py-1.5 border-b border-[#20242a]">Valuation Engine</Link>
+            <Link href="#architecture" onClick={() => setMobileMenuOpen(false)} className="text-[#a0a7b1] hover:text-white transition-colors py-1.5 border-b border-[#20242a]">Architecture</Link>
+            <Link href="#tiers" onClick={() => setMobileMenuOpen(false)} className="text-[#a0a7b1] hover:text-white transition-colors py-1.5">Tiers</Link>
+            <div className="pt-3 border-t border-[#30353c] flex flex-col space-y-2">
+              <Link href="/demo" onClick={() => setMobileMenuOpen(false)} className="w-full text-center py-2.5 rounded bg-[#20242a] border border-[#3b82f6]/40 text-[#3b82f6] text-xs font-mono">
+                Explore Demo Workstation
+              </Link>
+              <Link href="/app" onClick={() => setMobileMenuOpen(false)} className="w-full text-center py-2.5 rounded bg-[#2563eb] text-white text-xs font-medium">
+                Launch Workspace
+              </Link>
+            </div>
+          </nav>
+        </div>
+      )}
 
       {/* =========================================================================
           HERO SECTION: Layered Depth & Editorial Typography

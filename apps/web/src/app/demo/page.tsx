@@ -122,6 +122,17 @@ export default function FlagshipDemoPage() {
   // Bottom Telemetry Drawer
   const [showEventDrawer, setShowEventDrawer] = useState(false);
 
+  // Mobile / Tablet Responsive Navigation States
+  const [stage3MobileTab, setStage3MobileTab] = useState<"specialists" | "stream" | "interrogate">("stream");
+  const [stage4MobileTab, setStage4MobileTab] = useState<"floor" | "specialists" | "evidence">("floor");
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setLeftPanelCollapsed(true);
+      setRightPanelCollapsed(true);
+    }
+  }, []);
+
   useEffect(() => {
     initFlagshipDemo();
   }, []);
@@ -435,7 +446,7 @@ export default function FlagshipDemoPage() {
     <div className="app-shell bg-[#111315] text-[#e5e7eb] font-sans selection:bg-[#20242a] selection:text-[#f8fafc]">
       {/* GLOBAL FLOATING NAVIGATION — Apple-Grade Ultra-Transparent Liquid Glass */}
       <header className="fixed top-2.5 inset-x-2 sm:inset-x-4 lg:inset-x-6 z-40 select-none pointer-events-none">
-        <div className="nav-liquid-glass pointer-events-auto h-12 px-3 md:px-4 flex items-center justify-between mx-auto w-full max-w-[1780px]">
+        <div className="glass-liquid-nav nav-liquid-glass pointer-events-auto h-12 px-3 md:px-4 flex items-center justify-between mx-auto w-full max-w-[1780px]">
           {/* Brand & Corporate Identity Group */}
           <div className="flex items-center space-x-2.5 sm:space-x-3.5 shrink-0">
             <Link href="/" className="flex items-center space-x-2 group">
@@ -527,7 +538,7 @@ export default function FlagshipDemoPage() {
         
         {/* ================= STAGE 01: Research Seeds & Mandate ================= */}
         {currentStage === 1 && (
-          <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain px-8 pt-20 pb-12 max-w-5xl mx-auto w-full">
+          <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain px-3 sm:px-6 md:px-8 pt-16 sm:pt-20 pb-12 max-w-5xl mx-auto w-full">
             <div className="mb-8 border-b border-[#30353c] pb-6">
               <div className="text-[11px] font-mono uppercase tracking-wider text-[#737c88] mb-1">
                 Stage 01 • Institutional Grounding & Primary Disclosures
@@ -624,8 +635,8 @@ export default function FlagshipDemoPage() {
                 <span className="text-[11px] font-mono text-[#10b981]">100% SEC & CRS Grounded</span>
               </div>
 
-              <div className="border border-[#30353c] rounded overflow-hidden">
-                <table className="w-full text-left text-xs border-collapse">
+              <div className="border border-[#30353c] rounded overflow-x-auto scrollbar-none">
+                <table className="w-full min-w-[550px] text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-[#181b1f] border-b border-[#30353c] text-[10px] font-mono text-[#737c88] uppercase tracking-wider">
                       <th className="py-2.5 px-3">Publisher / Authority</th>
@@ -681,9 +692,9 @@ export default function FlagshipDemoPage() {
         {/* ================= STAGE 02: Knowledge Graph Workstation ================= */}
         {currentStage === 2 && (
           <div className="flex-1 min-h-0 min-w-0 flex flex-row overflow-hidden divide-x divide-[#30353c] pt-[58px]">
-            {/* Left Panel: Entity Directory (Collapsible) */}
+            {/* Left Panel: Entity Directory (Desktop Sidebar or Mobile Overlay Drawer) */}
             {leftPanelCollapsed ? (
-              <div className="w-10 shrink-0 h-full flex flex-col items-center py-3 border-r border-[#30353c] bg-[#141619] z-20 select-none">
+              <div className="hidden lg:flex w-10 shrink-0 h-full flex-col items-center py-3 border-r border-[#30353c] bg-[#141619] z-20 select-none">
                 <button
                   onClick={() => setLeftPanelCollapsed(false)}
                   className="p-2 rounded text-[#a0a7b1] hover:text-[#e5e7eb] hover:bg-[#20242a] transition-colors cursor-pointer"
@@ -696,7 +707,8 @@ export default function FlagshipDemoPage() {
                 </div>
               </div>
             ) : (
-              <div className="w-72 lg:w-80 shrink-0 h-full flex flex-col overflow-hidden bg-[#141619] select-none">
+              <div className="fixed inset-0 z-50 lg:relative lg:inset-auto lg:z-auto bg-black/60 lg:bg-transparent flex justify-start">
+                <div className="w-80 max-w-[85vw] lg:w-80 shrink-0 h-full flex flex-col overflow-hidden bg-[#141619] select-none shadow-2xl lg:shadow-none border-r border-[#30353c]">
                 <div className="h-11 shrink-0 px-3.5 border-b border-[#30353c] bg-[#181b1f] flex items-center justify-between">
                   <div className="flex items-center space-x-1.5 text-xs font-mono uppercase text-[#e5e7eb] tracking-wider">
                     <Layers className="w-3.5 h-3.5 text-[#3b82f6]" />
@@ -750,7 +762,12 @@ export default function FlagshipDemoPage() {
                     return (
                       <button
                         key={cat.key}
-                        onClick={() => setGraphTypeFilter(cat.key)}
+                        onClick={() => {
+                          setGraphTypeFilter(cat.key);
+                          if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                            setLeftPanelCollapsed(true);
+                          }
+                        }}
                         className={`w-full text-left px-2.5 py-2 rounded text-xs transition-colors flex items-center justify-between cursor-pointer ${
                           isSelected 
                             ? "bg-[#20242a] text-[#f8fafc] font-medium border border-[#30353c]" 
@@ -786,11 +803,30 @@ export default function FlagshipDemoPage() {
                     </div>
                   </div>
                 )}
+                </div>
               </div>
             )}
 
             {/* Center Panel: Knowledge Graph Fixed Viewport (Occupies all remaining area) */}
             <div className="flex-1 min-h-0 min-w-0 h-full relative overflow-hidden bg-[#0d0f12] flex flex-col">
+              {/* Mobile Floating Drawer Trigger Pills */}
+              <div className="lg:hidden absolute top-3 left-3 z-30 flex items-center space-x-2">
+                <button
+                  onClick={() => setLeftPanelCollapsed(false)}
+                  className="px-2.5 py-1.5 rounded-lg bg-[#181b1f]/90 border border-[#30353c] text-xs font-mono text-[#3b82f6] shadow-lg backdrop-blur-md flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Entities ({graphData.nodes.length})</span>
+                </button>
+                <button
+                  onClick={() => setRightPanelCollapsed(false)}
+                  className="px-2.5 py-1.5 rounded-lg bg-[#181b1f]/90 border border-[#30353c] text-xs font-mono text-[#10b981] shadow-lg backdrop-blur-md flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Inspector</span>
+                </button>
+              </div>
+
               {/* Dual-Engine Toolbar Pill */}
               <div className="absolute top-3 left-48 z-20 hidden md:flex items-center space-x-1.5 glass-clear px-2.5 py-1.5 rounded border border-[#30353c] text-xs">
                 <span className="text-[10px] font-mono uppercase text-[#737c88]">Engine:</span>
@@ -821,11 +857,17 @@ export default function FlagshipDemoPage() {
                   onSelectNode={(node) => {
                     setSelectedNode(node);
                     setSelectedEdge(null);
+                    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                      setRightPanelCollapsed(false);
+                    }
                   }}
                   selectedEdge={selectedEdge}
                   onSelectEdge={(edge) => {
                     setSelectedEdge(edge);
                     setSelectedNode(null);
+                    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                      setRightPanelCollapsed(false);
+                    }
                   }}
                   affectedEntityNames={activeHypoResult?.affected_entities || []}
                   searchQuery={graphSearch}
@@ -840,11 +882,17 @@ export default function FlagshipDemoPage() {
                   onSelectNode={(node) => {
                     setSelectedNode(node);
                     setSelectedEdge(null);
+                    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                      setRightPanelCollapsed(false);
+                    }
                   }}
                   selectedEdge={selectedEdge}
                   onSelectEdge={(edge) => {
                     setSelectedEdge(edge);
                     setSelectedNode(null);
+                    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                      setRightPanelCollapsed(false);
+                    }
                   }}
                   searchQuery={graphSearch}
                   typeFilter={graphTypeFilter}
@@ -852,9 +900,9 @@ export default function FlagshipDemoPage() {
               )}
             </div>
 
-            {/* Right Panel: Contextual Entity & Provenance Inspector (Collapsible) */}
+            {/* Right Panel: Contextual Entity & Provenance Inspector (Desktop Sidebar or Mobile Overlay Drawer) */}
             {rightPanelCollapsed ? (
-              <div className="w-10 shrink-0 h-full flex flex-col items-center py-3 border-l border-[#30353c] bg-[#141619] z-20 select-none">
+              <div className="hidden lg:flex w-10 shrink-0 h-full flex-col items-center py-3 border-l border-[#30353c] bg-[#141619] z-20 select-none">
                 <button
                   onClick={() => setRightPanelCollapsed(false)}
                   className="p-2 rounded text-[#a0a7b1] hover:text-[#e5e7eb] hover:bg-[#20242a] transition-colors cursor-pointer"
@@ -867,7 +915,8 @@ export default function FlagshipDemoPage() {
                 </div>
               </div>
             ) : (
-              <div className="w-80 lg:w-96 shrink-0 h-full flex flex-col overflow-hidden bg-[#141619]">
+              <div className="fixed inset-0 z-50 lg:relative lg:inset-auto lg:z-auto bg-black/60 lg:bg-transparent flex justify-end">
+                <div className="w-80 sm:w-96 max-w-[90vw] shrink-0 h-full flex flex-col overflow-hidden bg-[#141619] shadow-2xl lg:shadow-none border-l border-[#30353c]">
                 <div className="h-11 shrink-0 px-3.5 border-b border-[#30353c] bg-[#181b1f] text-xs font-mono uppercase tracking-wider text-[#a0a7b1] flex items-center justify-between">
                   <span>Provenance Inspector</span>
                   <div className="flex items-center space-x-2">
@@ -989,15 +1038,48 @@ export default function FlagshipDemoPage() {
                   </button>
                 </div>
               </div>
+            </div>
             )}
           </div>
         )}
 
         {/* ================= STAGE 03: Specialist Operations & Interrogation ================= */}
         {currentStage === 3 && (
-          <div className="flex-1 min-h-0 min-w-0 overflow-hidden grid grid-cols-12 divide-x divide-[#30353c] pt-[58px]">
+          <div className="flex-1 min-h-0 min-w-0 overflow-hidden flex flex-col lg:grid lg:grid-cols-12 lg:divide-x divide-[#30353c] pt-[58px]">
+            {/* Mobile / Tablet Viewport Switcher */}
+            <div className="lg:hidden shrink-0 p-2 bg-[#141619] border-b border-[#30353c] flex items-center justify-center overflow-x-auto scrollbar-none">
+              <div className="flex rounded-lg bg-[#111315] p-0.5 border border-[#30353c] text-xs font-mono">
+                <button
+                  onClick={() => setStage3MobileTab("specialists")}
+                  className={`px-3 py-1 rounded-md transition-colors ${
+                    stage3MobileTab === "specialists" ? "bg-[#20242a] text-[#f8fafc] font-medium" : "text-[#737c88]"
+                  }`}
+                >
+                  Specialists ({societyAgents.length})
+                </button>
+                <button
+                  onClick={() => setStage3MobileTab("stream")}
+                  className={`px-3 py-1 rounded-md transition-colors ${
+                    stage3MobileTab === "stream" ? "bg-[#20242a] text-[#f8fafc] font-medium" : "text-[#737c88]"
+                  }`}
+                >
+                  Stream ({interactions.length})
+                </button>
+                <button
+                  onClick={() => setStage3MobileTab("interrogate")}
+                  className={`px-3 py-1 rounded-md transition-colors ${
+                    stage3MobileTab === "interrogate" ? "bg-[#20242a] text-[#f8fafc] font-medium" : "text-[#737c88]"
+                  }`}
+                >
+                  Interrogate & Sim
+                </button>
+              </div>
+            </div>
+
             {/* Left 3 Cols: Specialist Registry */}
-            <div className="col-span-3 flex flex-col overflow-hidden bg-[#181b1f]">
+            <div className={`col-span-3 flex-col overflow-hidden bg-[#181b1f] ${
+              stage3MobileTab === "specialists" ? "flex flex-1 min-h-0" : "hidden lg:flex"
+            }`}>
               <div className="p-3 border-b border-[#30353c] bg-[#141619] flex items-center justify-between gap-2">
                 <div className="flex items-center space-x-1.5 flex-1">
                   <Search className="w-3.5 h-3.5 text-[#737c88]" />
@@ -1020,7 +1102,12 @@ export default function FlagshipDemoPage() {
                   return (
                     <button
                       key={ag.id}
-                      onClick={() => setSelectedAgent(ag)}
+                      onClick={() => {
+                        setSelectedAgent(ag);
+                        if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                          setStage3MobileTab("interrogate");
+                        }
+                      }}
                       className={`w-full text-left p-2.5 rounded border transition-colors cursor-pointer ${
                         isSelected
                           ? "bg-[#20242a] border-[#3b82f6] text-[#f8fafc]"
@@ -1045,7 +1132,9 @@ export default function FlagshipDemoPage() {
             </div>
 
             {/* Center 5 Cols: Execution Timeline & Deliberation Stream */}
-            <div className="col-span-5 flex flex-col overflow-hidden bg-[#111315]">
+            <div className={`col-span-5 flex-col overflow-hidden bg-[#111315] ${
+              stage3MobileTab === "stream" ? "flex flex-1 min-h-0" : "hidden lg:flex"
+            }`}>
               <div className="p-3 border-b border-[#30353c] bg-[#181b1f] flex items-center justify-between">
                 <div>
                   <span className="text-xs font-mono uppercase tracking-wider text-[#e5e7eb] font-semibold flex items-center space-x-1.5">
@@ -1093,7 +1182,9 @@ export default function FlagshipDemoPage() {
             </div>
 
             {/* Right 4 Cols: Interrogation Console & Quantitative Scenario Stress */}
-            <div className="col-span-4 flex flex-col overflow-hidden bg-[#181b1f]">
+            <div className={`col-span-4 flex-col overflow-hidden bg-[#181b1f] ${
+              stage3MobileTab === "interrogate" ? "flex flex-1 min-h-0" : "hidden lg:flex"
+            }`}>
               {/* Tab Header: Specialist Interrogation vs MiroFish Simulation Suite */}
               <div className="p-2 border-b border-[#30353c] bg-[#141619] flex items-center justify-between">
                 <div className="flex items-center space-x-1 bg-[#111315] p-0.5 rounded border border-[#30353c] text-xs">
@@ -1461,9 +1552,41 @@ export default function FlagshipDemoPage() {
 
         {/* ================= STAGE 04: Boardroom Adversarial Deliberation Floor ================= */}
         {currentStage === 4 && (
-          <div className="flex-1 min-h-0 min-w-0 overflow-hidden grid grid-cols-12 divide-x divide-[#30353c] pt-[58px]">
+          <div className="flex-1 min-h-0 min-w-0 overflow-hidden flex flex-col lg:grid lg:grid-cols-12 lg:divide-x divide-[#30353c] pt-[58px]">
+            {/* Mobile / Tablet Viewport Switcher */}
+            <div className="lg:hidden shrink-0 p-2 bg-[#141619] border-b border-[#30353c] flex items-center justify-center overflow-x-auto scrollbar-none">
+              <div className="flex rounded-lg bg-[#111315] p-0.5 border border-[#30353c] text-xs font-mono">
+                <button
+                  onClick={() => setStage4MobileTab("floor")}
+                  className={`px-3 py-1 rounded-md transition-colors ${
+                    stage4MobileTab === "floor" ? "bg-[#20242a] text-[#f8fafc] font-medium" : "text-[#737c88]"
+                  }`}
+                >
+                  Debate Floor ({claims.length})
+                </button>
+                <button
+                  onClick={() => setStage4MobileTab("specialists")}
+                  className={`px-3 py-1 rounded-md transition-colors ${
+                    stage4MobileTab === "specialists" ? "bg-[#20242a] text-[#f8fafc] font-medium" : "text-[#737c88]"
+                  }`}
+                >
+                  Specialists ({societyAgents.length})
+                </button>
+                <button
+                  onClick={() => setStage4MobileTab("evidence")}
+                  className={`px-3 py-1 rounded-md transition-colors ${
+                    stage4MobileTab === "evidence" ? "bg-[#20242a] text-[#f8fafc] font-medium" : "text-[#737c88]"
+                  }`}
+                >
+                  Evidence & Citations
+                </button>
+              </div>
+            </div>
+
             {/* Panel A: 3 Cols - Specialist Roster & Epistemic Alignment */}
-            <div className="col-span-3 flex flex-col overflow-hidden bg-[#181b1f]">
+            <div className={`col-span-3 flex-col overflow-hidden bg-[#181b1f] ${
+              stage4MobileTab === "specialists" ? "flex flex-1 min-h-0" : "hidden lg:flex"
+            }`}>
               <div className="p-3 border-b border-[#30353c] bg-[#141619] text-xs font-mono uppercase tracking-wider text-[#a0a7b1] flex items-center justify-between">
                 <span>Specialist Roster</span>
                 <span className="text-[#3b82f6] text-[10px]">Mandate Stances</span>
@@ -1491,7 +1614,9 @@ export default function FlagshipDemoPage() {
             </div>
 
             {/* Panel B: 6 Cols - Structured Adversarial Debate Chamber */}
-            <div className="col-span-6 flex flex-col overflow-hidden bg-[#111315]">
+            <div className={`col-span-6 flex-col overflow-hidden bg-[#111315] ${
+              stage4MobileTab === "floor" ? "flex flex-1 min-h-0" : "hidden lg:flex"
+            }`}>
               <div className="p-3 border-b border-[#30353c] bg-[#181b1f] flex items-center justify-between">
                 <div>
                   <span className="text-xs font-mono uppercase tracking-wider text-[#e5e7eb] font-semibold">
@@ -1510,7 +1635,7 @@ export default function FlagshipDemoPage() {
                 {/* Claims Register */}
                 <div className="space-y-2 mb-2">
                   <div className="text-[10px] font-mono uppercase text-[#737c88]">Audited Claims Under Scrutiny:</div>
-                  {claims.map((c) => (
+                  {(claims || []).map((c) => (
                     <div 
                       key={c.id} 
                       onClick={() => setSelectedClaim(c)}
@@ -1522,13 +1647,13 @@ export default function FlagshipDemoPage() {
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#111315] text-[#a0a7b1]">
-                          {(c.proposing_specialist_id || "investigator").replace(/_/g, " ")}
+                          {(c.proposing_specialist_id || c.specialist_id || c.agent_id || "investigator").replace(/_/g, " ")}
                         </span>
                         <div className="flex items-center space-x-2">
                           <span className={`text-[10px] font-mono uppercase font-semibold ${
                             c.verdict === "supported" ? "text-[#10b981]" : "text-[#f59e0b]"
                           }`}>
-                            Verdict: {c.verdict}
+                            Verdict: {c.verdict || "evaluated"}
                           </span>
                           <button
                             onClick={(e) => {
@@ -1541,23 +1666,23 @@ export default function FlagshipDemoPage() {
                           </button>
                         </div>
                       </div>
-                      <p className="text-xs leading-relaxed font-serif text-[#e5e7eb]">{c.statement}</p>
+                      <p className="text-xs leading-relaxed font-serif text-[#e5e7eb]">{c.statement || c.claim_text || ""}</p>
                     </div>
                   ))}
                 </div>
 
                 {/* Deliberation Arguments Thread */}
-                {debates.map((d) => (
+                {(debates || []).map((d) => (
                   <div key={d.id} className="p-4 rounded bg-[#181b1f] border border-[#30353c]">
                     <div className="text-xs font-semibold text-[#f8fafc] mb-3 flex items-center space-x-2">
                       <Scale className="w-4 h-4 text-[#3b82f6]" />
-                      <span>Formal Dispute: {d.topic}</span>
+                      <span>Formal Dispute: {d.topic || "Core Thesis"}</span>
                     </div>
 
                     <div className="space-y-2.5">
-                      {d.arguments.map((arg: any) => (
+                      {(d.arguments || []).map((arg: any) => (
                         <div 
-                          key={arg.id} 
+                          key={arg.id || Math.random()} 
                           className={`p-3 rounded border text-xs ${
                             arg.argument_type === "adjudication"
                               ? "bg-[#1d192b] border-[#8b5cf6]/40 text-[#e0e7ff]"
@@ -1567,10 +1692,10 @@ export default function FlagshipDemoPage() {
                           }`}
                         >
                           <div className="flex items-center justify-between text-[10px] font-mono uppercase mb-1">
-                            <span className="font-semibold text-[#e5e7eb]">{(arg.specialist_id || "specialist").replace(/_/g, " ")}</span>
-                            <span className="text-[#737c88] font-mono">[{arg.argument_type}]</span>
+                            <span className="font-semibold text-[#e5e7eb]">{(arg.specialist_id || arg.agent_id || "specialist").replace(/_/g, " ")}</span>
+                            <span className="text-[#737c88] font-mono">[{arg.argument_type || "statement"}]</span>
                           </div>
-                          <p className="leading-relaxed font-serif text-xs">{arg.content}</p>
+                          <p className="leading-relaxed font-serif text-xs">{arg.content || arg.text || ""}</p>
                         </div>
                       ))}
                     </div>
@@ -1597,7 +1722,9 @@ export default function FlagshipDemoPage() {
             </div>
 
             {/* Panel C: 3 Cols - Evidence Provenance Inspector */}
-            <div className="col-span-3 flex flex-col overflow-hidden bg-[#181b1f]">
+            <div className={`col-span-3 flex-col overflow-hidden bg-[#181b1f] ${
+              stage4MobileTab === "evidence" ? "flex flex-1 min-h-0" : "hidden lg:flex"
+            }`}>
               <div className="p-3 border-b border-[#30353c] bg-[#141619] text-xs font-mono uppercase tracking-wider text-[#a0a7b1]">
                 Evidence Provenance
               </div>
@@ -1636,7 +1763,7 @@ export default function FlagshipDemoPage() {
 
         {/* ================= STAGE 05: Institutional Intelligence Dossier ================= */}
         {currentStage === 5 && (
-          <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain px-8 pt-20 pb-12 max-w-4xl mx-auto w-full">
+          <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain px-3 sm:px-6 md:px-8 pt-16 sm:pt-20 pb-12 max-w-4xl mx-auto w-full">
             {primaryReport ? (
               <article className="p-8 rounded bg-[#181b1f] border border-[#30353c] text-[#e5e7eb]">
                 <div className="border-b border-[#30353c] pb-6 mb-6 flex items-start justify-between">
