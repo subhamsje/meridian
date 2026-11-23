@@ -433,83 +433,92 @@ export default function FlagshipDemoPage() {
 
   return (
     <div className="app-shell bg-[#111315] text-[#e5e7eb] font-sans selection:bg-[#20242a] selection:text-[#f8fafc]">
-      {/* GLOBAL HEADER — fixed height, never independently scrolled */}
-      <header className="h-14 shrink-0 glass-clear border-b border-[#30353c] px-6 flex items-center justify-between z-40 select-none">
-        <div className="flex items-center space-x-4">
-          <Link href="/" className="flex items-center space-x-2.5 group">
-            <div className="w-6 h-6 rounded bg-[#20242a] border border-[#30353c] flex items-center justify-center font-mono font-bold text-[#e5e7eb] text-xs">
-              M
+      {/* GLOBAL FLOATING NAVIGATION — Apple-Grade Ultra-Transparent Liquid Glass */}
+      <header className="fixed top-2.5 inset-x-2 sm:inset-x-4 lg:inset-x-6 z-40 select-none pointer-events-none">
+        <div className="nav-liquid-glass pointer-events-auto h-12 px-3 md:px-4 flex items-center justify-between mx-auto w-full max-w-[1780px]">
+          {/* Brand & Corporate Identity Group */}
+          <div className="flex items-center space-x-2.5 sm:space-x-3.5 shrink-0">
+            <Link href="/" className="flex items-center space-x-2 group">
+              <div className="w-6 h-6 rounded-lg bg-white/[0.08] border border-white/[0.18] flex items-center justify-center font-mono font-bold text-white text-[11px] shadow-xs group-hover:bg-white/[0.14] group-hover:border-white/[0.28] transition-all">
+                M
+              </div>
+              <span className="font-semibold text-xs tracking-wider uppercase text-white/90 group-hover:text-white transition-colors">
+                Meridian
+              </span>
+            </Link>
+
+            <div className="h-4 w-px bg-white/[0.12] hidden md:block"></div>
+
+            <div className="hidden md:flex items-center space-x-2">
+              <span className="text-xs font-medium text-white/85 tracking-tight truncate max-w-[180px] 2xl:max-w-none">
+                Palantir Technologies Inc. <span className="text-white/50 text-[11px] hidden 2xl:inline">(NYSE: PLTR)</span>
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/[0.05] border border-white/[0.12] text-white/70 shadow-xs">
+                CIK: 0001321655
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-500/[0.12] border border-emerald-400/[0.3] text-emerald-300 flex items-center space-x-1.5 shadow-[0_0_12px_-2px_rgba(16,185,129,0.25)]">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399] animate-pulse"></span>
+                <span className="hidden 2xl:inline">SEC 10-K VERIFIED</span>
+                <span className="2xl:hidden">10-K</span>
+              </span>
             </div>
-            <span className="font-semibold text-xs tracking-wider uppercase text-[#e5e7eb] group-hover:text-white transition-colors">
-              Meridian
-            </span>
-          </Link>
-          <div className="h-4 w-px bg-[#30353c]"></div>
-          <div className="flex items-center space-x-2.5">
-            <span className="text-xs font-medium text-[#e5e7eb]">
-              Palantir Technologies Inc. (NYSE: PLTR)
-            </span>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#20242a] text-[#a0a7b1] border border-[#30353c]">
-              CIK: 0001321655
-            </span>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#15231c] text-[#10b981] border border-[#1b3d2b] flex items-center space-x-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]"></span>
-              <span>SEC 10-K VERIFIED</span>
-            </span>
           </div>
-        </div>
 
-        {/* 5-Stage Stepper Navigation */}
-        <nav className="flex items-center bg-[#111315]/90 p-0.5 rounded border border-[#30353c] text-xs font-medium">
-          {[
-            { stage: 1, label: "01 Mandate & Seeds", icon: FileText },
-            { stage: 2, label: "02 Relationship Graph", icon: Network },
-            { stage: 3, label: "03 Specialist Operations", icon: Users },
-            { stage: 4, label: "04 Deliberation Floor", icon: Scale },
-            { stage: 5, label: "05 Intelligence Dossier", icon: ShieldCheck },
-          ].map((item) => {
-            const Icon = item.icon;
-            const isActive = currentStage === item.stage;
-            return (
-              <button
-                key={item.stage}
-                onClick={() => setCurrentStage(item.stage as any)}
-                className={`px-3 py-1.5 rounded transition-colors flex items-center space-x-1.5 cursor-pointer ${
-                  isActive
-                    ? "bg-[#2563eb] text-[#f8fafc] border border-[#3b82f6] font-medium shadow-xs"
-                    : "text-[#a0a7b1] hover:text-[#e5e7eb] hover:bg-[#181b1f] border border-transparent"
-                }`}
-              >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? "text-white" : "text-[#737c88]"}`} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
+          {/* 5-Stage Stepper Navigation Group */}
+          <nav className="glass-stepper-group shrink-0" aria-label="Investigation Stages">
+            {[
+              { stage: 1, label: "01 Mandate & Seeds", short: "01 Seeds", icon: FileText },
+              { stage: 2, label: "02 Relationship Graph", short: "02 Graph", icon: Network },
+              { stage: 3, label: "03 Specialist Operations", short: "03 Operations", icon: Users },
+              { stage: 4, label: "04 Deliberation Floor", short: "04 Deliberation", icon: Scale },
+              { stage: 5, label: "05 Intelligence Dossier", short: "05 Dossier", icon: ShieldCheck },
+            ].map((item) => {
+              const Icon = item.icon;
+              const isActive = currentStage === item.stage;
+              return (
+                <button
+                  key={item.stage}
+                  onClick={() => setCurrentStage(item.stage as any)}
+                  className={`px-2.5 md:px-3 py-1.5 text-xs font-medium transition-all flex items-center space-x-1.5 cursor-pointer relative ${
+                    isActive
+                      ? "glass-tab-active"
+                      : "glass-tab-inactive"
+                  }`}
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? "text-white" : "text-[#737c88]"}`} />
+                  <span className="hidden 2xl:inline">{item.label}</span>
+                  <span className="hidden sm:inline 2xl:hidden">{item.short}</span>
+                  <span className="sm:hidden">0{item.stage}</span>
+                </button>
+              );
+            })}
+          </nav>
 
-        {/* Telemetry & Workspace Exit */}
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => setShowEventDrawer(prev => !prev)}
-            className={`text-xs px-2.5 py-1.5 rounded border font-mono flex items-center space-x-1.5 transition-colors cursor-pointer ${
-              showEventDrawer 
-                ? "bg-[#20242a] border-[#3b82f6] text-[#3b82f6]" 
-                : "bg-[#111315] border-[#30353c] text-[#a0a7b1] hover:text-[#e5e7eb]"
-            }`}
-            title="Toggle Live Event Stream Drawer"
-          >
-            <Activity className="w-3.5 h-3.5 text-[#3b82f6]" />
-            <span>Event Telemetry</span>
-            {showEventDrawer ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
-          </button>
+          {/* Telemetry & Workspace Exit Group */}
+          <div className="flex items-center space-x-2 shrink-0">
+            <button
+              onClick={() => setShowEventDrawer(prev => !prev)}
+              className={`text-xs px-2.5 py-1.5 font-mono flex items-center space-x-1.5 transition-all cursor-pointer ${
+                showEventDrawer 
+                  ? "glass-action-pill-active" 
+                  : "glass-action-pill"
+              }`}
+              title="Toggle Live Event Stream Drawer"
+            >
+              <Activity className={`w-3.5 h-3.5 ${showEventDrawer ? "text-[#60a5fa]" : "text-[#93c5fd]"}`} />
+              <span className="hidden sm:inline">Event Telemetry</span>
+              {showEventDrawer ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+            </button>
 
-          <Link
-            href="/app"
-            className="text-xs px-3 py-1.5 rounded bg-[#20242a] hover:bg-[#2c323a] border border-[#30353c] text-[#e5e7eb] font-medium transition-colors flex items-center space-x-1.5"
-          >
-            <span>Custom Workspace</span>
-            <ArrowRight className="w-3 h-3" />
-          </Link>
+            <Link
+              href="/app"
+              className="text-xs px-3 py-1.5 font-medium transition-all flex items-center space-x-1.5 glass-action-pill"
+            >
+              <span className="hidden sm:inline">Custom Workspace</span>
+              <ArrowRight className="w-3 h-3 text-white/80" />
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -518,7 +527,7 @@ export default function FlagshipDemoPage() {
         
         {/* ================= STAGE 01: Research Seeds & Mandate ================= */}
         {currentStage === 1 && (
-          <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain p-8 max-w-5xl mx-auto w-full">
+          <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain px-8 pt-20 pb-12 max-w-5xl mx-auto w-full">
             <div className="mb-8 border-b border-[#30353c] pb-6">
               <div className="text-[11px] font-mono uppercase tracking-wider text-[#737c88] mb-1">
                 Stage 01 • Institutional Grounding & Primary Disclosures
@@ -671,7 +680,7 @@ export default function FlagshipDemoPage() {
 
         {/* ================= STAGE 02: Knowledge Graph Workstation ================= */}
         {currentStage === 2 && (
-          <div className="flex-1 min-h-0 min-w-0 flex flex-row overflow-hidden divide-x divide-[#30353c]">
+          <div className="flex-1 min-h-0 min-w-0 flex flex-row overflow-hidden divide-x divide-[#30353c] pt-[58px]">
             {/* Left Panel: Entity Directory (Collapsible) */}
             {leftPanelCollapsed ? (
               <div className="w-10 shrink-0 h-full flex flex-col items-center py-3 border-r border-[#30353c] bg-[#141619] z-20 select-none">
@@ -986,7 +995,7 @@ export default function FlagshipDemoPage() {
 
         {/* ================= STAGE 03: Specialist Operations & Interrogation ================= */}
         {currentStage === 3 && (
-          <div className="flex-1 min-h-0 min-w-0 overflow-hidden grid grid-cols-12 divide-x divide-[#30353c]">
+          <div className="flex-1 min-h-0 min-w-0 overflow-hidden grid grid-cols-12 divide-x divide-[#30353c] pt-[58px]">
             {/* Left 3 Cols: Specialist Registry */}
             <div className="col-span-3 flex flex-col overflow-hidden bg-[#181b1f]">
               <div className="p-3 border-b border-[#30353c] bg-[#141619] flex items-center justify-between gap-2">
@@ -1452,7 +1461,7 @@ export default function FlagshipDemoPage() {
 
         {/* ================= STAGE 04: Boardroom Adversarial Deliberation Floor ================= */}
         {currentStage === 4 && (
-          <div className="flex-1 min-h-0 min-w-0 overflow-hidden grid grid-cols-12 divide-x divide-[#30353c]">
+          <div className="flex-1 min-h-0 min-w-0 overflow-hidden grid grid-cols-12 divide-x divide-[#30353c] pt-[58px]">
             {/* Panel A: 3 Cols - Specialist Roster & Epistemic Alignment */}
             <div className="col-span-3 flex flex-col overflow-hidden bg-[#181b1f]">
               <div className="p-3 border-b border-[#30353c] bg-[#141619] text-xs font-mono uppercase tracking-wider text-[#a0a7b1] flex items-center justify-between">
@@ -1627,7 +1636,7 @@ export default function FlagshipDemoPage() {
 
         {/* ================= STAGE 05: Institutional Intelligence Dossier ================= */}
         {currentStage === 5 && (
-          <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain p-10 max-w-4xl mx-auto w-full">
+          <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain px-8 pt-20 pb-12 max-w-4xl mx-auto w-full">
             {primaryReport ? (
               <article className="p-8 rounded bg-[#181b1f] border border-[#30353c] text-[#e5e7eb]">
                 <div className="border-b border-[#30353c] pb-6 mb-6 flex items-start justify-between">
@@ -1746,12 +1755,32 @@ export default function FlagshipDemoPage() {
                     Material Institutional Risks
                   </h2>
                   <div className="space-y-2">
-                    {primaryReport.risk_register?.map((risk: string, rIdx: number) => (
-                      <div key={rIdx} className="p-3 rounded bg-[#111315] border border-[#30353c] text-xs text-[#cbd5e1] flex items-start space-x-2">
-                        <AlertTriangle className="w-3.5 h-3.5 text-[#f59e0b] shrink-0 mt-0.5" />
-                        <span>{risk}</span>
-                      </div>
-                    ))}
+                    {primaryReport.risk_register?.map((risk: any, rIdx: number) => {
+                      const isObj = typeof risk === "object" && risk !== null;
+                      const text = isObj ? (risk.detail || risk.category || JSON.stringify(risk)) : String(risk);
+                      const severity = isObj ? risk.severity : null;
+                      const category = isObj ? risk.category : null;
+                      return (
+                        <div key={rIdx} className="p-3 rounded bg-[#111315] border border-[#30353c] text-xs text-[#cbd5e1] flex items-start space-x-2.5">
+                          <AlertTriangle className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${severity === "HIGH" ? "text-red-400" : "text-[#f59e0b]"}`} />
+                          <div className="flex-1">
+                            {category && (
+                              <div className="flex items-center space-x-2 mb-1">
+                                <span className="font-semibold text-white">{category}</span>
+                                {severity && (
+                                  <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
+                                    severity === "HIGH" ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                                  }`}>
+                                    {severity}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            <span>{text}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </section>
 
