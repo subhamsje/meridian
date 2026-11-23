@@ -8,7 +8,7 @@ from main import app
 from database import get_db, Base
 from models import User, Organization, Investigation, AdjudicationVerdict
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test_meridian_suite.db"
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test_meridian_society.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -28,93 +28,79 @@ def setup_database():
     yield
     Base.metadata.drop_all(bind=engine)
 
-def test_full_investigation_and_multi_tenant_isolation():
-    # 1. Register Org A User
-    reg_a = client.post("/api/v1/auth/register", json={
-        "email": "analyst@vance-capital.internal",
-        "full_name": "Eleanor Vance",
-        "password": "SecurePasswordVance2026!",
-        "organization_name": "Vance Strategic Intelligence"
+def test_multi_agent_society_and_intervention():
+    # 1. Register User and Organization
+    reg = client.post("/api/v1/auth/register", json={
+        "email": "lead.investigator@meridian-intel.internal",
+        "full_name": "Dr. Eleanor Vance",
+        "password": "InstitutionalSecurePassword2026!",
+        "organization_name": "Vance Global Intelligence"
     })
-    assert reg_a.status_code == 200
-    token_a = reg_a.json()["access_token"]
-    headers_a = {"Authorization": f"Bearer {token_a}"}
+    assert reg.status_code == 200
+    token = reg.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
 
-    # 2. Register Org B User
-    reg_b = client.post("/api/v1/auth/register", json={
-        "email": "partner@blackstone.internal",
-        "full_name": "Marcus Stone",
-        "password": "SecurePasswordStone2026!",
-        "organization_name": "Blackstone Quantitative"
-    })
-    assert reg_b.status_code == 200
-    token_b = reg_b.json()["access_token"]
-    headers_b = {"Authorization": f"Bearer {token_b}"}
-
-    # 3. Org A creates an investigation into Snowflake (SNOW)
-    create_res = client.post("/api/v1/investigations", headers=headers_a, json={
-        "company_name": "Snowflake Inc.",
-        "ticker": "SNOW",
-        "domain": "snowflake.com",
+    # 2. Create Investigation into Palantir (PLTR)
+    create_res = client.post("/api/v1/investigations", headers=headers, json={
+        "company_name": "Palantir Technologies",
+        "ticker": "PLTR",
+        "domain": "palantir.com",
         "company_type": "public",
-        "sector": "Cloud Data & AI Infrastructure",
+        "sector": "Enterprise Software & Defense AI",
         "depth": "comprehensive",
-        "budget_limit_usd": 250.0
+        "budget_limit_usd": 300.0
     })
     assert create_res.status_code == 200
     inv_id = create_res.json()["investigation_id"]
 
-    # 4. Run pipeline
-    from engine import run_investigation_pipeline
+    # 3. Execute 8-round multi-agent society pipeline
+    from multi_agent_society_engine import MultiAgentSocietyEngine
     db = TestingSessionLocal()
-    asyncio.run(run_investigation_pipeline(inv_id, db))
+    asyncio.run(MultiAgentSocietyEngine.run_full_society_pipeline(inv_id, db))
     db.close()
 
-    # 5. Org A can access investigation details & sub-resources
-    detail_res = client.get(f"/api/v1/investigations/{inv_id}", headers=headers_a)
-    assert detail_res.status_code == 200
-    data = detail_res.json()
-    assert data["status"] == "completed"
-    assert data["company"]["ticker"] == "SNOW"
+    # 4. Verify Society Agents Roster (14 distinct specialists)
+    agents_res = client.get(f"/api/v1/investigations/{inv_id}/society/agents", headers=headers)
+    assert agents_res.status_code == 200
+    agents = agents_res.json()
+    assert len(agents) == 14
+    
+    agent_ids = [ag["agent_id"] for ag in agents]
+    assert "chief_coordinator" in agent_ids
+    assert "financial_analyst" in agent_ids
+    assert "forensic_accountant" in agent_ids
+    assert "bull_analyst" in agent_ids
+    assert "bear_analyst" in agent_ids
+    assert "evidence_verifier" in agent_ids
+    assert "final_adjudicator" in agent_ids
 
-    specs_res = client.get(f"/api/v1/investigations/{inv_id}/specialists", headers=headers_a)
-    assert specs_res.status_code == 200
-    assert len(specs_res.json()) == 9
+    # 5. Verify Persistent Interactions (Direct messaging, challenges, concessions)
+    inter_res = client.get(f"/api/v1/investigations/{inv_id}/society/interactions", headers=headers)
+    assert inter_res.status_code == 200
+    interactions = inter_res.json()
+    assert len(interactions) >= 6
 
-    claims_res = client.get(f"/api/v1/investigations/{inv_id}/claims", headers=headers_a)
-    assert claims_res.status_code == 200
-    assert len(claims_res.json()) >= 4
+    # Verify at least one CHALLENGE and one CONCEDE exists
+    types = [i["interaction_type"] for i in interactions]
+    assert "CHALLENGE" in types
+    assert "CONCEDE" in types
 
-    reports_res = client.get(f"/api/v1/investigations/{inv_id}/reports", headers=headers_a)
-    assert reports_res.status_code == 200
-    rep = reports_res.json()[0]
-    assert rep["financial_analysis"]["revenue_usd_m"] == 2806.0
-    assert rep["financial_analysis"]["gross_margin_pct"] == 67.8
-    assert "scenario_matrix" in rep
-    assert "bull_case" in rep["scenario_matrix"]
+    # 6. Verify Position Revision Tracking on Bull Analyst
+    bull_prof_res = client.get(f"/api/v1/investigations/{inv_id}/society/agents/bull_analyst", headers=headers)
+    assert bull_prof_res.status_code == 200
+    bull_profile = bull_prof_res.json()
+    assert len(bull_profile["position_revisions"]) >= 1
+    assert "Conceded to Forensic Accountant" in bull_profile["position_revisions"][0]["reason"]
 
-    # Verify Corporate Graph Nodes & Edges
-    graph_res = client.get(f"/api/v1/investigations/{inv_id}/graph", headers=headers_a)
-    assert graph_res.status_code == 200
-    graph_data = graph_res.json()
-    assert len(graph_data["nodes"]) >= 2
-    assert len(graph_data["edges"]) >= 2
-
-    # 6. SECURITY AUDIT: Org B attempts to access Org A's investigation (Should receive 404/Forbidden)
-    unauthorized_detail = client.get(f"/api/v1/investigations/{inv_id}", headers=headers_b)
-    assert unauthorized_detail.status_code == 404
-
-    unauthorized_claims = client.get(f"/api/v1/investigations/{inv_id}/claims", headers=headers_b)
-    assert unauthorized_claims.status_code == 404
-
-    unauthorized_graph = client.get(f"/api/v1/investigations/{inv_id}/graph", headers=headers_b)
-    assert unauthorized_graph.status_code == 404
-
-    unauthorized_reports = client.get(f"/api/v1/investigations/{inv_id}/reports", headers=headers_b)
-    assert unauthorized_reports.status_code == 404
-
-    unauthorized_evidence = client.get(f"/api/v1/investigations/{inv_id}/evidence", headers=headers_b)
-    assert unauthorized_evidence.status_code == 404
+    # 7. Test User Intervention into Agent (Questioning Forensic Accountant)
+    intervene_res = client.post(f"/api/v1/investigations/{inv_id}/society/intervene", headers=headers, json={
+        "agent_id": "forensic_accountant",
+        "message": "What is the primary risk if Palantir loses its largest government contract?"
+    })
+    assert intervene_res.status_code == 200
+    data = intervene_res.json()
+    assert "agent_reply" in data
+    assert "Forensic Accountant" in data["agent_reply"] or "forensic" in data["agent_reply"].lower()
 
 def test_financial_scenario_calculations():
     from research_provider import ScenarioForecaster

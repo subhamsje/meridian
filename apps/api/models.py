@@ -88,7 +88,7 @@ class CorporateRelationship(Base):
     investigation_id = Column(String(36), ForeignKey("investigations.id", ondelete="CASCADE"), nullable=False, index=True)
     source_company_id = Column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
     target_company_id = Column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
-    relationship_type = Column(String(50), nullable=False) # subsidiary, parent, competitor, supplier, customer, investor, partner
+    relationship_type = Column(String(50), nullable=False)
     description = Column(Text, nullable=True)
     evidence_id = Column(String(36), ForeignKey("evidence_items.id", ondelete="SET NULL"), nullable=True)
     confidence = Column(Float, default=0.90)
@@ -124,6 +124,11 @@ class Investigation(Base):
     reports = relationship("Report", back_populates="investigation", cascade="all, delete-orphan")
     events = relationship("InvestigationEvent", back_populates="investigation", cascade="all, delete-orphan")
     corporate_relationships = relationship("CorporateRelationship", back_populates="investigation", cascade="all, delete-orphan")
+    
+    # Multi-Agent Society links
+    society_agents = relationship("SocietyAgent", back_populates="investigation", cascade="all, delete-orphan")
+    interactions = relationship("AgentInteraction", back_populates="investigation", cascade="all, delete-orphan")
+    simulation_runs = relationship("SimulationRun", back_populates="investigation", cascade="all, delete-orphan")
 
 class SpecialistRun(Base):
     __tablename__ = "specialist_runs"
@@ -142,6 +147,99 @@ class SpecialistRun(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     investigation = relationship("Investigation", back_populates="specialists")
+
+# ----------------- MULTI-AGENT SOCIETY ENTITIES -----------------
+
+class SocietyAgent(Base):
+    __tablename__ = "society_agents"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    investigation_id = Column(String(36), ForeignKey("investigations.id", ondelete="CASCADE"), nullable=False, index=True)
+    organization_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    agent_id = Column(String(100), nullable=False) # e.g. "financial_analyst", "forensic_accountant"
+    name = Column(String(100), nullable=False)
+    role = Column(String(100), nullable=False)
+    specialization = Column(String(255), nullable=True)
+    biography = Column(Text, nullable=True)
+    expertise = Column(JSON, default=list)
+    mandate = Column(Text, nullable=False)
+    analytical_style = Column(String(100), default="empirical_rigorous")
+    initial_position = Column(Text, nullable=True)
+    current_position = Column(Text, nullable=True)
+    confidence = Column(Float, default=0.75)
+    assumptions = Column(JSON, default=list)
+    active_hypotheses = Column(JSON, default=list)
+    permitted_tools = Column(JSON, default=list)
+    current_task = Column(String(255), nullable=True)
+    status = Column(String(50), default="IDLE") # IDLE, RESEARCHING, IN_DEBATE, AWAITING_EVIDENCE, COMPLETED
+    interaction_count = Column(Integer, default=0)
+    tokens_consumed = Column(Integer, default=0)
+    cost_usd = Column(Float, default=0.0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    investigation = relationship("Investigation", back_populates="society_agents")
+    memories = relationship("AgentMemory", back_populates="agent", cascade="all, delete-orphan")
+    position_revisions = relationship("PositionRevision", back_populates="agent", cascade="all, delete-orphan")
+
+class AgentMemory(Base):
+    __tablename__ = "agent_memories"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    agent_id = Column(String(36), ForeignKey("society_agents.id", ondelete="CASCADE"), nullable=False, index=True)
+    memory_type = Column(String(50), nullable=False) # finding, objection, concession, peer_insight, evidence_provenance
+    content = Column(Text, nullable=False)
+    source_entity = Column(String(255), nullable=True)
+    confidence = Column(Float, default=0.85)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    agent = relationship("SocietyAgent", back_populates="memories")
+
+class PositionRevision(Base):
+    __tablename__ = "position_revisions"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    agent_id = Column(String(36), ForeignKey("society_agents.id", ondelete="CASCADE"), nullable=False, index=True)
+    previous_position = Column(Text, nullable=True)
+    new_position = Column(Text, nullable=False)
+    previous_confidence = Column(Float, default=0.7)
+    new_confidence = Column(Float, default=0.8)
+    triggering_evidence_id = Column(String(36), ForeignKey("evidence_items.id", ondelete="SET NULL"), nullable=True)
+    reason_for_change = Column(Text, nullable=False)
+    round_number = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    agent = relationship("SocietyAgent", back_populates="position_revisions")
+
+class AgentInteraction(Base):
+    __tablename__ = "agent_interactions"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    investigation_id = Column(String(36), ForeignKey("investigations.id", ondelete="CASCADE"), nullable=False, index=True)
+    sender_agent_id = Column(String(100), nullable=False) # e.g. "financial_analyst" or "user"
+    recipient_agent_id = Column(String(100), nullable=False) # e.g. "forensic_accountant" or "ALL"
+    interaction_type = Column(String(50), nullable=False) # MESSAGE, ASK, CHALLENGE, REBUT, CONCEDE, etc.
+    content = Column(Text, nullable=False)
+    referenced_claim_id = Column(String(36), ForeignKey("claims.id", ondelete="SET NULL"), nullable=True)
+    referenced_evidence_id = Column(String(36), ForeignKey("evidence_items.id", ondelete="SET NULL"), nullable=True)
+    round_number = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    investigation = relationship("Investigation", back_populates="interactions")
+
+class SimulationRun(Base):
+    __tablename__ = "simulation_runs"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    investigation_id = Column(String(36), ForeignKey("investigations.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    scenario_description = Column(Text, nullable=False)
+    status = Column(String(50), default="INITIALIZED") # INITIALIZED, RUNNING, PAUSED, COMPLETED
+    current_round = Column(Integer, default=0)
+    total_rounds = Column(Integer, default=6)
+    injected_events = Column(JSON, default=list) # [{round: 1, event: "Competitor drops prices by 30%"}]
+    outcomes = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+
+    investigation = relationship("Investigation", back_populates="simulation_runs")
+
+# ----------------- END MULTI-AGENT SOCIETY ENTITIES -----------------
 
 class Source(Base):
     __tablename__ = "sources"

@@ -23,7 +23,14 @@ import {
   Printer,
   Download,
   Share2,
-  Network
+  Network,
+  Users,
+  MessageSquare,
+  Send,
+  Sparkles,
+  ArrowRight,
+  HelpCircle,
+  Activity
 } from "lucide-react";
 import { API_BASE } from "@/lib/utils";
 
@@ -46,13 +53,20 @@ export default function WorkspaceApp() {
   const [investigations, setInvestigations] = useState<Investigation[]>([]);
   const [selectedInvId, setSelectedInvId] = useState<string | null>(null);
   const [invDetail, setInvDetail] = useState<any>(null);
-  const [specialists, setSpecialists] = useState<any[]>([]);
+  const [societyAgents, setSocietyAgents] = useState<any[]>([]);
+  const [selectedAgent, setSelectedAgent] = useState<any>(null);
+  const [interactions, setInteractions] = useState<any[]>([]);
   const [claims, setClaims] = useState<any[]>([]);
   const [debates, setDebates] = useState<any[]>([]);
   const [evidence, setEvidence] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
   const [graphData, setGraphData] = useState<{ nodes: any[]; edges: any[] }>({ nodes: [], edges: [] });
-  const [activeTab, setActiveTab] = useState<"boardroom" | "graph" | "scenarios" | "evidence" | "reports">("boardroom");
+  const [activeTab, setActiveTab] = useState<"society" | "timeline" | "boardroom" | "graph" | "scenarios" | "evidence" | "reports">("society");
+
+  // User Intervention / Question State
+  const [interventionQuery, setInterventionQuery] = useState("");
+  const [interventionLoading, setInterventionLoading] = useState(false);
+  const [interventionHistory, setInterventionHistory] = useState<any[]>([]);
 
   // Auth Form State
   const [email, setEmail] = useState("lead.analyst@meridian.internal");
@@ -65,10 +79,10 @@ export default function WorkspaceApp() {
 
   // New Investigation Modal
   const [showNewModal, setShowNewModal] = useState(false);
-  const [newCompany, setNewCompany] = useState("Snowflake Inc.");
-  const [newTicker, setNewTicker] = useState("SNOW");
-  const [newDomain, setNewDomain] = useState("snowflake.com");
-  const [newSector, setNewSector] = useState("Cloud Data & AI Infrastructure");
+  const [newCompany, setNewCompany] = useState("Palantir Technologies");
+  const [newTicker, setNewTicker] = useState("PLTR");
+  const [newDomain, setNewDomain] = useState("palantir.com");
+  const [newSector, setNewSector] = useState("Enterprise Software & Defense AI");
 
   useEffect(() => {
     const savedToken = localStorage.getItem("meridian_token");
@@ -148,9 +162,10 @@ export default function WorkspaceApp() {
     setSelectedInvId(id);
     if (!jwt) return;
     try {
-      const [detailRes, specsRes, claimsRes, debatesRes, evRes, reportsRes, graphRes] = await Promise.all([
+      const [detailRes, agentsRes, interRes, claimsRes, debatesRes, evRes, reportsRes, graphRes] = await Promise.all([
         fetch(`${API_BASE}/investigations/${id}`, { headers: { Authorization: `Bearer ${jwt}` } }),
-        fetch(`${API_BASE}/investigations/${id}/specialists`, { headers: { Authorization: `Bearer ${jwt}` } }),
+        fetch(`${API_BASE}/investigations/${id}/society/agents`, { headers: { Authorization: `Bearer ${jwt}` } }),
+        fetch(`${API_BASE}/investigations/${id}/society/interactions`, { headers: { Authorization: `Bearer ${jwt}` } }),
         fetch(`${API_BASE}/investigations/${id}/claims`, { headers: { Authorization: `Bearer ${jwt}` } }),
         fetch(`${API_BASE}/investigations/${id}/debates`, { headers: { Authorization: `Bearer ${jwt}` } }),
         fetch(`${API_BASE}/investigations/${id}/evidence`, { headers: { Authorization: `Bearer ${jwt}` } }),
@@ -159,7 +174,14 @@ export default function WorkspaceApp() {
       ]);
 
       if (detailRes.ok) setInvDetail(await detailRes.json());
-      if (specsRes.ok) setSpecialists(await specsRes.json());
+      if (agentsRes.ok) {
+        const ags = await agentsRes.json();
+        setSocietyAgents(ags);
+        if (ags.length > 0 && !selectedAgent) {
+          setSelectedAgent(ags[0]);
+        }
+      }
+      if (interRes.ok) setInteractions(await interRes.json());
       if (claimsRes.ok) setClaims(await claimsRes.json());
       if (debatesRes.ok) setDebates(await debatesRes.json());
       if (evRes.ok) setEvidence(await evRes.json());
@@ -187,7 +209,7 @@ export default function WorkspaceApp() {
           company_type: "public",
           sector: newSector,
           depth: "comprehensive",
-          budget_limit_usd: 200.0
+          budget_limit_usd: 250.0
         })
       });
       const data = await res.json();
@@ -218,6 +240,40 @@ export default function WorkspaceApp() {
       }, 1500);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleIntervention = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedInvId || !selectedAgent || !interventionQuery.trim() || !token) return;
+    setInterventionLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/investigations/${selectedInvId}/society/intervene`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          agent_id: selectedAgent.agent_id,
+          message: interventionQuery
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setInterventionHistory(prev => [...prev, data]);
+        setInterventionQuery("");
+        // Refresh interactions
+        const interRes = await fetch(`${API_BASE}/investigations/${selectedInvId}/society/interactions`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (interRes.ok) setInteractions(await interRes.json());
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setInterventionLoading(false);
     }
   };
 
@@ -334,7 +390,7 @@ export default function WorkspaceApp() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#0b0d10] text-[#e1e4ea] font-sans">
-      {/* Sidebar: Navigation & Investigation Registry */}
+      {/* Sidebar: Navigation & Dossier Registry */}
       <aside className="w-80 border-r border-[#20252e] bg-[#0e1217] flex flex-col justify-between">
         <div className="flex flex-col flex-1 overflow-hidden">
           <div className="h-14 border-b border-[#20252e] px-4 flex items-center justify-between">
@@ -459,7 +515,9 @@ export default function WorkspaceApp() {
                 <div className="text-xs text-slate-400 flex items-center space-x-3 mt-0.5 font-mono">
                   <span>Sector: {invDetail.company.sector}</span>
                   <span>•</span>
-                  <span>Scope: {invDetail.scope.length} tracks</span>
+                  <span>Society: {societyAgents.length} Agents</span>
+                  <span>•</span>
+                  <span>Interactions: {interactions.length}</span>
                   <span>•</span>
                   <span>Cost: ${invDetail.current_cost_usd.toFixed(2)} USD</span>
                 </div>
@@ -469,12 +527,30 @@ export default function WorkspaceApp() {
               <div className="flex items-center space-x-3">
                 <div className="flex items-center bg-[#141922] p-1 rounded border border-[#20252e] text-xs font-medium">
                   <button
+                    onClick={() => setActiveTab("society")}
+                    className={`px-3 py-1.5 rounded transition-all cursor-pointer flex items-center space-x-1.5 ${
+                      activeTab === "society" ? "bg-emerald-950 text-emerald-300 border border-emerald-500/40" : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>Agent Society ({societyAgents.length})</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("timeline")}
+                    className={`px-3 py-1.5 rounded transition-all cursor-pointer flex items-center space-x-1.5 ${
+                      activeTab === "timeline" ? "bg-emerald-950 text-emerald-300 border border-emerald-500/40" : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    <Activity className="w-3.5 h-3.5" />
+                    <span>Live Interactions ({interactions.length})</span>
+                  </button>
+                  <button
                     onClick={() => setActiveTab("boardroom")}
                     className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
                       activeTab === "boardroom" ? "bg-emerald-950 text-emerald-300 border border-emerald-500/40" : "text-slate-400 hover:text-slate-200"
                     }`}
                   >
-                    Adversarial Boardroom
+                    Adversarial Debate
                   </button>
                   <button
                     onClick={() => setActiveTab("graph")}
@@ -493,14 +569,6 @@ export default function WorkspaceApp() {
                     Scenario Matrix
                   </button>
                   <button
-                    onClick={() => setActiveTab("evidence")}
-                    className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
-                      activeTab === "evidence" ? "bg-emerald-950 text-emerald-300 border border-emerald-500/40" : "text-slate-400 hover:text-slate-200"
-                    }`}
-                  >
-                    Evidence Provenance ({evidence.length})
-                  </button>
-                  <button
                     onClick={() => setActiveTab("reports")}
                     className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
                       activeTab === "reports" ? "bg-emerald-950 text-emerald-300 border border-emerald-500/40" : "text-slate-400 hover:text-slate-200"
@@ -516,140 +584,274 @@ export default function WorkspaceApp() {
                     className="px-3.5 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium flex items-center space-x-1.5 shadow-sm cursor-pointer"
                   >
                     <Play className="w-3.5 h-3.5" />
-                    <span>Run Investigation</span>
+                    <span>Run Society Pipeline</span>
                   </button>
                 )}
               </div>
             </header>
 
-            {/* Tab 1: Adversarial Boardroom */}
-            {activeTab === "boardroom" && (
+            {/* TAB 1: Agent Society & Individual Agent Workspace with Direct Intervention */}
+            {activeTab === "society" && (
               <div className="flex-1 overflow-hidden grid grid-cols-12 divide-x divide-[#20252e]">
-                {/* Specialists Column (Left 3 cols) */}
-                <div className="col-span-3 flex flex-col overflow-hidden bg-[#0e1217]">
+                {/* Left 4 Cols: Society Agents Roster */}
+                <div className="col-span-4 flex flex-col overflow-hidden bg-[#0e1217]">
                   <div className="p-3 border-b border-[#20252e] text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center justify-between">
-                    <span>Specialist Roster</span>
-                    <span className="text-emerald-400">{specialists.length} Deployed</span>
+                    <span>Society Population</span>
+                    <span className="text-emerald-400">{societyAgents.length} Agents</span>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                    {specialists.map((s) => (
-                      <div key={s.id} className="p-3 rounded bg-[#141922] border border-[#20252e] text-xs">
+                  <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+                    {societyAgents.map((ag) => (
+                      <button
+                        key={ag.id}
+                        onClick={() => setSelectedAgent(ag)}
+                        className={`w-full text-left p-3 rounded border transition-all cursor-pointer ${
+                          selectedAgent?.id === ag.id
+                            ? "bg-[#181f2a] border-emerald-500/50 text-slate-100"
+                            : "bg-[#12161e] border-[#20252e] text-slate-300 hover:border-slate-600"
+                        }`}
+                      >
                         <div className="flex items-center justify-between mb-1">
-                          <span className="font-semibold text-slate-200">{s.role_name}</span>
-                          <span className="font-mono text-emerald-400">{(s.confidence * 100).toFixed(0)}%</span>
+                          <span className="font-semibold text-xs text-slate-100 truncate">{ag.name}</span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#1c222b] text-emerald-400">
+                            {(ag.confidence * 100).toFixed(0)}% Conf
+                          </span>
                         </div>
-                        <p className="text-slate-400 text-[11px] leading-relaxed mb-2">
-                          {s.mandate}
-                        </p>
-                        <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-2 border-t border-[#20252e]">
-                          <span>{s.tokens_consumed} tokens</span>
-                          <span className="capitalize text-slate-300">{s.status}</span>
+                        <div className="text-[11px] font-medium text-slate-400">{ag.role}</div>
+                        <div className="text-[10px] text-slate-500 mt-1 line-clamp-1">{ag.specialization}</div>
+                        <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mt-2 pt-2 border-t border-[#20252e]">
+                          <span className="capitalize text-emerald-400">{ag.status}</span>
+                          <span>{ag.interaction_count} Interactions</span>
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
 
-                {/* Deliberation & Claims Floor (Center 6 cols) */}
-                <div className="col-span-6 flex flex-col overflow-hidden bg-[#0b0d10]">
-                  <div className="p-3 border-b border-[#20252e] text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center justify-between">
-                    <span>Adversarial Debate Floor & Claims</span>
-                    <span className="text-amber-400">Structured Deliberation</span>
-                  </div>
-                  
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    <div className="space-y-2">
-                      <div className="text-[11px] font-mono uppercase text-slate-400">Investigative Claims & Adjudication</div>
-                      {claims.map((c) => (
-                        <div 
-                          key={c.id} 
-                          className={`p-3.5 rounded border text-xs ${
-                            c.disputed 
-                              ? "bg-amber-950/20 border-amber-800/40 text-amber-100" 
-                              : "bg-[#141922] border-[#20252e] text-slate-200"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="font-mono text-[10px] uppercase px-1.5 py-0.5 rounded bg-[#1c222b] text-slate-300 border border-[#2d3748]">
-                              {c.specialist_id.replace(/_/g, " ")}
-                            </span>
-                            <span className={`text-[10px] font-mono uppercase font-semibold ${
-                              c.verdict === "supported" ? "text-emerald-400" : "text-amber-400"
-                            }`}>
-                              Verdict: {c.verdict}
+                {/* Right 8 Cols: Selected Agent Detailed Workspace & Live User Intervention Panel */}
+                <div className="col-span-8 flex flex-col overflow-hidden bg-[#0b0d10]">
+                  {selectedAgent ? (
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                      {/* Agent Header */}
+                      <div className="p-6 border-b border-[#20252e] bg-[#12161e]">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="text-xs font-mono uppercase text-emerald-400 tracking-wider mb-1">
+                              {selectedAgent.role}
+                            </div>
+                            <h2 className="text-xl font-serif font-bold text-slate-100">{selectedAgent.name}</h2>
+                            <p className="text-xs text-slate-400 mt-1">{selectedAgent.specialization}</p>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-xs font-mono px-2.5 py-1 rounded bg-[#1c222b] border border-[#2d3748] text-slate-200">
+                              Style: {selectedAgent.analytical_style}
                             </span>
                           </div>
-                          <p className="text-xs leading-relaxed">{c.statement}</p>
-                          {c.citations && c.citations.length > 0 && (
-                            <div className="mt-2.5 pt-2 border-t border-[#20252e]/80 flex flex-wrap gap-1.5">
-                              {c.citations.map((cit: any, i: number) => (
-                                <span key={i} className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/30">
-                                  [{cit.source_title.slice(0, 24)}... {cit.location}]
-                                </span>
+                        </div>
+
+                        <p className="text-xs text-slate-300 mt-3 p-3 rounded bg-[#0b0d10] border border-[#20252e] leading-relaxed">
+                          {selectedAgent.biography}
+                        </p>
+
+                        <div className="mt-3 text-xs">
+                          <span className="font-mono text-slate-400 text-[10px] uppercase">Current Mandate: </span>
+                          <span className="text-slate-200">{selectedAgent.mandate}</span>
+                        </div>
+                      </div>
+
+                      {/* Agent Current Position & Memory */}
+                      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                        <div>
+                          <h3 className="text-xs font-mono uppercase text-slate-400 tracking-wider mb-2">
+                            Current Epistemic Position & Findings
+                          </h3>
+                          <div className="p-4 rounded-lg bg-[#141922] border border-[#20252e] text-xs text-slate-200 leading-relaxed font-serif">
+                            {selectedAgent.current_position || "Preliminary research in progress."}
+                          </div>
+                        </div>
+
+                        {/* Interactive Direct Interrogation Console */}
+                        <div className="p-5 rounded-lg bg-[#12161e] border border-emerald-500/30">
+                          <div className="flex items-center space-x-2 text-xs font-medium text-emerald-400 mb-2">
+                            <MessageSquare className="w-4 h-4" />
+                            <span>Interrogate Specialist (Direct User Intervention)</span>
+                          </div>
+                          <p className="text-[11px] text-slate-400 mb-4">
+                            Directly question {selectedAgent.name}. The specialist will answer grounded in its mandate, verified disclosures, and current investigation evidence.
+                          </p>
+
+                          <form onSubmit={handleIntervention} className="space-y-3">
+                            <textarea
+                              value={interventionQuery}
+                              onChange={(e) => setInterventionQuery(e.target.value)}
+                              rows={3}
+                              placeholder={`Question ${selectedAgent.name} on ${selectedAgent.role.toLowerCase()} observations...`}
+                              className="w-full px-3 py-2 rounded bg-[#0b0d10] border border-[#20252e] text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                            />
+                            <div className="flex justify-end">
+                              <button
+                                type="submit"
+                                disabled={interventionLoading || !interventionQuery.trim()}
+                                className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                              >
+                                <Send className="w-3 h-3" />
+                                <span>{interventionLoading ? "Questioning..." : "Submit Question"}</span>
+                              </button>
+                            </div>
+                          </form>
+
+                          {/* Interrogation responses history */}
+                          {interventionHistory.length > 0 && (
+                            <div className="mt-4 pt-4 border-t border-[#20252e] space-y-3 text-xs">
+                              {interventionHistory.map((item, idx) => (
+                                <div key={idx} className="p-3 rounded bg-[#0b0d10] border border-[#20252e]">
+                                  <div className="text-[10px] font-mono text-emerald-400 uppercase">You Asked:</div>
+                                  <div className="text-slate-300 italic mb-2">"{item.user_query}"</div>
+                                  <div className="text-[10px] font-mono text-cyan-400 uppercase">{item.agent_name} Responded:</div>
+                                  <div className="text-slate-200 font-serif leading-relaxed">{item.agent_reply}</div>
+                                </div>
                               ))}
                             </div>
                           )}
                         </div>
-                      ))}
+                      </div>
                     </div>
-
-                    {debates.map((d) => (
-                      <div key={d.id} className="pt-4 border-t border-[#20252e]">
-                        <div className="text-xs font-medium text-slate-300 mb-3 flex items-center space-x-1.5">
-                          <Scale className="w-3.5 h-3.5 text-amber-400" />
-                          <span>Debate Session: {d.topic}</span>
-                        </div>
-                        <div className="space-y-2.5">
-                          {d.arguments.map((arg: any) => (
-                            <div 
-                              key={arg.id} 
-                              className={`p-3 rounded border text-xs ${
-                                arg.argument_type === "adjudication"
-                                  ? "bg-emerald-950/30 border-emerald-500/40 text-emerald-200"
-                                  : arg.argument_type === "challenge"
-                                  ? "bg-amber-950/20 border-amber-800/40 text-amber-200"
-                                  : "bg-[#141922] border-[#20252e] text-slate-300"
-                              }`}
-                            >
-                              <div className="flex items-center justify-between text-[10px] font-mono uppercase mb-1">
-                                <span className="font-semibold text-slate-200">{arg.specialist_id.replace(/_/g, " ")}</span>
-                                <span className="text-slate-400">{arg.argument_type}</span>
-                              </div>
-                              <p className="leading-relaxed">{arg.content}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Evidence Column (Right 3 cols) */}
-                <div className="col-span-3 flex flex-col overflow-hidden bg-[#0e1217]">
-                  <div className="p-3 border-b border-[#20252e] text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center justify-between">
-                    <span>Evidence Inspector</span>
-                    <span className="text-cyan-400">{evidence.length} Passages</span>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-3 space-y-3">
-                    {evidence.map((ev) => (
-                      <div key={ev.id} className="p-3 rounded bg-[#141922] border border-[#20252e] text-xs">
-                        <div className="text-[10px] font-mono text-slate-400 uppercase">{ev.publisher}</div>
-                        <div className="font-semibold text-slate-200 mt-0.5">{ev.source_title}</div>
-                        <p className="text-slate-300 text-[11px] italic mt-2 p-2 rounded bg-[#0b0d10] border border-[#20252e]">
-                          "{ev.extracted_passage}"
-                        </p>
-                        <div className="flex items-center justify-between mt-2 text-[10px] font-mono text-emerald-400">
-                          <span>{ev.location_reference}</span>
-                          <span>Auth: {(ev.reliability_score * 100).toFixed(0)}%</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center text-slate-500 text-xs">
+                      Select an agent from the society roster to inspect their mandate and initiate direct questioning.
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Tab 2: Corporate Relationship Graph */}
+            {/* TAB 2: Live Interaction Timeline */}
+            {activeTab === "timeline" && (
+              <div className="flex-1 overflow-y-auto p-8 max-w-5xl mx-auto w-full">
+                <div className="mb-6 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-serif text-slate-100">Live Multi-Agent Interaction Timeline</h2>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Chronological stream of agent-to-agent peer inquiries, evidence challenges, rebuttals, concessions, and coordinator assignments.
+                    </p>
+                  </div>
+                  <div className="text-xs font-mono px-3 py-1.5 rounded bg-[#161c24] border border-[#20252e] text-emerald-400">
+                    {interactions.length} Structured Interactions
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {interactions.map((msg) => (
+                    <div key={msg.id} className="p-4 rounded-lg bg-[#141922] border border-[#20252e] text-xs">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-semibold text-slate-200 font-mono text-[11px]">
+                            {msg.sender_agent_id.replace(/_/g, " ").toUpperCase()}
+                          </span>
+                          <span className="text-slate-500">→</span>
+                          <span className="text-slate-400 font-mono text-[11px]">
+                            {msg.recipient_agent_id.replace(/_/g, " ").toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded border ${
+                            msg.interaction_type === "CHALLENGE"
+                              ? "bg-amber-950/50 text-amber-400 border-amber-500/30"
+                              : msg.interaction_type === "CONCEDE"
+                              ? "bg-purple-950/50 text-purple-400 border-purple-500/30"
+                              : msg.interaction_type === "USER_INTERVENTION"
+                              ? "bg-blue-950/50 text-blue-400 border-blue-500/30"
+                              : "bg-emerald-950/50 text-emerald-400 border-emerald-500/30"
+                          }`}>
+                            {msg.interaction_type}
+                          </span>
+                          <span className="text-[10px] font-mono text-slate-500">Round {msg.round_number}</span>
+                        </div>
+                      </div>
+                      <p className="text-slate-300 font-serif leading-relaxed p-2.5 rounded bg-[#0b0d10] border border-[#20252e]">
+                        "{msg.content}"
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: Adversarial Debate Floor */}
+            {activeTab === "boardroom" && (
+              <div className="flex-1 overflow-y-auto p-8 max-w-5xl mx-auto w-full">
+                <div className="mb-6">
+                  <h2 className="text-xl font-serif text-slate-100">Adversarial Deliberation & Disputed Claims</h2>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Structured challenges, rebuttals, and final epistemic rulings between Bull, Bear, Forensic, and Adjudicator agents.
+                  </p>
+                </div>
+
+                <div className="space-y-4 mb-8">
+                  {claims.map((c) => (
+                    <div 
+                      key={c.id} 
+                      className={`p-4 rounded-lg border text-xs ${
+                        c.disputed 
+                          ? "bg-amber-950/20 border-amber-800/40 text-amber-100" 
+                          : "bg-[#141922] border-[#20252e] text-slate-200"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-mono text-[10px] uppercase px-2 py-0.5 rounded bg-[#1c222b] text-slate-300 border border-[#2d3748]">
+                          {c.specialist_id.replace(/_/g, " ")}
+                        </span>
+                        <span className={`text-[10px] font-mono uppercase font-semibold ${
+                          c.verdict === "supported" ? "text-emerald-400" : "text-amber-400"
+                        }`}>
+                          Verdict: {c.verdict}
+                        </span>
+                      </div>
+                      <p className="text-xs leading-relaxed font-serif">{c.statement}</p>
+                      {c.citations && c.citations.length > 0 && (
+                        <div className="mt-2.5 pt-2 border-t border-[#20252e]/80 flex flex-wrap gap-1.5">
+                          {c.citations.map((cit: any, i: number) => (
+                            <span key={i} className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/30">
+                              [{cit.source_title.slice(0, 24)}... {cit.location}]
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {debates.map((d) => (
+                  <div key={d.id} className="p-6 rounded-lg bg-[#12161e] border border-[#20252e] mb-6">
+                    <div className="text-xs font-semibold text-slate-200 mb-4 flex items-center space-x-2">
+                      <Scale className="w-4 h-4 text-amber-400" />
+                      <span>Debate Session: {d.topic}</span>
+                    </div>
+                    <div className="space-y-3">
+                      {d.arguments.map((arg: any) => (
+                        <div 
+                          key={arg.id} 
+                          className={`p-3.5 rounded border text-xs ${
+                            arg.argument_type === "adjudication"
+                              ? "bg-emerald-950/30 border-emerald-500/40 text-emerald-200"
+                              : arg.argument_type === "challenge"
+                              ? "bg-amber-950/20 border-amber-800/40 text-amber-200"
+                              : "bg-[#161c24] border-[#20252e] text-slate-300"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-[10px] font-mono uppercase mb-1.5">
+                            <span className="font-semibold text-slate-200">{arg.specialist_id.replace(/_/g, " ")}</span>
+                            <span className="text-slate-400">{arg.argument_type}</span>
+                          </div>
+                          <p className="leading-relaxed font-serif">{arg.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* TAB 4: Corporate Relationship Graph */}
             {activeTab === "graph" && (
               <div className="flex-1 overflow-y-auto p-8 max-w-5xl mx-auto w-full">
                 <div className="mb-6 flex items-center justify-between">
@@ -715,7 +917,7 @@ export default function WorkspaceApp() {
               </div>
             )}
 
-            {/* Tab 3: Scenario Matrix */}
+            {/* TAB 5: Scenario Matrix */}
             {activeTab === "scenarios" && (
               <div className="flex-1 overflow-y-auto p-8 max-w-5xl mx-auto w-full">
                 <div className="mb-6">
@@ -774,45 +976,7 @@ export default function WorkspaceApp() {
               </div>
             )}
 
-            {/* Tab 4: Evidence Provenance */}
-            {activeTab === "evidence" && (
-              <div className="flex-1 overflow-y-auto p-6 max-w-5xl mx-auto w-full">
-                <div className="mb-6">
-                  <h2 className="text-xl font-serif text-slate-100">Evidence Provenance & Verification Audit</h2>
-                  <p className="text-xs text-slate-400">
-                    Primary source documents ingested, passage extractions, checksums, and institutional reliability ratings.
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  {evidence.map((ev) => (
-                    <div key={ev.id} className="p-4 rounded-lg bg-[#141922] border border-[#20252e]">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/30">
-                          {ev.category.toUpperCase()}
-                        </span>
-                        <span className="text-xs font-mono text-slate-400">
-                          Reliability: {(ev.reliability_score * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                      <h3 className="font-medium text-slate-100 text-sm mb-1">{ev.source_title}</h3>
-                      <p className="text-xs text-slate-400 mb-3">Publisher: {ev.publisher} • Reference: {ev.location_reference}</p>
-                      
-                      <div className="p-3 rounded bg-[#0b0d10] border border-[#20252e] text-xs text-slate-200 font-serif leading-relaxed mb-3">
-                        "{ev.extracted_passage}"
-                      </div>
-
-                      <div className="text-[11px] text-emerald-400/90 font-mono flex items-center space-x-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>{ev.reliability_assessment}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Tab 5: Institutional Dossier */}
+            {/* TAB 6: Institutional Dossier */}
             {activeTab === "reports" && (
               <div className="flex-1 overflow-y-auto p-8 max-w-4xl mx-auto w-full">
                 {reports.length === 0 ? (
@@ -882,7 +1046,7 @@ export default function WorkspaceApp() {
                         {r.sections?.map((sec: any, idx: number) => (
                           <div key={idx} className="space-y-2">
                             <h3 className="text-sm font-semibold text-slate-100">{sec.title}</h3>
-                            <p className="text-xs text-slate-400 leading-relaxed">{sec.content}</p>
+                            <p className="text-xs text-slate-400 leading-relaxed font-serif">{sec.content}</p>
                           </div>
                         ))}
                       </div>
@@ -930,7 +1094,7 @@ export default function WorkspaceApp() {
           <div className="w-full max-w-lg bg-[#12161e] border border-[#20252e] rounded-lg p-6 shadow-2xl">
             <h2 className="text-lg font-serif text-slate-100 mb-1">Launch Company Investigation</h2>
             <p className="text-xs text-slate-400 mb-5">
-              Enter target corporate identity. Meridian will resolve entities, ingest primary disclosures, and activate the specialist roster.
+              Enter target corporate identity. Meridian will activate the 14-agent multi-specialist research society, ingest primary disclosures, and begin deliberation.
             </p>
 
             <form onSubmit={handleCreateInvestigation} className="space-y-4 text-xs">
@@ -988,7 +1152,7 @@ export default function WorkspaceApp() {
                   type="submit"
                   className="px-5 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow-sm cursor-pointer"
                 >
-                  Initiate Investigation
+                  Initiate Multi-Agent Society
                 </button>
               </div>
             </form>

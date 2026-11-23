@@ -11,18 +11,20 @@ from sqlalchemy import desc
 from database import init_db, get_db
 from models import (
     User, Organization, OrganizationMember, Company, Investigation,
-    InvestigationStatus, SpecialistRun, Source, EvidenceItem, Claim,
-    DebateSession, DebateArgument, Report, InvestigationEvent, CorporateRelationship
+    InvestigationStatus, SpecialistRun, SocietyAgent, AgentMemory,
+    PositionRevision, AgentInteraction, SimulationRun, Source, EvidenceItem,
+    Claim, DebateSession, DebateArgument, Report, InvestigationEvent, CorporateRelationship
 )
 from auth import (
     get_password_hash, verify_password, create_access_token,
     get_current_user, get_current_organization
 )
-from engine import run_investigation_pipeline, SPECIALIST_ROSTER
+from multi_agent_society_engine import MultiAgentSocietyEngine
+from engine import run_investigation_pipeline
 
 app = FastAPI(
-    title="MERIDIAN Enterprise Intelligence API",
-    version="1.0.0",
+    title="MERIDIAN Multi-Agent Society & Intelligence API",
+    version="2.0.0",
     docs_url="/api/docs",
     openapi_url="/api/openapi.json"
 )
@@ -39,7 +41,6 @@ app.add_middleware(
 def on_startup():
     init_db()
 
-# ---- Helper for strict tenant isolation ----
 def get_authorized_investigation(
     investigation_id: str,
     org: Organization,
@@ -85,6 +86,10 @@ class CreateInvestigationRequest(BaseModel):
     depth: str = "comprehensive"
     scope: List[str] = ["corporate_identity", "financials", "competitive", "market", "risks", "scenarios"]
     budget_limit_usd: float = 150.0
+
+class AgentInterventionRequest(BaseModel):
+    agent_id: str
+    message: str
 
 # ---- Auth Endpoints ----
 @app.post("/api/v1/auth/register", response_model=TokenResponse)
@@ -239,7 +244,7 @@ def start_investigation(
             job_db.close()
 
     background_tasks.add_task(run_job, inv.id)
-    return {"message": "Investigation pipeline launched successfully", "investigation_id": inv.id}
+    return {"message": "Multi-agent society investigation pipeline launched", "investigation_id": inv.id}
 
 @app.get("/api/v1/investigations/{id}")
 def get_investigation_detail(
@@ -265,7 +270,7 @@ def get_investigation_detail(
         "progress_percentage": inv.progress_percentage,
         "budget_limit_usd": inv.budget_limit_usd,
         "current_cost_usd": inv.current_cost_usd,
-        "specialists_count": len(inv.specialists),
+        "society_agents_count": len(inv.society_agents),
         "claims_count": len(inv.claims),
         "evidence_count": len(inv.evidence_items),
         "reports_count": len(inv.reports),
@@ -273,65 +278,127 @@ def get_investigation_detail(
         "completed_at": inv.completed_at.isoformat() if inv.completed_at else None
     }
 
-# ---- Corporate Graph Endpoints ----
-@app.get("/api/v1/investigations/{id}/graph")
-def get_corporate_graph(
+# ---------------- MULTI-AGENT SOCIETY ENDPOINTS ----------------
+
+@app.get("/api/v1/investigations/{id}/society/agents")
+def get_society_agents(
     id: str,
     org: Organization = Depends(get_current_organization),
     db: Session = Depends(get_db)
 ):
     inv = get_authorized_investigation(id, org, db)
-    rels = db.query(CorporateRelationship).filter(CorporateRelationship.investigation_id == inv.id).all()
-    
-    nodes_dict = {}
-    edges = []
-
-    # Center target company
-    nodes_dict[inv.company.id] = {
-        "id": inv.company.id,
-        "label": inv.company.name,
-        "type": "target_entity",
-        "sector": inv.company.sector,
-        "ticker": inv.company.ticker
-    }
-
-    for r in rels:
-        # Source node
-        if r.source_company_id not in nodes_dict:
-            src = r.source_company
-            nodes_dict[src.id] = {
-                "id": src.id,
-                "label": src.name,
-                "type": src.company_type,
-                "sector": src.sector,
-                "ticker": src.ticker
-            }
-        # Target node
-        if r.target_company_id not in nodes_dict:
-            tgt = r.target_company
-            nodes_dict[tgt.id] = {
-                "id": tgt.id,
-                "label": tgt.name,
-                "type": tgt.company_type,
-                "sector": tgt.sector,
-                "ticker": tgt.ticker
-            }
-
-        edges.append({
-            "id": r.id,
-            "source": r.source_company_id,
-            "target": r.target_company_id,
-            "relationship": r.relationship_type,
-            "description": r.description,
-            "confidence": r.confidence
+    agents = db.query(SocietyAgent).filter(SocietyAgent.investigation_id == inv.id).all()
+    results = []
+    for ag in agents:
+        results.append({
+            "id": ag.id,
+            "agent_id": ag.agent_id,
+            "name": ag.name,
+            "role": ag.role,
+            "specialization": ag.specialization,
+            "biography": ag.biography,
+            "expertise": ag.expertise,
+            "mandate": ag.mandate,
+            "analytical_style": ag.analytical_style,
+            "current_position": ag.current_position,
+            "confidence": ag.confidence,
+            "current_task": ag.current_task,
+            "status": ag.status,
+            "interaction_count": ag.interaction_count,
+            "tokens_consumed": ag.tokens_consumed,
+            "memories_count": len(ag.memories),
+            "revisions_count": len(ag.position_revisions)
         })
+    return results
 
+@app.get("/api/v1/investigations/{id}/society/agents/{agent_id}")
+def get_agent_profile(
+    id: str,
+    agent_id: str,
+    org: Organization = Depends(get_current_organization),
+    db: Session = Depends(get_db)
+):
+    inv = get_authorized_investigation(id, org, db)
+    agent = db.query(SocietyAgent).filter(
+        SocietyAgent.investigation_id == inv.id,
+        SocietyAgent.agent_id == agent_id
+    ).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Society agent not found")
+    
     return {
-        "nodes": list(nodes_dict.values()),
-        "edges": edges
+        "id": agent.id,
+        "agent_id": agent.agent_id,
+        "name": agent.name,
+        "role": agent.role,
+        "specialization": agent.specialization,
+        "biography": agent.biography,
+        "expertise": agent.expertise,
+        "mandate": agent.mandate,
+        "analytical_style": agent.analytical_style,
+        "current_position": agent.current_position,
+        "confidence": agent.confidence,
+        "current_task": agent.current_task,
+        "status": agent.status,
+        "interaction_count": agent.interaction_count,
+        "permitted_tools": agent.permitted_tools,
+        "memories": [{"type": m.memory_type, "content": m.content, "confidence": m.confidence} for m in agent.memories],
+        "position_revisions": [
+            {
+                "previous_position": r.previous_position,
+                "new_position": r.new_position,
+                "confidence": r.new_confidence,
+                "reason": r.reason_for_change,
+                "round": r.round_number
+            }
+            for r in agent.position_revisions
+        ]
     }
 
-# ---- Tenant-Isolated Boardroom Sub-Endpoints ----
+@app.get("/api/v1/investigations/{id}/society/interactions")
+def get_society_interactions(
+    id: str,
+    org: Organization = Depends(get_current_organization),
+    db: Session = Depends(get_db)
+):
+    inv = get_authorized_investigation(id, org, db)
+    interactions = db.query(AgentInteraction).filter(
+        AgentInteraction.investigation_id == inv.id
+    ).order_by(AgentInteraction.created_at).all()
+
+    return [
+        {
+            "id": i.id,
+            "sender_agent_id": i.sender_agent_id,
+            "recipient_agent_id": i.recipient_agent_id,
+            "interaction_type": i.interaction_type,
+            "content": i.content,
+            "round_number": i.round_number,
+            "created_at": i.created_at.isoformat()
+        }
+        for i in interactions
+    ]
+
+@app.post("/api/v1/investigations/{id}/society/intervene")
+def intervene_with_agent(
+    id: str,
+    req: AgentInterventionRequest,
+    org: Organization = Depends(get_current_organization),
+    db: Session = Depends(get_db)
+):
+    inv = get_authorized_investigation(id, org, db)
+    result = MultiAgentSocietyEngine.inject_user_intervention(
+        investigation_id=inv.id,
+        agent_id=req.agent_id,
+        message=req.message,
+        db=db
+    )
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+# ---------------- EXISTING SUB-RESOURCE ENDPOINTS ----------------
+
 @app.get("/api/v1/investigations/{id}/specialists")
 def get_specialists(
     id: str,
@@ -339,6 +406,24 @@ def get_specialists(
     db: Session = Depends(get_db)
 ):
     inv = get_authorized_investigation(id, org, db)
+    # Return society agents if instantiated, otherwise legacy specialist_runs
+    agents = db.query(SocietyAgent).filter(SocietyAgent.investigation_id == inv.id).all()
+    if agents:
+        return [
+            {
+                "id": s.id,
+                "specialist_id": s.agent_id,
+                "role_name": s.role,
+                "mandate": s.mandate,
+                "status": s.status.lower(),
+                "confidence": s.confidence,
+                "current_position": s.current_position,
+                "tokens_consumed": s.tokens_consumed,
+                "cost_usd": s.cost_usd
+            }
+            for s in agents
+        ]
+    
     specs = db.query(SpecialistRun).filter(SpecialistRun.investigation_id == inv.id).all()
     return [
         {
@@ -464,6 +549,60 @@ def get_reports(
         }
         for r in reports
     ]
+
+@app.get("/api/v1/investigations/{id}/graph")
+def get_corporate_graph(
+    id: str,
+    org: Organization = Depends(get_current_organization),
+    db: Session = Depends(get_db)
+):
+    inv = get_authorized_investigation(id, org, db)
+    rels = db.query(CorporateRelationship).filter(CorporateRelationship.investigation_id == inv.id).all()
+    
+    nodes_dict = {}
+    edges = []
+
+    nodes_dict[inv.company.id] = {
+        "id": inv.company.id,
+        "label": inv.company.name,
+        "type": "target_entity",
+        "sector": inv.company.sector,
+        "ticker": inv.company.ticker
+    }
+
+    for r in rels:
+        if r.source_company_id not in nodes_dict:
+            src = r.source_company
+            nodes_dict[src.id] = {
+                "id": src.id,
+                "label": src.name,
+                "type": src.company_type,
+                "sector": src.sector,
+                "ticker": src.ticker
+            }
+        if r.target_company_id not in nodes_dict:
+            tgt = r.target_company
+            nodes_dict[tgt.id] = {
+                "id": tgt.id,
+                "label": tgt.name,
+                "type": tgt.company_type,
+                "sector": tgt.sector,
+                "ticker": tgt.ticker
+            }
+
+        edges.append({
+            "id": r.id,
+            "source": r.source_company_id,
+            "target": r.target_company_id,
+            "relationship": r.relationship_type,
+            "description": r.description,
+            "confidence": r.confidence
+        })
+
+    return {
+        "nodes": list(nodes_dict.values()),
+        "edges": edges
+    }
 
 # ---- SSE Realtime Stream with Last-Event-ID Resume ----
 @app.get("/api/v1/investigations/{id}/stream")
