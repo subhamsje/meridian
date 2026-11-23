@@ -63,6 +63,7 @@ interface LivingKnowledgeGraphProps {
   investigatingEntityNames?: string[];
   searchQuery?: string;
   typeFilter?: string;
+  showInternalInspector?: boolean;
 }
 
 // Institutional Category Palette: Restrained, High-Contrast, Professional
@@ -75,84 +76,84 @@ export const INSTITUTIONAL_CATEGORIES: Record<string, {
   description: string;
 }> = {
   target_entity: {
-    label: "Subject Entity",
-    fill: "#1e2229",
-    border: "#94a3b8",
-    text: "#f8fafc",
-    accent: "#cbd5e1",
-    description: "Primary target under investigation (Palantir Technologies)"
+    label: "Subject Entity (PLTR)",
+    fill: "#1e2430",
+    border: "#3b82f6",
+    text: "#ffffff",
+    accent: "#60a5fa",
+    description: "Primary corporate target under forensic research investigation"
   },
   government_customer: {
     label: "Sovereign / Defense Customer",
-    fill: "#15202e",
-    border: "#3b82f6",
-    text: "#dbeafe",
-    accent: "#60a5fa",
-    description: "Federal, intelligence, and defense procurement accounts"
+    fill: "#15202b",
+    border: "#2563eb",
+    text: "#93c5fd",
+    accent: "#3b82f6",
+    description: "National security, intelligence, and defense procurement authorities"
   },
   defense_contract: {
     label: "Defense Program / Contract",
-    fill: "#1a1c30",
-    border: "#6366f1",
-    text: "#e0e7ff",
-    accent: "#818cf8",
-    description: "Formally appropriated defense software & hardware programs"
+    fill: "#1a1c2e",
+    border: "#4f46e5",
+    text: "#c7d2fe",
+    accent: "#6366f1",
+    description: "Government military and modernization programs (TITAN, Maven, Army Vantage)"
   },
   cloud_infrastructure: {
-    label: "Cloud & Sovereign Infrastructure",
-    fill: "#122627",
-    border: "#14b8a6",
-    text: "#ccfbf1",
-    accent: "#2dd4bf",
-    description: "IL-5/IL-6 compliant sovereign cloud deployment hosts"
+    label: "Cloud & Sovereign Infra",
+    fill: "#112624",
+    border: "#0d9488",
+    text: "#99f6e4",
+    accent: "#14b8a6",
+    description: "Hyperscale cloud partners hosting classified sovereign compute"
   },
   commercial_customer: {
     label: "Commercial Enterprise Client",
-    fill: "#12251e",
-    border: "#10b981",
-    text: "#d1fae5",
-    accent: "#34d399",
-    description: "Private sector enterprise customer cohorts"
+    fill: "#14231b",
+    border: "#059669",
+    text: "#a7f3d0",
+    accent: "#10b981",
+    description: "Fortune 500 enterprise customers deploying Foundry/AIP platforms"
   },
   core_platform: {
     label: "Core Software Platform",
-    fill: "#221a30",
-    border: "#8b5cf6",
-    text: "#ede9fe",
-    accent: "#a78bfa",
-    description: "Proprietary software suites (AIP, Foundry, Gotham, Apollo)"
+    fill: "#291f16",
+    border: "#d97706",
+    text: "#fde68a",
+    accent: "#f59e0b",
+    description: "Proprietary software architectures (Foundry, Gotham, Apollo, AIP)"
   },
   competitor: {
     label: "Market Competitor",
-    fill: "#281e18",
-    border: "#f59e0b",
-    text: "#fef3c7",
-    accent: "#fbbf24",
-    description: "Direct enterprise data & analytics market rivals"
+    fill: "#28171a",
+    border: "#dc2626",
+    text: "#fecaca",
+    accent: "#ef4444",
+    description: "Enterprise software, defense analytics, or hyperscaler cloud competition"
   },
   leadership: {
-    label: "Key Executive / Director",
-    fill: "#28171d",
-    border: "#f43f5e",
-    text: "#ffe4e6",
-    accent: "#fb7185",
-    description: "Executive leadership & founders with Class F voting shares"
+    label: "Executive Leadership",
+    fill: "#281726",
+    border: "#db2777",
+    text: "#fbcfe8",
+    accent: "#ec4899",
+    description: "Named executive officers, founders, and governance directors"
   },
   regulatory_body: {
-    label: "Regulatory & Oversight Body",
-    fill: "#181d24",
-    border: "#64748b",
-    text: "#e2e8f0",
-    accent: "#94a3b8",
-    description: "Securities, defense compliance, and audit authorities"
+    label: "Regulatory Oversight Body",
+    fill: "#221c2b",
+    border: "#7c3aed",
+    text: "#ddd6fe",
+    accent: "#8b5cf6",
+    description: "Securities, audit, defense procurement, or antitrust regulatory agencies"
   },
   default: {
-    label: "Institutional Entity",
-    fill: "#181b1f",
-    border: "#4b5563",
-    text: "#e5e7eb",
-    accent: "#9ca3af",
-    description: "General verified corporate or government entity"
+    label: "Corporate Connection",
+    fill: "#1a1e24",
+    border: "#475569",
+    text: "#cbd5e1",
+    accent: "#64748b",
+    description: "Associated institutional entity or transaction counterpart"
   }
 };
 
@@ -166,55 +167,34 @@ export default function LivingKnowledgeGraph({
   affectedEntityNames = [],
   investigatingEntityNames = [],
   searchQuery = "",
-  typeFilter = "ALL"
+  typeFilter = "ALL",
+  showInternalInspector = false
 }: LivingKnowledgeGraphProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Camera & Interaction State
-  const [camera, setCamera] = useState({ x: 0, y: 0, zoom: 1 });
+  const [camera, setCamera] = useState({ x: 0, y: 0, zoom: 0.9 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
   const [hoveredEdge, setHoveredEdge] = useState<GraphEdge | null>(null);
   const [draggedNode, setDraggedNode] = useState<GraphNode | null>(null);
-
-  // Layout & Display Controls
-  const [layoutMode, setLayoutMode] = useState<"force" | "radial" | "clustered">("force");
   const [isSimulating, setIsSimulating] = useState(true);
+  const [layoutMode, setLayoutMode] = useState<"force" | "radial" | "clustered">("force");
   const [showEdgeLabels, setShowEdgeLabels] = useState(true);
-  const [showLegend, setShowLegend] = useState(true);
   const [selectedRelFilter, setSelectedRelFilter] = useState<string>("ALL");
-  const [showLeftExplorer, setShowLeftExplorer] = useState(false);
-  const [localSearch, setLocalSearch] = useState("");
+  const [hasAutoFramed, setHasAutoFramed] = useState(false);
 
-  // Center camera on a specific node
-  const centerOnNode = useCallback((node: GraphNode) => {
-    const simNode = simNodesRef.current.find(n => n.id === node.id) || node;
-    if (simNode.x !== undefined && simNode.y !== undefined) {
-      setCamera({ x: -simNode.x * 1.3, y: -simNode.y * 1.3, zoom: 1.3 });
-    }
-    onSelectNode(node);
-    onSelectEdge(null);
-  }, [onSelectNode, onSelectEdge]);
-
-  // Compute connections for selected node
-  const nodeConnections = useMemo(() => {
-    if (!selectedNode) return { inbound: [], outbound: [] };
-    const inbound: Array<{ edge: GraphEdge; neighbor?: GraphNode }> = [];
-    const outbound: Array<{ edge: GraphEdge; neighbor?: GraphNode }> = [];
-    const nodeMap = new Map<string, GraphNode>();
-    rawNodes.forEach(n => nodeMap.set(n.id, n));
-
+  // Compute node connection degrees
+  const degreeMap = useMemo(() => {
+    const map = new Map<string, number>();
     rawEdges.forEach(e => {
-      if (e.source === selectedNode.id) {
-        outbound.push({ edge: e, neighbor: nodeMap.get(e.target) });
-      } else if (e.target === selectedNode.id) {
-        inbound.push({ edge: e, neighbor: nodeMap.get(e.source) });
-      }
+      map.set(e.source, (map.get(e.source) || 0) + 1);
+      map.set(e.target, (map.get(e.target) || 0) + 1);
     });
-    return { inbound, outbound };
-  }, [selectedNode, rawNodes, rawEdges]);
+    return map;
+  }, [rawEdges]);
 
   // Local mutable node/edge simulation state
   const simNodesRef = useRef<GraphNode[]>([]);
@@ -226,18 +206,63 @@ export default function LivingKnowledgeGraph({
     rawEdges.forEach(e => {
       if (e.relationship) types.add(e.relationship);
     });
-    return Array.from(types);
+    return Array.from(types).sort();
   }, [rawEdges]);
 
-  // Compute degree map for node sizing
-  const degreeMap = useMemo(() => {
-    const map = new Map<string, number>();
-    rawEdges.forEach(e => {
-      map.set(e.source, (map.get(e.source) || 0) + 1);
-      map.set(e.target, (map.get(e.target) || 0) + 1);
+  // Fit to View Calculation
+  const fitToView = useCallback((customNodes?: GraphNode[]) => {
+    const nodes = customNodes || simNodesRef.current;
+    if (!nodes || nodes.length === 0) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const width = canvas.width || 800;
+    const height = canvas.height || 600;
+
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    nodes.forEach(n => {
+      const r = n.radius || 16;
+      const x = n.x ?? 0;
+      const y = n.y ?? 0;
+      if (x - r < minX) minX = x - r;
+      if (x + r > maxX) maxX = x + r;
+      if (y - r < minY) minY = y - r;
+      if (y + r > maxY) maxY = y + r;
     });
-    return map;
-  }, [rawEdges]);
+
+    if (!isFinite(minX) || !isFinite(maxX)) return;
+
+    const spanX = Math.max(120, maxX - minX);
+    const spanY = Math.max(120, maxY - minY);
+    const padding = 70;
+
+    const zoomX = (width - padding * 2) / spanX;
+    const zoomY = (height - padding * 2) / spanY;
+    const optimalZoom = Math.max(0.45, Math.min(1.2, Math.min(zoomX, zoomY)));
+
+    const midX = (minX + maxX) / 2;
+    const midY = (minY + maxY) / 2;
+
+    setCamera({
+      x: -midX * optimalZoom,
+      y: -midY * optimalZoom,
+      zoom: optimalZoom
+    });
+  }, []);
+
+  // Center camera on a specific node
+  const centerOnNode = useCallback((node: GraphNode) => {
+    const simNode = simNodesRef.current.find(n => n.id === node.id) || node;
+    const targetZoom = Math.max(camera.zoom, 1.1);
+    if (simNode.x !== undefined && simNode.y !== undefined) {
+      setCamera({ 
+        x: -simNode.x * targetZoom, 
+        y: -simNode.y * targetZoom, 
+        zoom: targetZoom 
+      });
+    }
+    onSelectNode(node);
+    onSelectEdge(null);
+  }, [camera.zoom, onSelectNode, onSelectEdge]);
 
   // Initialize and lay out nodes
   useEffect(() => {
@@ -254,10 +279,10 @@ export default function LivingKnowledgeGraph({
       const isTarget = n.type === "target_entity" || n.label.toLowerCase().includes("palantir");
 
       // Defensible radius based on connection degree and target status
-      let radius = 13;
-      if (isTarget) radius = 26;
-      else if (degree >= 5) radius = 18;
-      else if (degree >= 3) radius = 15;
+      let radius = 12;
+      if (isTarget) radius = 24;
+      else if (degree >= 5) radius = 17;
+      else if (degree >= 3) radius = 14;
 
       if (existing && layoutMode === "force") {
         return {
@@ -278,42 +303,40 @@ export default function LivingKnowledgeGraph({
         x = 0;
         y = 0;
       } else if (layoutMode === "radial") {
-        // Concentric rings by category hierarchy
-        let ringRadius = 240;
+        let ringRadius = 180;
         let angleOffset = (idx / total) * Math.PI * 2;
-        if (n.type === "core_platform") { ringRadius = 150; }
-        else if (n.type === "government_customer" || n.type === "defense_contract") { ringRadius = 250; }
-        else if (n.type === "commercial_customer") { ringRadius = 330; }
-        else if (n.type === "cloud_infrastructure") { ringRadius = 390; }
-        else if (n.type === "competitor") { ringRadius = 450; }
-        else if (n.type === "leadership") { ringRadius = 190; }
-        else if (n.type === "regulatory_body") { ringRadius = 300; }
+        if (n.type === "core_platform") { ringRadius = 120; }
+        else if (n.type === "government_customer" || n.type === "defense_contract") { ringRadius = 190; }
+        else if (n.type === "commercial_customer") { ringRadius = 260; }
+        else if (n.type === "cloud_infrastructure") { ringRadius = 310; }
+        else if (n.type === "competitor") { ringRadius = 360; }
+        else if (n.type === "leadership") { ringRadius = 150; }
+        else if (n.type === "regulatory_body") { ringRadius = 240; }
 
         x = Math.cos(angleOffset) * ringRadius;
         y = Math.sin(angleOffset) * ringRadius;
       } else if (layoutMode === "clustered") {
-        // Quadrant spatial domain clustering
         let cx = 0;
         let cy = 0;
         if (n.type === "government_customer" || n.type === "defense_contract") {
-          cx = -260; cy = -180; // Top-Left: Defense & Sovereign
+          cx = -180; cy = -130; // Defense & Sovereign
         } else if (n.type === "commercial_customer") {
-          cx = 260; cy = -180; // Top-Right: Commercial Enterprise
+          cx = 180; cy = -130; // Commercial Enterprise
         } else if (n.type === "cloud_infrastructure" || n.type === "core_platform") {
-          cx = -260; cy = 180; // Bottom-Left: Infrastructure & Tech
+          cx = -180; cy = 130; // Infrastructure & Tech
         } else if (n.type === "competitor" || n.type === "leadership" || n.type === "regulatory_body") {
-          cx = 260; cy = 180; // Bottom-Right: Market & Governance
+          cx = 180; cy = 130; // Market & Governance
         }
         const offsetAngle = (idx % 8) * (Math.PI / 4);
-        const offsetDist = 50 + (idx % 3) * 35;
+        const offsetDist = 35 + (idx % 3) * 25;
         x = cx + Math.cos(offsetAngle) * offsetDist;
         y = cy + Math.sin(offsetAngle) * offsetDist;
       } else {
-        // Standard angular distribution for force layout
+        // Compact angular distribution for force layout
         const angle = (idx / total) * Math.PI * 2;
-        const dist = 180 + (idx % 4) * 60;
-        x = Math.cos(angle) * dist + (Math.random() - 0.5) * 20;
-        y = Math.sin(angle) * dist + (Math.random() - 0.5) * 20;
+        const dist = 140 + (idx % 4) * 45;
+        x = Math.cos(angle) * dist + (Math.random() - 0.5) * 15;
+        y = Math.sin(angle) * dist + (Math.random() - 0.5) * 15;
       }
 
       return {
@@ -328,24 +351,28 @@ export default function LivingKnowledgeGraph({
 
     simNodesRef.current = initializedNodes;
     simEdgesRef.current = rawEdges;
-  }, [rawNodes, rawEdges, layoutMode, degreeMap]);
+
+    if (!hasAutoFramed) {
+      fitToView(initializedNodes);
+      setHasAutoFramed(true);
+    }
+  }, [rawNodes, rawEdges, layoutMode, degreeMap, hasAutoFramed, fitToView]);
 
   // First-degree neighbor set for selected or hovered node
   const activeNeighborhood = useMemo(() => {
-    const active = selectedNode || hoveredNode;
-    if (!active) return null;
+    const focusNode = hoveredNode || selectedNode;
+    if (!focusNode) return null;
 
     const neighborIds = new Set<string>();
     const incidentEdgeIds = new Set<string>();
 
-    neighborIds.add(active.id);
+    neighborIds.add(focusNode.id);
 
     simEdgesRef.current.forEach(e => {
-      if (e.source === active.id) {
+      if (e.source === focusNode.id) {
         neighborIds.add(e.target);
         incidentEdgeIds.add(e.id);
-      }
-      if (e.target === active.id) {
+      } else if (e.target === focusNode.id) {
         neighborIds.add(e.source);
         incidentEdgeIds.add(e.id);
       }
@@ -354,7 +381,37 @@ export default function LivingKnowledgeGraph({
     return { neighborIds, incidentEdgeIds };
   }, [selectedNode, hoveredNode]);
 
-  // Canvas Render Loop with Restrained Physics
+  // Native non-passive Wheel Event Isolation (Prevents window scrolling & zooms towards cursor)
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheelNative = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const rect = container.getBoundingClientRect();
+      const mouseScreenX = e.clientX - rect.left - rect.width / 2;
+      const mouseScreenY = e.clientY - rect.top - rect.height / 2;
+
+      const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
+
+      setCamera(prev => {
+        const newZoom = Math.max(0.35, Math.min(2.4, prev.zoom * zoomFactor));
+        const scaleChange = newZoom / prev.zoom;
+        const newX = mouseScreenX - (mouseScreenX - prev.x) * scaleChange;
+        const newY = mouseScreenY - (mouseScreenY - prev.y) * scaleChange;
+        return { x: newX, y: newY, zoom: newZoom };
+      });
+    };
+
+    container.addEventListener("wheel", handleWheelNative, { passive: false });
+    return () => {
+      container.removeEventListener("wheel", handleWheelNative);
+    };
+  }, []);
+
+  // Canvas Render Loop with Restrained Physics & ResizeObserver
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -364,12 +421,21 @@ export default function LivingKnowledgeGraph({
     let width = (canvas.width = canvas.parentElement?.clientWidth || 800);
     let height = (canvas.height = canvas.parentElement?.clientHeight || 600);
 
-    const handleResize = () => {
-      if (!canvas || !canvas.parentElement) return;
-      width = canvas.width = canvas.parentElement.clientWidth;
-      height = canvas.height = canvas.parentElement.clientHeight;
-    };
-    window.addEventListener("resize", handleResize);
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width: newWidth, height: newHeight } = entry.contentRect;
+        if (newWidth > 0 && newHeight > 0) {
+          canvas.width = newWidth;
+          canvas.height = newHeight;
+          width = newWidth;
+          height = newHeight;
+        }
+      }
+    });
+
+    if (canvas.parentElement) {
+      resizeObserver.observe(canvas.parentElement);
+    }
 
     let animFrame: number;
 
@@ -379,7 +445,7 @@ export default function LivingKnowledgeGraph({
       const edges = simEdgesRef.current;
       const nLen = nodes.length;
 
-      // 1. Repulsion (Coulomb)
+      // 1. Repulsion (Coulomb) - Bounded
       for (let i = 0; i < nLen; i++) {
         for (let j = i + 1; j < nLen; j++) {
           const a = nodes[i];
@@ -389,8 +455,8 @@ export default function LivingKnowledgeGraph({
           const distSq = dx * dx + dy * dy + 0.01;
           const dist = Math.sqrt(distSq);
 
-          if (dist < 280) {
-            const force = (280 - dist) / dist * 0.045;
+          if (dist < 200) {
+            const force = (200 - dist) / dist * 0.035;
             if (!a.isDragging && a.type !== "target_entity") {
               a.vx = (a.vx || 0) - dx * force;
               a.vy = (a.vy || 0) - dy * force;
@@ -403,7 +469,7 @@ export default function LivingKnowledgeGraph({
         }
       }
 
-      // 2. Attraction along edges (Hooke)
+      // 2. Attraction along edges (Hooke) - Bounded
       const nodeMap = new Map<string, GraphNode>();
       nodes.forEach(n => nodeMap.set(n.id, n));
 
@@ -415,16 +481,16 @@ export default function LivingKnowledgeGraph({
         const dx = (tgt.x || 0) - (src.x || 0);
         const dy = (tgt.y || 0) - (src.y || 0);
         const dist = Math.sqrt(dx * dx + dy * dy) + 0.01;
-        const targetDist = 170;
-        const force = (dist - targetDist) * 0.0025;
+        const targetDist = 120;
+        const force = (dist - targetDist) * 0.003;
 
         if (!src.isDragging && src.type !== "target_entity") {
-          src.vx = (src.vx || 0) + (dx / dist) * force * 12;
-          src.vy = (src.vy || 0) + (dy / dist) * force * 12;
+          src.vx = (src.vx || 0) + (dx / dist) * force * 10;
+          src.vy = (src.vy || 0) + (dy / dist) * force * 10;
         }
         if (!tgt.isDragging && tgt.type !== "target_entity") {
-          tgt.vx = (tgt.vx || 0) - (dx / dist) * force * 12;
-          tgt.vy = (tgt.vy || 0) - (dy / dist) * force * 12;
+          tgt.vx = (tgt.vx || 0) - (dx / dist) * force * 10;
+          tgt.vy = (tgt.vy || 0) - (dy / dist) * force * 10;
         }
       });
 
@@ -438,13 +504,13 @@ export default function LivingKnowledgeGraph({
         if (n.isDragging) return;
 
         const distCenter = Math.sqrt((n.x || 0) * (n.x || 0) + (n.y || 0) * (n.y || 0));
-        if (distCenter > 480) {
-          n.vx = (n.vx || 0) - (n.x || 0) * 0.0015;
-          n.vy = (n.vy || 0) - (n.y || 0) * 0.0015;
+        if (distCenter > 240) {
+          n.vx = (n.vx || 0) - (n.x || 0) * 0.002;
+          n.vy = (n.vy || 0) - (n.y || 0) * 0.002;
         }
 
-        n.vx = (n.vx || 0) * 0.86;
-        n.vy = (n.vy || 0) * 0.86;
+        n.vx = (n.vx || 0) * 0.85;
+        n.vy = (n.vy || 0) * 0.85;
         n.x = (n.x || 0) + (n.vx || 0);
         n.y = (n.y || 0) + (n.vy || 0);
       });
@@ -453,18 +519,17 @@ export default function LivingKnowledgeGraph({
     const render = () => {
       stepPhysics();
 
-      ctx.save();
       ctx.clearRect(0, 0, width, height);
 
-      // Graphite Foundation Background: #111315
-      ctx.fillStyle = "#111315";
+      // Deep Dark Workstation Canvas Background
+      ctx.fillStyle = "#0d0f12";
       ctx.fillRect(0, 0, width, height);
 
-      // Subtle Coordinate Grid Matrix
+      // Subtle Precision Coordinate Grid
       ctx.save();
-      ctx.strokeStyle = "#1a1e24";
+      ctx.strokeStyle = "#16191e";
       ctx.lineWidth = 1;
-      const gridSize = 48 * camera.zoom;
+      const gridSize = 40 * camera.zoom;
       const offsetX = (width / 2 + camera.x) % gridSize;
       const offsetY = (height / 2 + camera.y) % gridSize;
 
@@ -483,6 +548,7 @@ export default function LivingKnowledgeGraph({
       ctx.restore();
 
       // Camera transformation
+      ctx.save();
       ctx.translate(width / 2 + camera.x, height / 2 + camera.y);
       ctx.scale(camera.zoom, camera.zoom);
 
@@ -494,8 +560,10 @@ export default function LivingKnowledgeGraph({
       const isNodeMatching = (n: GraphNode) => {
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase();
-          const match = n.label.toLowerCase().includes(q) || (n.type && n.type.toLowerCase().includes(q));
-          if (!match) return false;
+          const matches = n.label.toLowerCase().includes(q) || 
+                          (n.ticker && n.ticker.toLowerCase().includes(q)) ||
+                          (n.description && n.description.toLowerCase().includes(q));
+          if (!matches) return false;
         }
         if (typeFilter && typeFilter !== "ALL") {
           return n.type?.toUpperCase() === typeFilter.toUpperCase();
@@ -509,6 +577,54 @@ export default function LivingKnowledgeGraph({
         }
         return true;
       };
+
+      // ---------------- LEVEL OF DETAIL 1: CLUSTER REGIONS (Far Zoom < 0.7) ----------------
+      if (camera.zoom < 0.72) {
+        ctx.save();
+        const clusters: Record<string, { label: string; color: string; xs: number[]; ys: number[] }> = {
+          defense: { label: "Sovereign & Defense", color: "rgba(37, 99, 235, 0.06)", xs: [], ys: [] },
+          commercial: { label: "Commercial Enterprise", color: "rgba(16, 185, 129, 0.06)", xs: [], ys: [] },
+          infra: { label: "Cloud & Sovereign Infra", color: "rgba(20, 184, 166, 0.06)", xs: [], ys: [] },
+          market: { label: "Competitors & Leadership", color: "rgba(239, 68, 68, 0.06)", xs: [], ys: [] }
+        };
+
+        nodes.forEach(n => {
+          let cKey = "commercial";
+          if (n.type === "government_customer" || n.type === "defense_contract") cKey = "defense";
+          else if (n.type === "cloud_infrastructure" || n.type === "core_platform") cKey = "infra";
+          else if (n.type === "competitor" || n.type === "leadership" || n.type === "regulatory_body") cKey = "market";
+          
+          if (n.type !== "target_entity") {
+            clusters[cKey].xs.push(n.x || 0);
+            clusters[cKey].ys.push(n.y || 0);
+          }
+        });
+
+        Object.values(clusters).forEach(cl => {
+          if (cl.xs.length >= 2) {
+            const avgX = cl.xs.reduce((a, b) => a + b, 0) / cl.xs.length;
+            const avgY = cl.ys.reduce((a, b) => a + b, 0) / cl.ys.length;
+            let maxR = 60;
+            for (let i = 0; i < cl.xs.length; i++) {
+              const d = Math.sqrt((cl.xs[i] - avgX) ** 2 + (cl.ys[i] - avgY) ** 2);
+              if (d + 35 > maxR) maxR = d + 35;
+            }
+
+            ctx.beginPath();
+            ctx.arc(avgX, avgY, maxR, 0, Math.PI * 2);
+            ctx.fillStyle = cl.color;
+            ctx.fill();
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.04)";
+            ctx.stroke();
+
+            ctx.font = "600 11px Inter, sans-serif";
+            ctx.fillStyle = "rgba(160, 167, 177, 0.4)";
+            ctx.textAlign = "center";
+            ctx.fillText(cl.label.toUpperCase(), avgX, avgY - maxR + 16);
+          }
+        });
+        ctx.restore();
+      }
 
       // ---------------- 1. DRAW EDGES ----------------
       edges.forEach(e => {
@@ -542,9 +658,8 @@ export default function LivingKnowledgeGraph({
         ctx.moveTo(sx, sy);
         ctx.lineTo(tx, ty);
 
-        // Edge styling: restrained strokes without neon glow
         if (isEdgeSelected) {
-          ctx.strokeStyle = "#3b82f6"; // Primary blue
+          ctx.strokeStyle = "#3b82f6";
           ctx.lineWidth = 2.4;
         } else if (isEdgeHovered) {
           ctx.strokeStyle = "#60a5fa";
@@ -553,7 +668,7 @@ export default function LivingKnowledgeGraph({
           ctx.strokeStyle = "#475569";
           ctx.lineWidth = 1.6;
         } else {
-          ctx.strokeStyle = "#272e38"; // Subtle graphite stroke
+          ctx.strokeStyle = "#272e38";
           ctx.lineWidth = 1.0;
         }
         ctx.stroke();
@@ -562,9 +677,9 @@ export default function LivingKnowledgeGraph({
         const dx = tx - sx;
         const dy = ty - sy;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist > 40 && passesRelFilter) {
+        if (dist > 35 && passesRelFilter && camera.zoom > 0.6) {
           const targetRadius = tgt.radius || 14;
-          const arrowOffset = targetRadius + 6;
+          const arrowOffset = targetRadius + 5;
           const ax = tx - (dx / dist) * arrowOffset;
           const ay = ty - (dy / dist) * arrowOffset;
 
@@ -586,39 +701,39 @@ export default function LivingKnowledgeGraph({
           ctx.fill();
         }
 
-        // Relationship label pill (visible on zoom > 1.15 or when active/selected)
+        // Relationship label pill: Level of Detail (Only shown if close zoom or selected)
         const shouldShowEdgeLabel = showEdgeLabels && passesRelFilter && (
-          isEdgeSelected || isEdgeHovered || isIncident || camera.zoom > 1.2
+          isEdgeSelected || isEdgeHovered || (isIncident && camera.zoom > 1.05) || camera.zoom > 1.3
         );
 
         if (shouldShowEdgeLabel) {
           const midX = (sx + tx) / 2;
           const midY = (sy + ty) / 2;
-          const relText = e.relationship.replace(/_/g, " ");
+          const relText = (e.relationship || "RELATED_TO").replace(/_/g, " ");
 
           ctx.font = "500 8.5px Inter, -apple-system, sans-serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
 
           const textMetrics = ctx.measureText(relText);
-          const padX = 5;
-          const padY = 2.5;
+          const padX = 4;
+          const padY = 2;
 
-          ctx.fillStyle = isEdgeSelected ? "#1e293b" : "#181b1f";
+          ctx.fillStyle = isEdgeSelected ? "#1e293b" : "#14171b";
           ctx.fillRect(
             midX - textMetrics.width / 2 - padX,
-            midY - 6 - padY,
+            midY - 5 - padY,
             textMetrics.width + padX * 2,
-            12 + padY * 2
+            10 + padY * 2
           );
 
-          ctx.strokeStyle = isEdgeSelected ? "#3b82f6" : "#30353c";
+          ctx.strokeStyle = isEdgeSelected ? "#3b82f6" : "#2b323c";
           ctx.lineWidth = 1;
           ctx.strokeRect(
             midX - textMetrics.width / 2 - padX,
-            midY - 6 - padY,
+            midY - 5 - padY,
             textMetrics.width + padX * 2,
-            12 + padY * 2
+            10 + padY * 2
           );
 
           ctx.fillStyle = isEdgeSelected ? "#93c5fd" : "#94a3b8";
@@ -650,18 +765,18 @@ export default function LivingKnowledgeGraph({
           ctx.globalAlpha = 0.15;
         }
 
-        // Shock Impact State (Subtle warning ring, non-distracting)
+        // Shock Impact State
         if (isAffectedByShock) {
           ctx.beginPath();
           ctx.arc(nx, ny, radius + 4, 0, Math.PI * 2);
-          ctx.strokeStyle = "#f59e0b"; // Institutional amber
+          ctx.strokeStyle = "#f59e0b";
           ctx.lineWidth = 1.5;
           ctx.setLineDash([3, 3]);
           ctx.stroke();
           ctx.setLineDash([]);
         }
 
-        // Selection Ring (Solid technical double ring, zero glow)
+        // Selection Ring
         if (isSelected) {
           ctx.beginPath();
           ctx.arc(nx, ny, radius + 4, 0, Math.PI * 2);
@@ -676,19 +791,19 @@ export default function LivingKnowledgeGraph({
           ctx.stroke();
         }
 
-        // Main Node Body (Solid elevated graphite fill + category border)
+        // Main Node Body
         ctx.beginPath();
         ctx.arc(nx, ny, radius, 0, Math.PI * 2);
         ctx.fillStyle = cat.fill;
         ctx.fill();
 
         ctx.strokeStyle = isSelected ? "#3b82f6" : cat.border;
-        ctx.lineWidth = isSelected ? 2.0 : (n.type === "target_entity" ? 2.2 : 1.5);
+        ctx.lineWidth = isSelected ? 2.0 : (n.type === "target_entity" ? 2.2 : 1.4);
         ctx.stroke();
 
-        // Target Entity Center Monogram or Category Badge inside Node
+        // Node Monogram or Center Dot
         if (n.type === "target_entity") {
-          ctx.font = "bold 10px monospace";
+          ctx.font = "bold 9.5px monospace";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillStyle = "#f8fafc";
@@ -706,7 +821,6 @@ export default function LivingKnowledgeGraph({
           ctx.fillStyle = cat.accent;
           ctx.fillText(initials, nx, ny);
         } else {
-          // Small technical center dot
           ctx.beginPath();
           ctx.arc(nx, ny, 2.5, 0, Math.PI * 2);
           ctx.fillStyle = cat.accent;
@@ -714,27 +828,27 @@ export default function LivingKnowledgeGraph({
         }
 
         // ---------------- 3. LABELS (Level of Detail) ----------------
-        const shouldShowLabel = isSelected || isHovered || isNeighbor || n.type === "target_entity" || camera.zoom > 0.95;
+        // Show labels if: selected, hovered, neighbor, target, OR zoom > 0.75
+        const shouldShowLabel = isSelected || isHovered || isNeighbor || n.type === "target_entity" || camera.zoom > 0.75;
 
         if (shouldShowLabel && passesFilter) {
           ctx.font = isSelected || n.type === "target_entity" 
-            ? "600 11px Inter, -apple-system, sans-serif" 
-            : "500 9.5px Inter, -apple-system, sans-serif";
+            ? "600 10.5px Inter, -apple-system, sans-serif" 
+            : "500 9px Inter, -apple-system, sans-serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "top";
 
           const labelY = ny + radius + 4;
           const textMetrics = ctx.measureText(n.label);
-          const bgPadX = 4;
+          const bgPadX = 3.5;
           const bgPadY = 1.5;
 
-          // Legible background backing
-          ctx.fillStyle = "rgba(17, 19, 21, 0.92)";
+          ctx.fillStyle = "rgba(13, 15, 18, 0.90)";
           ctx.fillRect(
             nx - textMetrics.width / 2 - bgPadX,
             labelY - bgPadY,
             textMetrics.width + bgPadX * 2,
-            12 + bgPadY * 2
+            11 + bgPadY * 2
           );
 
           if (isSelected) {
@@ -750,48 +864,7 @@ export default function LivingKnowledgeGraph({
         ctx.restore();
       });
 
-      // ---------------- 4. RADAR MINIMAP ----------------
-      ctx.restore(); // Exit camera coordinates to render HUD overlay
-
-      const minimapW = 120;
-      const minimapH = 80;
-      const minimapX = width - minimapW - 16;
-      const minimapY = height - minimapH - 16;
-
-      ctx.save();
-      ctx.fillStyle = "#181b1f";
-      ctx.strokeStyle = "#30353c";
-      ctx.lineWidth = 1;
-      ctx.fillRect(minimapX, minimapY, minimapW, minimapH);
-      ctx.strokeRect(minimapX, minimapY, minimapW, minimapH);
-
-      // Radar dots
-      const scale = 0.08;
-      const mmCenterX = minimapX + minimapW / 2;
-      const mmCenterY = minimapY + minimapH / 2;
-
-      nodes.forEach(n => {
-        const mx = mmCenterX + (n.x || 0) * scale;
-        const my = mmCenterY + (n.y || 0) * scale;
-        if (mx >= minimapX && mx <= minimapX + minimapW && my >= minimapY && my <= minimapY + minimapH) {
-          ctx.beginPath();
-          ctx.arc(mx, my, n.type === "target_entity" ? 2.5 : 1.2, 0, Math.PI * 2);
-          ctx.fillStyle = n.id === selectedNode?.id ? "#3b82f6" : "#64748b";
-          ctx.fill();
-        }
-      });
-
-      // Viewport bounds rectangle on minimap
-      const vpW = (width / camera.zoom) * scale;
-      const vpH = (height / camera.zoom) * scale;
-      const vpX = mmCenterX - (camera.x / camera.zoom) * scale - vpW / 2;
-      const vpY = mmCenterY - (camera.y / camera.zoom) * scale - vpH / 2;
-
-      ctx.strokeStyle = "#3b82f6";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(vpX, vpY, vpW, vpH);
-
-      ctx.restore();
+      ctx.restore(); // Exit camera coordinates
 
       animFrame = requestAnimationFrame(render);
     };
@@ -800,7 +873,9 @@ export default function LivingKnowledgeGraph({
 
     return () => {
       cancelAnimationFrame(animFrame);
-      window.removeEventListener("resize", handleResize);
+      if (canvas.parentElement) {
+        resizeObserver.unobserve(canvas.parentElement);
+      }
     };
   }, [
     camera,
@@ -839,7 +914,6 @@ export default function LivingKnowledgeGraph({
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const { worldX, worldY, clientX, clientY } = getCanvasCoords(e);
 
-    // Check if clicked a node
     const nodes = simNodesRef.current;
     let hitNode: GraphNode | null = null;
 
@@ -847,8 +921,8 @@ export default function LivingKnowledgeGraph({
       const n = nodes[i];
       const dx = worldX - (n.x || 0);
       const dy = worldY - (n.y || 0);
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist <= (n.radius || 14) + 4) {
+      const r = (n.radius || 14) + 4;
+      if (dx * dx + dy * dy <= r * r) {
         hitNode = n;
         break;
       }
@@ -862,15 +936,15 @@ export default function LivingKnowledgeGraph({
       return;
     }
 
-    // Check if clicked an edge
+    // Check edge click
     const edges = simEdgesRef.current;
     const nodeMap = new Map<string, GraphNode>();
     nodes.forEach(n => nodeMap.set(n.id, n));
-
     let hitEdge: GraphEdge | null = null;
-    for (const edge of edges) {
-      const src = nodeMap.get(edge.source);
-      const tgt = nodeMap.get(edge.target);
+
+    for (const eItem of edges) {
+      const src = nodeMap.get(eItem.source);
+      const tgt = nodeMap.get(eItem.target);
       if (!src || !tgt) continue;
 
       const sx = src.x || 0;
@@ -878,19 +952,19 @@ export default function LivingKnowledgeGraph({
       const tx = tgt.x || 0;
       const ty = tgt.y || 0;
 
-      // Distance from point to line segment
       const dx = tx - sx;
       const dy = ty - sy;
       const lenSq = dx * dx + dy * dy;
       if (lenSq === 0) continue;
 
-      const t = Math.max(0, Math.min(1, ((worldX - sx) * dx + (worldY - sy) * dy) / lenSq));
+      let t = ((worldX - sx) * dx + (worldY - sy) * dy) / lenSq;
+      t = Math.max(0, Math.min(1, t));
       const projX = sx + t * dx;
       const projY = sy + t * dy;
-      const distToLine = Math.sqrt((worldX - projX) * (worldX - projX) + (worldY - projY) * (worldY - projY));
 
-      if (distToLine < 8) {
-        hitEdge = edge;
+      const distSq = (worldX - projX) * (worldX - projX) + (worldY - projY) * (worldY - projY);
+      if (distSq < 36) {
+        hitEdge = eItem;
         break;
       }
     }
@@ -901,7 +975,7 @@ export default function LivingKnowledgeGraph({
       return;
     }
 
-    // Otherwise start panning
+    // Canvas panning start
     setIsPanning(true);
     setPanStart({ x: clientX - camera.x, y: clientY - camera.y });
   };
@@ -934,49 +1008,14 @@ export default function LivingKnowledgeGraph({
       const n = nodes[i];
       const dx = worldX - (n.x || 0);
       const dy = worldY - (n.y || 0);
-      if (Math.sqrt(dx * dx + dy * dy) <= (n.radius || 14) + 4) {
+      const r = (n.radius || 14) + 4;
+      if (dx * dx + dy * dy <= r * r) {
         hitNode = n;
         break;
       }
     }
 
     setHoveredNode(hitNode);
-
-    if (!hitNode) {
-      const edges = simEdgesRef.current;
-      const nodeMap = new Map<string, GraphNode>();
-      nodes.forEach(n => nodeMap.set(n.id, n));
-
-      let hitEdge: GraphEdge | null = null;
-      for (const edge of edges) {
-        const src = nodeMap.get(edge.source);
-        const tgt = nodeMap.get(edge.target);
-        if (!src || !tgt) continue;
-
-        const sx = src.x || 0;
-        const sy = src.y || 0;
-        const tx = tgt.x || 0;
-        const ty = tgt.y || 0;
-
-        const dx = tx - sx;
-        const dy = ty - sy;
-        const lenSq = dx * dx + dy * dy;
-        if (lenSq === 0) continue;
-
-        const t = Math.max(0, Math.min(1, ((worldX - sx) * dx + (worldY - sy) * dy) / lenSq));
-        const projX = sx + t * dx;
-        const projY = sy + t * dy;
-        const distToLine = Math.sqrt((worldX - projX) * (worldX - projX) + (worldY - projY) * (worldY - projY));
-
-        if (distToLine < 8) {
-          hitEdge = edge;
-          break;
-        }
-      }
-      setHoveredEdge(hitEdge);
-    } else {
-      setHoveredEdge(null);
-    }
   };
 
   const handleMouseUp = () => {
@@ -987,367 +1026,195 @@ export default function LivingKnowledgeGraph({
     setIsPanning(false);
   };
 
-  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
-    setCamera(prev => ({
-      ...prev,
-      zoom: Math.max(0.3, Math.min(3.2, prev.zoom * zoomFactor))
-    }));
-  };
-
   const resetView = () => {
-    setCamera({ x: 0, y: 0, zoom: 1 });
-    onSelectNode(null);
-    onSelectEdge(null);
+    fitToView();
   };
 
   return (
-    <div ref={containerRef} className="relative w-full h-full flex flex-col bg-[#111315] select-none overflow-hidden">
-      {/* Top Workstation Graph Toolbar */}
-      <div className="h-10 px-4 bg-[#181b1f] border-b border-[#30353c] flex items-center justify-between z-10">
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-1.5 text-xs text-[#a0a7b1] font-medium">
-            <Network className="w-3.5 h-3.5 text-[#3b82f6]" />
-            <span>Corporate Intelligence Graph</span>
-          </div>
-
-          <div className="h-3.5 w-px bg-[#30353c]"></div>
-
-          {/* Layout Mode Selector */}
-          <div className="flex items-center space-x-1 bg-[#111315] p-0.5 rounded border border-[#30353c] text-[11px]">
-            <button
-              onClick={() => setLayoutMode("force")}
-              className={`px-2 py-0.5 rounded transition-colors ${
-                layoutMode === "force"
-                  ? "bg-[#20242a] text-[#f8fafc] font-medium"
-                  : "text-[#a0a7b1] hover:text-[#e5e7eb]"
-              }`}
-            >
-              Force-Relaxed
-            </button>
-            <button
-              onClick={() => setLayoutMode("radial")}
-              className={`px-2 py-0.5 rounded transition-colors ${
-                layoutMode === "radial"
-                  ? "bg-[#20242a] text-[#f8fafc] font-medium"
-                  : "text-[#a0a7b1] hover:text-[#e5e7eb]"
-              }`}
-            >
-              Radial Hierarchy
-            </button>
-            <button
-              onClick={() => setLayoutMode("clustered")}
-              className={`px-2 py-0.5 rounded transition-colors ${
-                layoutMode === "clustered"
-                  ? "bg-[#20242a] text-[#f8fafc] font-medium"
-                  : "text-[#a0a7b1] hover:text-[#e5e7eb]"
-              }`}
-            >
-              Domain Clusters
-            </button>
-          </div>
-
-          {/* Relationship Filter */}
-          {relationshipTypes.length > 0 && (
-            <div className="hidden lg:flex items-center space-x-1.5 text-xs text-[#a0a7b1]">
-              <span className="text-[10px] uppercase font-mono tracking-wider text-[#737c88]">Link:</span>
-              <select
-                value={selectedRelFilter}
-                onChange={(e) => setSelectedRelFilter(e.target.value)}
-                className="bg-[#111315] border border-[#30353c] text-[11px] text-[#e5e7eb] rounded px-2 py-0.5 focus:outline-none focus:border-[#3b82f6]"
-              >
-                <option value="ALL">All Relationships ({rawEdges.length})</option>
-                {relationshipTypes.map(r => (
-                  <option key={r} value={r}>{r.replace(/_/g, " ")}</option>
-                ))}
-              </select>
-            </div>
-          )}
+    <div ref={containerRef} className="relative w-full h-full flex flex-col bg-[#0d0f12] select-none overflow-hidden viewport-fixed">
+      {/* =========================================================================
+          FLOATING TOP CONTROLS (Material A — Apple Clear Glass)
+         ========================================================================= */}
+      
+      {/* Top-Left: Mode & Stats Indicator */}
+      <div className="absolute top-3 left-3 z-20 flex items-center space-x-2 glass-clear px-3 py-1.5 rounded-md text-xs">
+        <div className="flex items-center space-x-1.5 text-[#a0a7b1]">
+          <Network className="w-3.5 h-3.5 text-[#3b82f6]" />
+          <span className="font-medium text-[#e5e7eb] hidden sm:inline">Living Graph</span>
         </div>
 
-        {/* Viewport & Render Controls */}
-        <div className="flex items-center space-x-1">
+        <div className="h-3 w-px bg-white/10"></div>
+
+        {/* Layout Switcher */}
+        <div className="flex items-center space-x-1 bg-[#111315]/80 p-0.5 rounded border border-[#30353c] text-[10.5px]">
           <button
-            onClick={() => setShowLeftExplorer(prev => !prev)}
-            title={showLeftExplorer ? "Hide Entity Directory" : "Show Entity Directory"}
-            className={`p-1.5 rounded border transition-colors ${
-              showLeftExplorer
-                ? "bg-[#20242a] text-[#3b82f6] border-[#30353c]"
-                : "bg-[#111315] text-[#737c88] border-[#30353c] hover:text-[#e5e7eb]"
+            onClick={() => setLayoutMode("force")}
+            className={`px-2 py-0.5 rounded transition-colors ${
+              layoutMode === "force"
+                ? "bg-[#2563eb] text-white font-medium"
+                : "text-[#a0a7b1] hover:text-[#e5e7eb]"
             }`}
           >
-            <Layers className="w-3.5 h-3.5" />
+            Force
           </button>
-
           <button
-            onClick={() => setShowEdgeLabels(prev => !prev)}
-            title={showEdgeLabels ? "Hide edge labels" : "Show edge labels"}
-            className={`p-1.5 rounded border transition-colors ${
-              showEdgeLabels
-                ? "bg-[#20242a] text-[#3b82f6] border-[#30353c]"
-                : "bg-[#111315] text-[#737c88] border-[#30353c] hover:text-[#e5e7eb]"
+            onClick={() => setLayoutMode("radial")}
+            className={`px-2 py-0.5 rounded transition-colors ${
+              layoutMode === "radial"
+                ? "bg-[#2563eb] text-white font-medium"
+                : "text-[#a0a7b1] hover:text-[#e5e7eb]"
             }`}
           >
-            {showEdgeLabels ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+            Radial
           </button>
-
           <button
-            onClick={() => setIsSimulating(prev => !prev)}
-            title={isSimulating ? "Freeze physics simulation" : "Resume physics simulation"}
-            className={`p-1.5 rounded border transition-colors ${
-              isSimulating
-                ? "bg-[#20242a] text-[#10b981] border-[#30353c]"
-                : "bg-[#111315] text-[#737c88] border-[#30353c] hover:text-[#e5e7eb]"
+            onClick={() => setLayoutMode("clustered")}
+            className={`px-2 py-0.5 rounded transition-colors ${
+              layoutMode === "clustered"
+                ? "bg-[#2563eb] text-white font-medium"
+                : "text-[#a0a7b1] hover:text-[#e5e7eb]"
             }`}
           >
-            {isSimulating ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+            Clusters
           </button>
+        </div>
 
-          <button
-            onClick={() => setCamera(prev => ({ ...prev, zoom: Math.min(3.2, prev.zoom * 1.2) }))}
-            className="p-1.5 rounded bg-[#111315] hover:bg-[#20242a] text-[#a0a7b1] hover:text-[#e5e7eb] border border-[#30353c] transition-colors"
-            title="Zoom In"
-          >
-            <ZoomIn className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => setCamera(prev => ({ ...prev, zoom: Math.max(0.3, prev.zoom * 0.8) }))}
-            className="p-1.5 rounded bg-[#111315] hover:bg-[#20242a] text-[#a0a7b1] hover:text-[#e5e7eb] border border-[#30353c] transition-colors"
-            title="Zoom Out"
-          >
-            <ZoomOut className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={resetView}
-            className="p-1.5 rounded bg-[#111315] hover:bg-[#20242a] text-[#a0a7b1] hover:text-[#e5e7eb] border border-[#30353c] transition-colors"
-            title="Reset to Center View"
-          >
-            <Crosshair className="w-3.5 h-3.5" />
-          </button>
+        <div className="h-3 w-px bg-white/10 hidden md:block"></div>
+
+        <div className="text-[10px] font-mono text-[#737c88] hidden md:flex items-center space-x-2">
+          <span>NODES: <strong className="text-[#e5e7eb] font-sans">{rawNodes.length}</strong></span>
+          <span>LINKS: <strong className="text-[#e5e7eb] font-sans">{rawEdges.length}</strong></span>
+          <span>ZOOM: <strong className="text-[#3b82f6] font-sans">{(camera.zoom * 100).toFixed(0)}%</strong></span>
         </div>
       </div>
 
-      {/* Main Workstation Graph Body */}
-      <div className="relative flex-1 w-full h-full flex overflow-hidden">
-        {/* Left Entity Explorer (Toggleable) */}
-        {showLeftExplorer && (
-          <div className="w-64 border-r border-[#30353c] bg-[#141619] flex flex-col z-10 shrink-0">
-            <div className="p-2.5 border-b border-[#30353c] flex items-center justify-between">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#737c88]">Entity Directory</span>
-              <span className="text-[10px] font-mono text-[#a0a7b1]">{rawNodes.length} Total</span>
-            </div>
-            <div className="p-2 border-b border-[#30353c]">
-              <div className="relative">
-                <Search className="w-3 h-3 absolute left-2 top-2 text-[#737c88]" />
-                <input
-                  type="text"
-                  value={localSearch}
-                  onChange={(e) => setLocalSearch(e.target.value)}
-                  placeholder="Filter nodes..."
-                  className="w-full pl-6 pr-2 py-1 text-[11px] rounded bg-[#111315] border border-[#30353c] text-[#e5e7eb] focus:outline-none focus:border-[#3b82f6]"
+      {/* Top-Right: Quick Action Controls */}
+      <div className="absolute top-3 right-3 z-20 flex items-center space-x-1 glass-clear p-1 rounded-md">
+        <button
+          onClick={() => fitToView()}
+          className="p-1.5 rounded hover:bg-white/10 text-[#a0a7b1] hover:text-white transition-colors cursor-pointer"
+          title="Fit Graph to View"
+        >
+          <Maximize2 className="w-3.5 h-3.5 text-[#3b82f6]" />
+        </button>
+
+        <button
+          onClick={() => setCamera(prev => ({ ...prev, zoom: Math.min(2.4, prev.zoom * 1.15) }))}
+          className="p-1.5 rounded hover:bg-white/10 text-[#a0a7b1] hover:text-white transition-colors cursor-pointer"
+          title="Zoom In"
+        >
+          <ZoomIn className="w-3.5 h-3.5" />
+        </button>
+
+        <button
+          onClick={() => setCamera(prev => ({ ...prev, zoom: Math.max(0.35, prev.zoom * 0.85) }))}
+          className="p-1.5 rounded hover:bg-white/10 text-[#a0a7b1] hover:text-white transition-colors cursor-pointer"
+          title="Zoom Out"
+        >
+          <ZoomOut className="w-3.5 h-3.5" />
+        </button>
+
+        <button
+          onClick={resetView}
+          className="p-1.5 rounded hover:bg-white/10 text-[#a0a7b1] hover:text-white transition-colors cursor-pointer"
+          title="Center Camera View"
+        >
+          <Crosshair className="w-3.5 h-3.5" />
+        </button>
+
+        <div className="h-3.5 w-px bg-white/10 mx-0.5"></div>
+
+        <button
+          onClick={() => setIsSimulating(prev => !prev)}
+          className={`p-1.5 rounded transition-colors cursor-pointer ${
+            isSimulating ? "text-[#10b981] hover:bg-white/10" : "text-[#737c88] hover:bg-white/10"
+          }`}
+          title={isSimulating ? "Pause Physics Simulation" : "Resume Physics Simulation"}
+        >
+          {isSimulating ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+        </button>
+
+        <button
+          onClick={() => setShowEdgeLabels(prev => !prev)}
+          className={`p-1.5 rounded transition-colors cursor-pointer ${
+            showEdgeLabels ? "text-[#3b82f6] hover:bg-white/10" : "text-[#737c88] hover:bg-white/10"
+          }`}
+          title={showEdgeLabels ? "Hide Edge Labels" : "Show Edge Labels"}
+        >
+          {showEdgeLabels ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+        </button>
+      </div>
+
+      {/* =========================================================================
+          CENTER CANVAS VIEWPORT
+         ========================================================================= */}
+      <div className="relative flex-1 w-full h-full cursor-grab active:cursor-grabbing overflow-hidden">
+        <canvas
+          ref={canvasRef}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          className="absolute inset-0 w-full h-full block"
+        />
+
+        {/* Selected Node Notification Chip (Non-intrusive) */}
+        {selectedNode && (
+          <div className="absolute top-12 left-3 z-20 flex items-center space-x-2 glass-clear px-2.5 py-1 rounded text-[11px] animate-fadeIn pointer-events-none">
+            <span className="w-2 h-2 rounded-full bg-[#3b82f6]"></span>
+            <span className="text-[#a0a7b1]">Focused:</span>
+            <span className="text-[#f8fafc] font-medium">{selectedNode.label}</span>
+          </div>
+        )}
+
+        {/* Bottom-Left: Refined Entity Types Legend */}
+        <div className="absolute bottom-3 left-3 z-20 glass-clear rounded p-2.5 max-w-xs shadow-xl hidden md:block select-none">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-[#e5e7eb] font-semibold mb-1.5 flex items-center justify-between">
+            <span>Entity Ontology</span>
+            <span className="text-[#737c88] text-[9px] font-mono">{rawNodes.length} Nodes</span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+            {Object.entries(INSTITUTIONAL_CATEGORIES).map(([key, cat]) => {
+              if (key === "default") return null;
+              return (
+                <div key={key} className="flex items-center space-x-1.5 truncate" title={cat.description}>
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: cat.fill, border: `1px solid ${cat.border}` }}
+                  />
+                  <span className="text-[#a0a7b1] truncate text-[9.5px]">{cat.label.split("(")[0].trim()}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Bottom-Right: Tactical Radar Minimap */}
+        <div className="absolute bottom-3 right-3 z-20 glass-clear rounded p-2 hidden sm:block select-none">
+          <div className="flex items-center justify-between text-[9px] font-mono uppercase text-[#737c88] mb-1">
+            <span>Spatial Radar</span>
+            <span>{(camera.zoom * 100).toFixed(0)}%</span>
+          </div>
+          <div className="w-28 h-20 bg-[#111315]/90 border border-[#30353c] rounded relative overflow-hidden">
+            {/* Draw miniature nodes in minimap */}
+            {simNodesRef.current.map(n => {
+              const mmScale = 0.08;
+              const mx = 56 + (n.x || 0) * mmScale;
+              const my = 40 + (n.y || 0) * mmScale;
+              if (mx < 0 || mx > 112 || my < 0 || my > 80) return null;
+              const isSel = n.id === selectedNode?.id;
+              return (
+                <div
+                  key={n.id}
+                  className={`absolute rounded-full pointer-events-none ${
+                    isSel ? "w-2 h-2 bg-[#3b82f6] -ml-1 -mt-1 ring-1 ring-white" : "w-1 h-1 bg-[#64748b] -ml-0.5 -mt-0.5"
+                  }`}
+                  style={{ left: `${mx}px`, top: `${my}px` }}
                 />
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto p-1.5 space-y-1">
-              {rawNodes
-                .filter(n => !localSearch.trim() || n.label.toLowerCase().includes(localSearch.toLowerCase()))
-                .map(n => {
-                  const cat = INSTITUTIONAL_CATEGORIES[n.type || "default"] || INSTITUTIONAL_CATEGORIES.default;
-                  const isSel = selectedNode?.id === n.id;
-                  return (
-                    <button
-                      key={n.id}
-                      onClick={() => centerOnNode(n)}
-                      className={`w-full text-left p-1.5 rounded text-xs flex items-center justify-between transition-colors ${
-                        isSel ? "bg-[#20242a] text-[#f8fafc] border border-[#3b82f6]" : "text-[#a0a7b1] hover:text-[#e5e7eb] hover:bg-[#181b1f]"
-                      }`}
-                    >
-                      <div className="flex items-center space-x-1.5 truncate">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat.fill, border: `1px solid ${cat.border}` }} />
-                        <span className="truncate text-[11px] font-medium">{n.label}</span>
-                      </div>
-                      <ChevronRight className="w-3 h-3 text-[#737c88] shrink-0" />
-                    </button>
-                  );
-                })}
-            </div>
-          </div>
-        )}
-
-        {/* Center Canvas */}
-        <div className="relative flex-1 w-full h-full cursor-grab active:cursor-grabbing overflow-hidden">
-          <canvas
-            ref={canvasRef}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onWheel={handleWheel}
-            className="absolute inset-0 w-full h-full block"
-          />
-
-          {/* Floating Technical Stats Overlay */}
-          <div className="absolute top-3 left-3 px-2.5 py-1.5 rounded bg-[#181b1f]/90 border border-[#30353c] backdrop-blur text-[10px] font-mono text-[#737c88] pointer-events-none space-x-3 flex items-center">
-            <span>ENTITIES: <strong className="text-[#e5e7eb] font-sans">{rawNodes.length}</strong></span>
-            <span>LINKS: <strong className="text-[#e5e7eb] font-sans">{rawEdges.length}</strong></span>
-            <span>ZOOM: <strong className="text-[#e5e7eb] font-sans">{(camera.zoom * 100).toFixed(0)}%</strong></span>
-            {selectedNode && (
-              <span className="text-[#3b82f6]">ACTIVE: <strong className="text-[#f8fafc] font-sans">{selectedNode.label}</strong></span>
-            )}
+              );
+            })}
           </div>
         </div>
-
-        {/* Right Entity & Link Inspector (When selected) */}
-        {(selectedNode || selectedEdge) && (
-          <div className="w-80 border-l border-[#30353c] bg-[#141619] flex flex-col z-10 shrink-0 overflow-y-auto">
-            {selectedNode && (
-              <div className="p-4 space-y-4">
-                <div className="flex items-start justify-between border-b border-[#30353c] pb-3">
-                  <div>
-                    <span 
-                      className="text-[9px] font-mono uppercase px-2 py-0.5 rounded border inline-block mb-1"
-                      style={{
-                        backgroundColor: (INSTITUTIONAL_CATEGORIES[selectedNode.type || "default"] || INSTITUTIONAL_CATEGORIES.default).fill,
-                        borderColor: (INSTITUTIONAL_CATEGORIES[selectedNode.type || "default"] || INSTITUTIONAL_CATEGORIES.default).border,
-                        color: (INSTITUTIONAL_CATEGORIES[selectedNode.type || "default"] || INSTITUTIONAL_CATEGORIES.default).accent
-                      }}
-                    >
-                      {(INSTITUTIONAL_CATEGORIES[selectedNode.type || "default"] || INSTITUTIONAL_CATEGORIES.default).label}
-                    </span>
-                    <h3 className="text-sm font-serif font-bold text-[#f8fafc]">{selectedNode.label}</h3>
-                    {selectedNode.ticker && (
-                      <span className="text-[10px] font-mono text-[#737c88]">${selectedNode.ticker}</span>
-                    )}
-                  </div>
-                  <button 
-                    onClick={() => onSelectNode(null)}
-                    className="p-1 rounded text-[#737c88] hover:text-[#e5e7eb] hover:bg-[#20242a]"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                {selectedNode.description && (
-                  <div>
-                    <div className="text-[10px] font-mono text-[#737c88] uppercase mb-1">Entity Brief</div>
-                    <p className="text-xs text-[#cbd5e1] font-serif leading-relaxed p-2.5 rounded bg-[#111315] border border-[#30353c]">
-                      {selectedNode.description}
-                    </p>
-                  </div>
-                )}
-
-                <div>
-                  <div className="text-[10px] font-mono text-[#737c88] uppercase mb-1.5 flex items-center justify-between">
-                    <span>Direct Links</span>
-                    <span>{nodeConnections.outbound.length + nodeConnections.inbound.length} Total</span>
-                  </div>
-                  <div className="space-y-1.5 max-h-56 overflow-y-auto">
-                    {nodeConnections.outbound.map(({ edge, neighbor }) => (
-                      <div 
-                        key={edge.id}
-                        onClick={() => neighbor && centerOnNode(neighbor)}
-                        className="p-2 rounded bg-[#111315] border border-[#30353c] hover:border-[#3b82f6] text-xs cursor-pointer space-y-0.5 transition-colors"
-                      >
-                        <div className="flex items-center justify-between text-[10px] font-mono">
-                          <span className="text-[#3b82f6]">{edge.relationship.replace(/_/g, " ")}</span>
-                          <span className="text-[#737c88]">OUT →</span>
-                        </div>
-                        <div className="text-[#e5e7eb] font-medium text-[11px] truncate">
-                          {neighbor?.label || edge.target}
-                        </div>
-                      </div>
-                    ))}
-                    {nodeConnections.inbound.map(({ edge, neighbor }) => (
-                      <div 
-                        key={edge.id}
-                        onClick={() => neighbor && centerOnNode(neighbor)}
-                        className="p-2 rounded bg-[#111315] border border-[#30353c] hover:border-[#3b82f6] text-xs cursor-pointer space-y-0.5 transition-colors"
-                      >
-                        <div className="flex items-center justify-between text-[10px] font-mono">
-                          <span className="text-[#10b981]">{edge.relationship.replace(/_/g, " ")}</span>
-                          <span className="text-[#737c88]">← IN</span>
-                        </div>
-                        <div className="text-[#e5e7eb] font-medium text-[11px] truncate">
-                          {neighbor?.label || edge.source}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="pt-2">
-                  <button
-                    onClick={() => centerOnNode(selectedNode)}
-                    className="w-full py-1.5 rounded bg-[#20242a] hover:bg-[#282d35] text-[#3b82f6] text-xs font-mono border border-[#30353c] transition-colors"
-                  >
-                    Center in Viewport
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {selectedEdge && !selectedNode && (
-              <div className="p-4 space-y-4">
-                <div className="flex items-start justify-between border-b border-[#30353c] pb-3">
-                  <div>
-                    <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded bg-[#1e293b] text-[#3b82f6] border border-[#3b82f6]/40 inline-block mb-1">
-                      Relationship Link
-                    </span>
-                    <h3 className="text-sm font-serif font-bold text-[#f8fafc]">
-                      {selectedEdge.relationship.replace(/_/g, " ")}
-                    </h3>
-                  </div>
-                  <button 
-                    onClick={() => onSelectEdge(null)}
-                    className="p-1 rounded text-[#737c88] hover:text-[#e5e7eb] hover:bg-[#20242a]"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <div className="space-y-2 text-xs">
-                  <div className="p-2.5 rounded bg-[#111315] border border-[#30353c] space-y-1">
-                    <span className="text-[10px] font-mono text-[#737c88] uppercase block">Source Node</span>
-                    <span className="text-[#e5e7eb] font-medium">{selectedEdge.source}</span>
-                  </div>
-                  <div className="p-2.5 rounded bg-[#111315] border border-[#30353c] space-y-1">
-                    <span className="text-[10px] font-mono text-[#737c88] uppercase block">Target Node</span>
-                    <span className="text-[#e5e7eb] font-medium">{selectedEdge.target}</span>
-                  </div>
-                  {selectedEdge.description && (
-                    <div className="p-2.5 rounded bg-[#111315] border border-[#30353c] space-y-1">
-                      <span className="text-[10px] font-mono text-[#737c88] uppercase block">Description</span>
-                      <p className="text-[#cbd5e1] font-serif leading-relaxed">{selectedEdge.description}</p>
-                    </div>
-                  )}
-                  {selectedEdge.evidence_id && (
-                    <div className="text-[10px] font-mono text-[#737c88]">
-                      Provenance Hash: <span className="text-[#a0a7b1]">{selectedEdge.evidence_id.substring(0, 16)}...</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Bottom Institutional Legend Bar */}
-      <div className="px-4 py-2 bg-[#181b1f] border-t border-[#30353c] flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-[#a0a7b1]">
-        <span className="text-[10px] font-mono uppercase tracking-wider text-[#737c88]">Legend:</span>
-        {Object.entries(INSTITUTIONAL_CATEGORIES).map(([key, cat]) => {
-          if (key === "default") return null;
-          return (
-            <div key={key} className="flex items-center space-x-1.5" title={cat.description}>
-              <span
-                className="w-2.5 h-2.5 rounded-full inline-block"
-                style={{ backgroundColor: cat.fill, border: `1.5px solid ${cat.border}` }}
-              />
-              <span className="text-[10.5px] text-[#a0a7b1]">{cat.label}</span>
-            </div>
-          );
-        })}
       </div>
     </div>
   );

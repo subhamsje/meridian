@@ -778,6 +778,7 @@ export default function WorkspaceApp() {
                         onSelectNode={(n) => { setSelectedNode(n); setSelectedEdge(null); }}
                         selectedEdge={selectedEdge}
                         onSelectEdge={(e) => { setSelectedEdge(e); setSelectedNode(null); }}
+                        showInternalInspector={false}
                       />
                     </div>
                   </div>
@@ -1078,6 +1079,7 @@ export default function WorkspaceApp() {
                         onSelectNode={(n) => { setSelectedNode(n); setSelectedEdge(null); }}
                         selectedEdge={selectedEdge}
                         onSelectEdge={(e) => { setSelectedEdge(e); setSelectedNode(null); }}
+                        showInternalInspector={false}
                       />
                     ) : (
                       <ReactFlowKnowledgeGraph

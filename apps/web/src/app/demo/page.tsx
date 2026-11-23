@@ -26,6 +26,7 @@ import {
   Maximize2,
   Info,
   ChevronRight,
+  ChevronLeft,
   TrendingUp,
   TrendingDown,
   Lock,
@@ -79,6 +80,8 @@ export default function FlagshipDemoPage() {
   const [graphTypeFilter, setGraphTypeFilter] = useState("ALL");
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<GraphEdge | null>(null);
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
 
   // Stage 03: Operations, Simulation & Interrogation
   const [simRounds, setSimRounds] = useState(40);
@@ -429,9 +432,9 @@ export default function FlagshipDemoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#111315] text-[#e5e7eb] flex flex-col font-sans selection:bg-[#20242a] selection:text-[#f8fafc]">
-      {/* Institutional Top Navigation Header */}
-      <header className="h-14 border-b border-[#30353c] bg-[#181b1f] px-6 flex items-center justify-between sticky top-0 z-50">
+    <div className="app-shell bg-[#111315] text-[#e5e7eb] font-sans selection:bg-[#20242a] selection:text-[#f8fafc]">
+      {/* GLOBAL HEADER — fixed height, never independently scrolled */}
+      <header className="h-14 shrink-0 glass-clear border-b border-[#30353c] px-6 flex items-center justify-between z-40 select-none">
         <div className="flex items-center space-x-4">
           <Link href="/" className="flex items-center space-x-2.5 group">
             <div className="w-6 h-6 rounded bg-[#20242a] border border-[#30353c] flex items-center justify-center font-mono font-bold text-[#e5e7eb] text-xs">
@@ -457,7 +460,7 @@ export default function FlagshipDemoPage() {
         </div>
 
         {/* 5-Stage Stepper Navigation */}
-        <nav className="flex items-center bg-[#111315] p-0.5 rounded border border-[#30353c] text-xs font-medium">
+        <nav className="flex items-center bg-[#111315]/90 p-0.5 rounded border border-[#30353c] text-xs font-medium">
           {[
             { stage: 1, label: "01 Mandate & Seeds", icon: FileText },
             { stage: 2, label: "02 Relationship Graph", icon: Network },
@@ -473,11 +476,11 @@ export default function FlagshipDemoPage() {
                 onClick={() => setCurrentStage(item.stage as any)}
                 className={`px-3 py-1.5 rounded transition-colors flex items-center space-x-1.5 cursor-pointer ${
                   isActive
-                    ? "bg-[#20242a] text-[#f8fafc] border border-[#30353c] font-medium shadow-xs"
+                    ? "bg-[#2563eb] text-[#f8fafc] border border-[#3b82f6] font-medium shadow-xs"
                     : "text-[#a0a7b1] hover:text-[#e5e7eb] hover:bg-[#181b1f] border border-transparent"
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? "text-[#3b82f6]" : "text-[#737c88]"}`} />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? "text-white" : "text-[#737c88]"}`} />
                 <span>{item.label}</span>
               </button>
             );
@@ -511,11 +514,11 @@ export default function FlagshipDemoPage() {
       </header>
 
       {/* Main Flagship Stage Viewer */}
-      <main className="flex-1 flex flex-col overflow-hidden relative">
+      <main className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden relative">
         
         {/* ================= STAGE 01: Research Seeds & Mandate ================= */}
         {currentStage === 1 && (
-          <div className="flex-1 overflow-y-auto p-10 max-w-5xl mx-auto w-full">
+          <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain p-8 max-w-5xl mx-auto w-full">
             <div className="mb-8 border-b border-[#30353c] pb-6">
               <div className="text-[11px] font-mono uppercase tracking-wider text-[#737c88] mb-1">
                 Stage 01 • Institutional Grounding & Primary Disclosures
@@ -668,95 +671,119 @@ export default function FlagshipDemoPage() {
 
         {/* ================= STAGE 02: Knowledge Graph Workstation ================= */}
         {currentStage === 2 && (
-          <div className="flex-1 overflow-hidden grid grid-cols-12 divide-x divide-[#30353c]">
-            {/* Left 3 Cols: Filter & Entity Hierarchy Sidebar */}
-            <div className="col-span-3 flex flex-col overflow-hidden bg-[#181b1f]">
-              <div className="p-3 border-b border-[#30353c] bg-[#141619] flex items-center justify-between">
-                <div className="flex items-center space-x-1.5 text-xs font-mono uppercase text-[#e5e7eb] tracking-wider">
-                  <Layers className="w-3.5 h-3.5 text-[#3b82f6]" />
-                  <span>Entity Directory</span>
-                </div>
-                <span className="text-[10px] font-mono text-[#a0a7b1] bg-[#111315] px-2 py-0.5 rounded border border-[#30353c]">
-                  {graphData.nodes.length} Entities
-                </span>
-              </div>
-
-              {/* Entity Search Bar */}
-              <div className="p-2.5 border-b border-[#30353c] bg-[#181b1f]">
-                <div className="flex items-center space-x-2 bg-[#111315] px-2.5 py-1.5 rounded border border-[#30353c]">
-                  <Search className="w-3.5 h-3.5 text-[#737c88]" />
-                  <input
-                    type="text"
-                    value={graphSearch}
-                    onChange={(e) => setGraphSearch(e.target.value)}
-                    placeholder="Search entities (DoD, AWS, TITAN)..."
-                    className="w-full bg-transparent text-xs text-[#e5e7eb] focus:outline-none placeholder-[#737c88]"
-                  />
+          <div className="flex-1 min-h-0 min-w-0 flex flex-row overflow-hidden divide-x divide-[#30353c]">
+            {/* Left Panel: Entity Directory (Collapsible) */}
+            {leftPanelCollapsed ? (
+              <div className="w-10 shrink-0 h-full flex flex-col items-center py-3 border-r border-[#30353c] bg-[#141619] z-20 select-none">
+                <button
+                  onClick={() => setLeftPanelCollapsed(false)}
+                  className="p-2 rounded text-[#a0a7b1] hover:text-[#e5e7eb] hover:bg-[#20242a] transition-colors cursor-pointer"
+                  title="Expand Entity Directory"
+                >
+                  <Layers className="w-4 h-4 text-[#3b82f6]" />
+                </button>
+                <div className="mt-8 text-[10px] font-mono uppercase tracking-widest text-[#737c88] [writing-mode:vertical-lr] rotate-180">
+                  Entity Directory ({graphData.nodes.length})
                 </div>
               </div>
-
-              {/* Category Hierarchy List */}
-              <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                {[
-                  { key: "ALL", label: "All Entities" },
-                  { key: "target_entity", label: "Subject Entity (PLTR)" },
-                  { key: "government_customer", label: "Sovereign / Defense Customer" },
-                  { key: "defense_contract", label: "Defense Program / Contract" },
-                  { key: "cloud_infrastructure", label: "Cloud & Sovereign Infra" },
-                  { key: "commercial_customer", label: "Commercial Enterprise Client" },
-                  { key: "core_platform", label: "Core Software Platform" },
-                  { key: "competitor", label: "Market Competitor" },
-                  { key: "leadership", label: "Executive Leadership" },
-                  { key: "regulatory_body", label: "Regulatory Oversight Body" },
-                ].map((cat) => {
-                  const count = cat.key === "ALL" ? graphData.nodes.length : (entityCategoryCounts[cat.key] || 0);
-                  const isSelected = graphTypeFilter === cat.key;
-                  const catStyle = INSTITUTIONAL_CATEGORIES[cat.key] || INSTITUTIONAL_CATEGORIES.default;
-                  return (
+            ) : (
+              <div className="w-72 lg:w-80 shrink-0 h-full flex flex-col overflow-hidden bg-[#141619] select-none">
+                <div className="h-11 shrink-0 px-3.5 border-b border-[#30353c] bg-[#181b1f] flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5 text-xs font-mono uppercase text-[#e5e7eb] tracking-wider">
+                    <Layers className="w-3.5 h-3.5 text-[#3b82f6]" />
+                    <span>Entity Directory</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <span className="text-[10px] font-mono text-[#a0a7b1] bg-[#111315] px-2 py-0.5 rounded border border-[#30353c]">
+                      {graphData.nodes.length} Entities
+                    </span>
                     <button
-                      key={cat.key}
-                      onClick={() => setGraphTypeFilter(cat.key)}
-                      className={`w-full text-left px-2.5 py-2 rounded text-xs transition-colors flex items-center justify-between cursor-pointer ${
-                        isSelected 
-                          ? "bg-[#20242a] text-[#f8fafc] font-medium border border-[#30353c]" 
-                          : "text-[#a0a7b1] hover:text-[#e5e7eb] hover:bg-[#141619] border border-transparent"
-                      }`}
+                      onClick={() => setLeftPanelCollapsed(true)}
+                      className="p-1 rounded text-[#737c88] hover:text-[#e5e7eb] hover:bg-[#20242a] transition-colors cursor-pointer"
+                      title="Collapse Entity Directory"
                     >
-                      <div className="flex items-center space-x-2 truncate">
-                        {cat.key !== "ALL" && (
-                          <span
-                            className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
-                            style={{ backgroundColor: catStyle.fill, border: `1.5px solid ${catStyle.border}` }}
-                          />
-                        )}
-                        <span className="truncate">{cat.label}</span>
-                      </div>
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#111315] text-[#737c88]">
-                        {count}
-                      </span>
+                      <ChevronLeft className="w-3.5 h-3.5" />
                     </button>
-                  );
-                })}
-              </div>
-
-              {/* Shock Indicator Banner */}
-              {activeHypoResult && (
-                <div className="p-3 border-t border-[#30353c] bg-[#141619] text-[11px]">
-                  <div className="text-[10px] font-mono uppercase text-[#f59e0b] font-medium flex items-center space-x-1">
-                    <AlertTriangle className="w-3 h-3 text-[#f59e0b]" />
-                    <span>Active Exogenous Stress Vector</span>
-                  </div>
-                  <div className="text-[#a0a7b1] mt-1 text-[10.5px] leading-snug line-clamp-2">
-                    "{activeHypoResult.event_description}"
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* Center 6 Cols: Knowledge Graph Workstation (Dual Engine) */}
-            <div className="col-span-6 flex flex-col overflow-hidden relative bg-[#111315]">
+                {/* Entity Search Bar */}
+                <div className="shrink-0 p-2.5 border-b border-[#30353c] bg-[#141619]">
+                  <div className="flex items-center space-x-2 bg-[#111315] px-2.5 py-1.5 rounded border border-[#30353c]">
+                    <Search className="w-3.5 h-3.5 text-[#737c88]" />
+                    <input
+                      type="text"
+                      value={graphSearch}
+                      onChange={(e) => setGraphSearch(e.target.value)}
+                      placeholder="Search entities (DoD, AWS, TITAN)..."
+                      className="w-full bg-transparent text-xs text-[#e5e7eb] focus:outline-none placeholder-[#737c88]"
+                    />
+                  </div>
+                </div>
+
+                {/* Category Hierarchy List - Independent Vertical Scroll Container */}
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2 space-y-1">
+                  {[
+                    { key: "ALL", label: "All Entities" },
+                    { key: "target_entity", label: "Subject Entity (PLTR)" },
+                    { key: "government_customer", label: "Sovereign / Defense Customer" },
+                    { key: "defense_contract", label: "Defense Program / Contract" },
+                    { key: "cloud_infrastructure", label: "Cloud & Sovereign Infra" },
+                    { key: "commercial_customer", label: "Commercial Enterprise Client" },
+                    { key: "core_platform", label: "Core Software Platform" },
+                    { key: "competitor", label: "Market Competitor" },
+                    { key: "leadership", label: "Executive Leadership" },
+                    { key: "regulatory_body", label: "Regulatory Oversight Body" },
+                  ].map((cat) => {
+                    const count = cat.key === "ALL" ? graphData.nodes.length : (entityCategoryCounts[cat.key] || 0);
+                    const isSelected = graphTypeFilter === cat.key;
+                    const catStyle = INSTITUTIONAL_CATEGORIES[cat.key] || INSTITUTIONAL_CATEGORIES.default;
+                    return (
+                      <button
+                        key={cat.key}
+                        onClick={() => setGraphTypeFilter(cat.key)}
+                        className={`w-full text-left px-2.5 py-2 rounded text-xs transition-colors flex items-center justify-between cursor-pointer ${
+                          isSelected 
+                            ? "bg-[#20242a] text-[#f8fafc] font-medium border border-[#30353c]" 
+                            : "text-[#a0a7b1] hover:text-[#e5e7eb] hover:bg-[#181b1f] border border-transparent"
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2 truncate">
+                          {cat.key !== "ALL" && (
+                            <span
+                              className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
+                              style={{ backgroundColor: catStyle.fill, border: `1.5px solid ${catStyle.border}` }}
+                            />
+                          )}
+                          <span className="truncate">{cat.label}</span>
+                        </div>
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#111315] text-[#737c88]">
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Shock Indicator Banner */}
+                {activeHypoResult && (
+                  <div className="shrink-0 p-3 border-t border-[#30353c] bg-[#181b1f] text-[11px]">
+                    <div className="text-[10px] font-mono uppercase text-[#f59e0b] font-medium flex items-center space-x-1">
+                      <AlertTriangle className="w-3 h-3 text-[#f59e0b]" />
+                      <span>Active Exogenous Stress Vector</span>
+                    </div>
+                    <div className="text-[#a0a7b1] mt-1 text-[10.5px] leading-snug line-clamp-2">
+                      "{activeHypoResult.event_description}"
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Center Panel: Knowledge Graph Fixed Viewport (Occupies all remaining area) */}
+            <div className="flex-1 min-h-0 min-w-0 h-full relative overflow-hidden bg-[#0d0f12] flex flex-col">
               {/* Dual-Engine Toolbar Pill */}
-              <div className="absolute top-3 left-3 z-20 flex items-center space-x-1.5 bg-[#181b1f]/95 px-2.5 py-1.5 rounded border border-[#30353c] backdrop-blur-md shadow-md text-xs">
+              <div className="absolute top-3 left-48 z-20 hidden md:flex items-center space-x-1.5 glass-clear px-2.5 py-1.5 rounded border border-[#30353c] text-xs">
                 <span className="text-[10px] font-mono uppercase text-[#737c88]">Engine:</span>
                 <button
                   onClick={() => setGraphEngine("canvas")}
@@ -794,6 +821,7 @@ export default function FlagshipDemoPage() {
                   affectedEntityNames={activeHypoResult?.affected_entities || []}
                   searchQuery={graphSearch}
                   typeFilter={graphTypeFilter}
+                  showInternalInspector={false}
                 />
               ) : (
                 <ReactFlowKnowledgeGraph
@@ -813,43 +841,42 @@ export default function FlagshipDemoPage() {
                   typeFilter={graphTypeFilter}
                 />
               )}
-
-              {/* MiroFish-Style Entity Taxonomy Legend Card (Overlay) */}
-              <div className="absolute bottom-3 left-3 z-20 bg-[#181b1f]/95 border border-[#30353c] rounded p-2.5 backdrop-blur-md max-w-xs shadow-xl hidden md:block select-none">
-                <div className="text-[10px] font-mono uppercase tracking-wider text-[#e5e7eb] font-semibold mb-1.5 flex items-center justify-between">
-                  <span>Entity Types Legend</span>
-                  <span className="text-[#737c88] text-[9px] font-mono">{graphData.nodes.length} Nodes</span>
-                </div>
-                <div className="grid grid-cols-2 gap-x-2.5 gap-y-1 text-[10px]">
-                  {[
-                    { label: "Target Entity", color: "#94a3b8" },
-                    { label: "Defense Customer", color: "#3b82f6" },
-                    { label: "Defense Program", color: "#6366f1" },
-                    { label: "Cloud Infra", color: "#14b8a6" },
-                    { label: "Commercial Client", color: "#10b981" },
-                    { label: "Core Platform", color: "#f59e0b" },
-                    { label: "Competitor", color: "#ef4444" },
-                    { label: "Leadership", color: "#ec4899" },
-                  ].map((item, idx) => (
-                    <div key={idx} className="flex items-center space-x-1.5 truncate">
-                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                      <span className="text-[#a0a7b1] truncate text-[9.5px]">{item.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
 
-            {/* Right 3 Cols: Contextual Entity & Provenance Inspector */}
-            <div className="col-span-3 flex flex-col overflow-hidden bg-[#181b1f]">
-              <div className="p-3 border-b border-[#30353c] bg-[#141619] text-xs font-mono uppercase tracking-wider text-[#a0a7b1] flex items-center justify-between">
-                <span>Provenance Inspector</span>
-                <span className="text-[#3b82f6] text-[10px]">
-                  {selectedNode ? "Entity Focus" : (selectedEdge ? "Relationship Link" : "Select Target")}
-                </span>
+            {/* Right Panel: Contextual Entity & Provenance Inspector (Collapsible) */}
+            {rightPanelCollapsed ? (
+              <div className="w-10 shrink-0 h-full flex flex-col items-center py-3 border-l border-[#30353c] bg-[#141619] z-20 select-none">
+                <button
+                  onClick={() => setRightPanelCollapsed(false)}
+                  className="p-2 rounded text-[#a0a7b1] hover:text-[#e5e7eb] hover:bg-[#20242a] transition-colors cursor-pointer"
+                  title="Expand Provenance Inspector"
+                >
+                  <ShieldCheck className="w-4 h-4 text-[#3b82f6]" />
+                </button>
+                <div className="mt-8 text-[10px] font-mono uppercase tracking-widest text-[#737c88] [writing-mode:vertical-lr] rotate-180">
+                  Provenance Inspector
+                </div>
               </div>
+            ) : (
+              <div className="w-80 lg:w-96 shrink-0 h-full flex flex-col overflow-hidden bg-[#141619]">
+                <div className="h-11 shrink-0 px-3.5 border-b border-[#30353c] bg-[#181b1f] text-xs font-mono uppercase tracking-wider text-[#a0a7b1] flex items-center justify-between">
+                  <span>Provenance Inspector</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-[#3b82f6] text-[10px]">
+                      {selectedNode ? "Entity Focus" : (selectedEdge ? "Relationship Link" : "Select Target")}
+                    </span>
+                    <button
+                      onClick={() => setRightPanelCollapsed(true)}
+                      className="p-1 rounded text-[#737c88] hover:text-[#e5e7eb] hover:bg-[#20242a] transition-colors cursor-pointer"
+                      title="Collapse Provenance Inspector"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
 
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+                {/* Independent Vertical Scroll Container */}
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-4 text-xs">
                 {selectedNode ? (
                   <div>
                     <div className="flex items-center justify-between mb-2">
@@ -900,7 +927,7 @@ export default function FlagshipDemoPage() {
                                 className="p-2.5 rounded bg-[#111315] hover:bg-[#20242a] border border-[#30353c] cursor-pointer transition-colors"
                               >
                                 <div className="flex items-center justify-between text-[10px] font-mono uppercase text-[#3b82f6] mb-1">
-                                  <span>{e.relationship.replace(/_/g, " ")}</span>
+                                  <span>{(e.relationship || "RELATED_TO").replace(/_/g, " ")}</span>
                                   <span className="text-[#737c88]">Directional</span>
                                 </div>
                                 <div className="font-medium text-[#e5e7eb]">{otherNode?.label || otherId}</div>
@@ -916,7 +943,7 @@ export default function FlagshipDemoPage() {
                 ) : selectedEdge ? (
                   <div>
                     <div className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#20242a] text-[#3b82f6] border border-[#30353c] mb-2 inline-block">
-                      {selectedEdge.relationship.replace(/_/g, " ")}
+                      {(selectedEdge.relationship || "RELATED_TO").replace(/_/g, " ")}
                     </div>
                     <h3 className="text-sm font-semibold text-[#f8fafc] mb-2">
                       Relationship Provenance Link
@@ -936,29 +963,30 @@ export default function FlagshipDemoPage() {
                 )}
               </div>
 
-              {/* Stage Navigation Footer */}
-              <div className="p-3 border-t border-[#30353c] bg-[#141619] flex justify-between items-center">
-                <button
-                  onClick={() => setCurrentStage(1)}
-                  className="px-3 py-1.5 rounded border border-[#30353c] text-[#a0a7b1] hover:text-[#e5e7eb] text-xs cursor-pointer"
-                >
-                  Back to Seeds
-                </button>
-                <button
-                  onClick={() => setCurrentStage(3)}
-                  className="px-4 py-2 rounded bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-medium text-xs flex items-center space-x-1.5 cursor-pointer"
-                >
-                  <span>Stage 03: Specialist Operations</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+                {/* Stage Navigation Footer */}
+                <div className="shrink-0 p-3 border-t border-[#30353c] bg-[#181b1f] flex justify-between items-center">
+                  <button
+                    onClick={() => setCurrentStage(1)}
+                    className="px-3 py-1.5 rounded border border-[#30353c] text-[#a0a7b1] hover:text-[#e5e7eb] text-xs cursor-pointer"
+                  >
+                    Back to Seeds
+                  </button>
+                  <button
+                    onClick={() => setCurrentStage(3)}
+                    className="px-4 py-2 rounded bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-medium text-xs flex items-center space-x-1.5 cursor-pointer"
+                  >
+                    <span>Stage 03: Specialist Operations</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
         {/* ================= STAGE 03: Specialist Operations & Interrogation ================= */}
         {currentStage === 3 && (
-          <div className="flex-1 overflow-hidden grid grid-cols-12 divide-x divide-[#30353c]">
+          <div className="flex-1 min-h-0 min-w-0 overflow-hidden grid grid-cols-12 divide-x divide-[#30353c]">
             {/* Left 3 Cols: Specialist Registry */}
             <div className="col-span-3 flex flex-col overflow-hidden bg-[#181b1f]">
               <div className="p-3 border-b border-[#30353c] bg-[#141619] flex items-center justify-between gap-2">
@@ -1424,7 +1452,7 @@ export default function FlagshipDemoPage() {
 
         {/* ================= STAGE 04: Boardroom Adversarial Deliberation Floor ================= */}
         {currentStage === 4 && (
-          <div className="flex-1 overflow-hidden grid grid-cols-12 divide-x divide-[#30353c]">
+          <div className="flex-1 min-h-0 min-w-0 overflow-hidden grid grid-cols-12 divide-x divide-[#30353c]">
             {/* Panel A: 3 Cols - Specialist Roster & Epistemic Alignment */}
             <div className="col-span-3 flex flex-col overflow-hidden bg-[#181b1f]">
               <div className="p-3 border-b border-[#30353c] bg-[#141619] text-xs font-mono uppercase tracking-wider text-[#a0a7b1] flex items-center justify-between">
@@ -1485,7 +1513,7 @@ export default function FlagshipDemoPage() {
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#111315] text-[#a0a7b1]">
-                          {c.proposing_specialist_id.replace(/_/g, " ")}
+                          {(c.proposing_specialist_id || "investigator").replace(/_/g, " ")}
                         </span>
                         <div className="flex items-center space-x-2">
                           <span className={`text-[10px] font-mono uppercase font-semibold ${
@@ -1530,7 +1558,7 @@ export default function FlagshipDemoPage() {
                           }`}
                         >
                           <div className="flex items-center justify-between text-[10px] font-mono uppercase mb-1">
-                            <span className="font-semibold text-[#e5e7eb]">{arg.specialist_id.replace(/_/g, " ")}</span>
+                            <span className="font-semibold text-[#e5e7eb]">{(arg.specialist_id || "specialist").replace(/_/g, " ")}</span>
                             <span className="text-[#737c88] font-mono">[{arg.argument_type}]</span>
                           </div>
                           <p className="leading-relaxed font-serif text-xs">{arg.content}</p>
@@ -1599,7 +1627,7 @@ export default function FlagshipDemoPage() {
 
         {/* ================= STAGE 05: Institutional Intelligence Dossier ================= */}
         {currentStage === 5 && (
-          <div className="flex-1 overflow-y-auto p-10 max-w-4xl mx-auto w-full">
+          <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain p-10 max-w-4xl mx-auto w-full">
             {primaryReport ? (
               <article className="p-8 rounded bg-[#181b1f] border border-[#30353c] text-[#e5e7eb]">
                 <div className="border-b border-[#30353c] pb-6 mb-6 flex items-start justify-between">
@@ -1744,6 +1772,32 @@ export default function FlagshipDemoPage() {
         )}
 
       </main>
+
+      {/* Optional contextual status bar — fixed */}
+      <footer className="h-7 shrink-0 px-4 bg-[#141619] border-t border-[#30353c] flex items-center justify-between text-[11px] font-mono text-[#737c88] select-none z-30">
+        <div className="flex items-center space-x-3">
+          <span className="flex items-center space-x-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]"></span>
+            <span className="text-[#a0a7b1]">MERIDIAN INTELLIGENCE WORKSTATION</span>
+          </span>
+          <span className="text-[#30353c]">|</span>
+          <span className="text-[#cbd5e1]">PLTR-2026-INV</span>
+          <span className="text-[#30353c] hidden sm:inline">|</span>
+          <span className="hidden sm:inline">{graphData.nodes.length} Entities · {graphData.edges.length} Links</span>
+          <span className="text-[#30353c] hidden md:inline">|</span>
+          <span className="text-[#10b981] hidden md:inline">100% SEC 10-K Audited</span>
+        </div>
+        <div className="flex items-center space-x-3">
+          <span className="hidden sm:inline">Stage 0{currentStage}: {
+            currentStage === 1 ? "Mandate & Seeds" :
+            currentStage === 2 ? "Relationship Graph" :
+            currentStage === 3 ? "Specialist Operations" :
+            currentStage === 4 ? "Deliberation Floor" : "Intelligence Dossier"
+          }</span>
+          <span className="text-[#30353c] hidden sm:inline">|</span>
+          <span className="text-[#3b82f6]">Viewport: Fixed Isolated Shell</span>
+        </div>
+      </footer>
 
       {/* Slide-Up Event Telemetry Drawer */}
       {showEventDrawer && (
