@@ -88,11 +88,17 @@ def test_full_investigation_and_multi_tenant_isolation():
     reports_res = client.get(f"/api/v1/investigations/{inv_id}/reports", headers=headers_a)
     assert reports_res.status_code == 200
     rep = reports_res.json()[0]
-    # Verify that SNOW benchmark numbers were applied rather than hardcoded static text
     assert rep["financial_analysis"]["revenue_usd_m"] == 2806.0
     assert rep["financial_analysis"]["gross_margin_pct"] == 67.8
     assert "scenario_matrix" in rep
     assert "bull_case" in rep["scenario_matrix"]
+
+    # Verify Corporate Graph Nodes & Edges
+    graph_res = client.get(f"/api/v1/investigations/{inv_id}/graph", headers=headers_a)
+    assert graph_res.status_code == 200
+    graph_data = graph_res.json()
+    assert len(graph_data["nodes"]) >= 2
+    assert len(graph_data["edges"]) >= 2
 
     # 6. SECURITY AUDIT: Org B attempts to access Org A's investigation (Should receive 404/Forbidden)
     unauthorized_detail = client.get(f"/api/v1/investigations/{inv_id}", headers=headers_b)
@@ -100,6 +106,9 @@ def test_full_investigation_and_multi_tenant_isolation():
 
     unauthorized_claims = client.get(f"/api/v1/investigations/{inv_id}/claims", headers=headers_b)
     assert unauthorized_claims.status_code == 404
+
+    unauthorized_graph = client.get(f"/api/v1/investigations/{inv_id}/graph", headers=headers_b)
+    assert unauthorized_graph.status_code == 404
 
     unauthorized_reports = client.get(f"/api/v1/investigations/{inv_id}/reports", headers=headers_b)
     assert unauthorized_reports.status_code == 404

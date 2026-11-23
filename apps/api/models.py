@@ -72,13 +72,31 @@ class Company(Base):
     domain = Column(String(255), nullable=True, index=True)
     legal_name = Column(String(255), nullable=True)
     jurisdiction = Column(String(100), nullable=True)
-    company_type = Column(String(50), default="private") # public, private, startup
+    company_type = Column(String(50), default="private")
     sector = Column(String(100), nullable=True)
     headquarters = Column(String(255), nullable=True)
     description = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     investigations = relationship("Investigation", back_populates="company")
+    relationships_as_source = relationship("CorporateRelationship", foreign_keys="CorporateRelationship.source_company_id", back_populates="source_company")
+    relationships_as_target = relationship("CorporateRelationship", foreign_keys="CorporateRelationship.target_company_id", back_populates="target_company")
+
+class CorporateRelationship(Base):
+    __tablename__ = "corporate_relationships"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    investigation_id = Column(String(36), ForeignKey("investigations.id", ondelete="CASCADE"), nullable=False, index=True)
+    source_company_id = Column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
+    target_company_id = Column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
+    relationship_type = Column(String(50), nullable=False) # subsidiary, parent, competitor, supplier, customer, investor, partner
+    description = Column(Text, nullable=True)
+    evidence_id = Column(String(36), ForeignKey("evidence_items.id", ondelete="SET NULL"), nullable=True)
+    confidence = Column(Float, default=0.90)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    investigation = relationship("Investigation", back_populates="corporate_relationships")
+    source_company = relationship("Company", foreign_keys=[source_company_id], back_populates="relationships_as_source")
+    target_company = relationship("Company", foreign_keys=[target_company_id], back_populates="relationships_as_target")
 
 class Investigation(Base):
     __tablename__ = "investigations"
@@ -87,8 +105,8 @@ class Investigation(Base):
     company_id = Column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String(255), nullable=False)
     status = Column(String(50), default=InvestigationStatus.DRAFT.value, index=True)
-    depth = Column(String(50), default="comprehensive") # rapid, standard, comprehensive, forensic
-    scope = Column(JSON, default=list) # List of categories: ["corporate_identity", "financials", "competitive", "market", "risks", "scenarios"]
+    depth = Column(String(50), default="comprehensive")
+    scope = Column(JSON, default=list)
     budget_limit_usd = Column(Float, default=150.0)
     current_cost_usd = Column(Float, default=0.0)
     time_limit_minutes = Column(Integer, default=60)
@@ -105,14 +123,15 @@ class Investigation(Base):
     debates = relationship("DebateSession", back_populates="investigation", cascade="all, delete-orphan")
     reports = relationship("Report", back_populates="investigation", cascade="all, delete-orphan")
     events = relationship("InvestigationEvent", back_populates="investigation", cascade="all, delete-orphan")
+    corporate_relationships = relationship("CorporateRelationship", back_populates="investigation", cascade="all, delete-orphan")
 
 class SpecialistRun(Base):
     __tablename__ = "specialist_runs"
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     investigation_id = Column(String(36), ForeignKey("investigations.id", ondelete="CASCADE"), nullable=False, index=True)
-    specialist_id = Column(String(100), nullable=False) # e.g. "financial_analyst"
+    specialist_id = Column(String(100), nullable=False)
     role_name = Column(String(100), nullable=False)
-    status = Column(String(50), default="idle") # idle, running, completed, disputed, conceded
+    status = Column(String(50), default="idle")
     confidence = Column(Float, default=0.0)
     current_position = Column(Text, nullable=True)
     mandate = Column(Text, nullable=True)
@@ -133,8 +152,8 @@ class Source(Base):
     publisher = Column(String(255), nullable=False)
     publication_date = Column(String(100), nullable=True)
     retrieval_date = Column(DateTime, default=datetime.utcnow)
-    source_category = Column(String(100), default="public_filing") # sec_filing, news, registry, company_disclosure, market_data
-    reliability_score = Column(Float, default=0.85) # 0.0 - 1.0 based on institutional authority
+    source_category = Column(String(100), default="public_filing")
+    reliability_score = Column(Float, default=0.85)
     checksum = Column(String(64), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -145,7 +164,7 @@ class EvidenceItem(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     investigation_id = Column(String(36), ForeignKey("investigations.id", ondelete="CASCADE"), nullable=False, index=True)
     source_id = Column(String(36), ForeignKey("sources.id", ondelete="CASCADE"), nullable=False, index=True)
-    location_reference = Column(String(255), nullable=True) # Page 12, Item 7, Section 3.2
+    location_reference = Column(String(255), nullable=True)
     extracted_passage = Column(Text, nullable=False)
     is_verified = Column(Boolean, default=True)
     reliability_assessment = Column(Text, nullable=True)
@@ -161,7 +180,7 @@ class Claim(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     investigation_id = Column(String(36), ForeignKey("investigations.id", ondelete="CASCADE"), nullable=False, index=True)
     proposing_specialist_id = Column(String(100), nullable=False)
-    category = Column(String(100), nullable=False) # financial, competitive, governance, legal, risk
+    category = Column(String(100), nullable=False)
     statement = Column(Text, nullable=False)
     confidence = Column(Float, default=0.7)
     verdict = Column(String(50), default=AdjudicationVerdict.UNVERIFIED.value)
@@ -178,7 +197,7 @@ class EvidenceClaimRelationship(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     claim_id = Column(String(36), ForeignKey("claims.id", ondelete="CASCADE"), nullable=False)
     evidence_id = Column(String(36), ForeignKey("evidence_items.id", ondelete="CASCADE"), nullable=False)
-    relationship_type = Column(String(50), default="supporting") # supporting, contradicting, context
+    relationship_type = Column(String(50), default="supporting")
 
     claim = relationship("Claim", back_populates="evidence_relationships")
     evidence = relationship("EvidenceItem", back_populates="claim_relationships")
@@ -188,7 +207,7 @@ class DebateSession(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     investigation_id = Column(String(36), ForeignKey("investigations.id", ondelete="CASCADE"), nullable=False, index=True)
     topic = Column(String(255), nullable=False)
-    status = Column(String(50), default="active") # active, resolved, stalemate
+    status = Column(String(50), default="active")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     investigation = relationship("Investigation", back_populates="debates")
@@ -200,9 +219,9 @@ class DebateArgument(Base):
     debate_id = Column(String(36), ForeignKey("debate_sessions.id", ondelete="CASCADE"), nullable=False)
     claim_id = Column(String(36), ForeignKey("claims.id", ondelete="SET NULL"), nullable=True)
     specialist_id = Column(String(100), nullable=False)
-    argument_type = Column(String(50), nullable=False) # assertion, challenge, rebuttal, concession
+    argument_type = Column(String(50), nullable=False)
     content = Column(Text, nullable=False)
-    evidence_ids = Column(JSON, default=list) # Array of evidence item IDs cited
+    evidence_ids = Column(JSON, default=list)
     confidence = Column(Float, default=0.7)
     created_at = Column(DateTime, default=datetime.utcnow)
 

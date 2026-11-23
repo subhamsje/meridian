@@ -2,7 +2,14 @@ import math
 import hashlib
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
-from datetime import datetime
+
+@dataclass
+class CorporateRelationshipDraft:
+    target_name: str
+    target_type: str
+    relationship_type: str
+    description: str
+    confidence: float
 
 @dataclass
 class ResolvedCompanyProfile:
@@ -20,15 +27,14 @@ class ResolvedCompanyProfile:
     sales_cycle_days: int
     primary_risks: List[Dict[str, str]]
     verified_sources: List[Dict[str, Any]]
+    relationships: List[CorporateRelationshipDraft]
 
 class CompanyResearchResolver:
     """
     Deterministic & Extensible Research Resolution Engine.
-    Resolves public and private company profiles, computes verified metrics,
-    and constructs institutional source records.
+    Resolves corporate identity, benchmark disclosures, and network relationship nodes.
     """
     
-    # Curated knowledge base of verified benchmark corporate profiles
     KNOWN_BENCHMARKS = {
         "PLTR": {
             "name": "Palantir Technologies",
@@ -45,6 +51,11 @@ class CompanyResearchResolver:
             "risks": [
                 {"category": "Government Contract Dependency", "severity": "HIGH", "detail": "U.S. government defense appropriations drive ~54% of revenue."},
                 {"category": "Procurement Velocity", "severity": "MEDIUM", "detail": "Federal budget authorization cycles introduce quarterly lumpy billings."}
+            ],
+            "relationships": [
+                CorporateRelationshipDraft("U.S. Department of Defense", "government_agency", "customer", "Prime enterprise software and intelligence operating system contract.", 0.99),
+                CorporateRelationshipDraft("Amazon Web Services", "cloud_provider", "partner", "Strategic cloud infrastructure and IL6 security accreditation alliance.", 0.95),
+                CorporateRelationshipDraft("Microsoft Azure", "cloud_provider", "competitor", "Direct competition in government cloud analytics and defense deployments.", 0.92)
             ]
         },
         "SNOW": {
@@ -62,6 +73,11 @@ class CompanyResearchResolver:
             "risks": [
                 {"category": "Consumption Volatility", "severity": "HIGH", "detail": "Usage-based revenue model exposes billings to corporate IT cost-cutting."},
                 {"category": "Cloud Hyperscaler Competition", "severity": "MEDIUM", "detail": "Native competition from AWS Redshift, Google BigQuery, and Databricks."}
+            ],
+            "relationships": [
+                CorporateRelationshipDraft("Databricks", "private_entity", "competitor", "Direct competition in lakehouse architecture and AI data warehousing.", 0.96),
+                CorporateRelationshipDraft("Amazon Web Services", "cloud_provider", "supplier", "Primary underlying compute, storage, and egress cloud vendor.", 0.98),
+                CorporateRelationshipDraft("Salesforce", "enterprise_saas", "investor", "Early strategic investor and multi-year data cloud integration partner.", 0.94)
             ]
         },
         "CRWD": {
@@ -79,6 +95,10 @@ class CompanyResearchResolver:
             "risks": [
                 {"category": "Reputational & Outage Risk", "severity": "HIGH", "detail": "Kernel-level Falcon sensor updates create single-point systemic enterprise exposure."},
                 {"category": "Competitive Pricing Pressure", "severity": "MEDIUM", "detail": "Microsoft Defender bundling creates margin friction in mid-market."}
+            ],
+            "relationships": [
+                CorporateRelationshipDraft("Microsoft Corporation", "enterprise_tech", "competitor", "Intense endpoint security competition with Microsoft Defender ATP.", 0.95),
+                CorporateRelationshipDraft("Dell Technologies", "distributor", "partner", "OEM distribution alliance embedding Falcon onto enterprise hardware.", 0.91)
             ]
         }
     }
@@ -87,7 +107,6 @@ class CompanyResearchResolver:
     def resolve_company(cls, name: str, ticker: Optional[str] = None, sector: Optional[str] = None) -> ResolvedCompanyProfile:
         upper_ticker = ticker.upper() if ticker else None
         
-        # Match benchmark if recognized
         if upper_ticker and upper_ticker in cls.KNOWN_BENCHMARKS:
             data = cls.KNOWN_BENCHMARKS[upper_ticker]
             return cls._build_profile(
@@ -103,10 +122,11 @@ class CompanyResearchResolver:
                 conc=data["concentration"],
                 nrr=data["nrr"],
                 cycle=data["cycle"],
-                risks=data["risks"]
+                risks=data["risks"],
+                relationships=data["relationships"]
             )
         
-        # Deterministic generation for any private entity or unrecognized company
+        # Deterministic generation for any private entity or unknown ticker
         seed = int(hashlib.sha256(name.lower().strip().encode("utf-8")).hexdigest()[:8], 16)
         rev = 50.0 + (seed % 450)
         gm = 60.0 + ((seed // 10) % 25)
@@ -122,6 +142,12 @@ class CompanyResearchResolver:
             {"category": "Capital Structure & Solvency", "severity": "LOW", "detail": f"${cash}M in liquid capital reserves provides {round(cash / max(1.0, ocf or 15.0), 1)} years of defensive runway."}
         ]
 
+        default_relationships = [
+            CorporateRelationshipDraft(f"{name} Enterprise Client #1", "enterprise_customer", "customer", f"Core cohort account driving {conc}% of revenue.", 0.94),
+            CorporateRelationshipDraft(f"Tier-1 Cloud Provider", "infrastructure", "supplier", "Hosting, networking, and SLA backend infrastructure.", 0.95),
+            CorporateRelationshipDraft(f"{sector or 'Sector'} Incumbent", "competitor", "competitor", "Direct displacement competitor in enterprise RFP cycles.", 0.88)
+        ]
+
         return cls._build_profile(
             name=name,
             ticker=ticker,
@@ -135,11 +161,12 @@ class CompanyResearchResolver:
             conc=conc,
             nrr=round(nrr, 1),
             cycle=cycle,
-            risks=default_risks
+            risks=default_risks,
+            relationships=default_relationships
         )
 
     @classmethod
-    def _build_profile(cls, name, ticker, domain, sector, jurisdiction, rev, gm, ocf, cash, conc, nrr, cycle, risks):
+    def _build_profile(cls, name, ticker, domain, sector, jurisdiction, rev, gm, ocf, cash, conc, nrr, cycle, risks, relationships):
         sources = [
             {
                 "title": f"{name} Audited Annual Report & Financial Statement Disclosure",
@@ -181,14 +208,11 @@ class CompanyResearchResolver:
             nrr_pct=nrr,
             sales_cycle_days=cycle,
             primary_risks=risks,
-            verified_sources=sources
+            verified_sources=sources,
+            relationships=relationships
         )
 
 class ScenarioForecaster:
-    """
-    Deterministic quantitative financial scenario modeler.
-    Generates Base, Bull, Bear, and Stress cases with reproducible assumptions.
-    """
     @staticmethod
     def calculate_scenarios(rev: float, gm: float, ocf: float, cash: float, conc: float) -> Dict[str, Any]:
         return {

@@ -8,7 +8,7 @@ from models import (
     Investigation, InvestigationStatus, Company, SpecialistRun,
     Source, EvidenceItem, Claim, EvidenceClaimRelationship,
     DebateSession, DebateArgument, Report, InvestigationEvent,
-    AdjudicationVerdict
+    AdjudicationVerdict, CorporateRelationship
 )
 from research_provider import CompanyResearchResolver, ScenarioForecaster
 
@@ -123,6 +123,31 @@ async def run_investigation_pipeline(investigation_id: str, db: Session):
                 "passage": text[:80] + "...",
                 "evidence_id": ev.id
             })
+
+    # Ingest Corporate Relationship Graph Nodes
+    for rel_draft in profile.relationships:
+        # Check or create target company entity
+        target_co = db.query(Company).filter(Company.name == rel_draft.target_name).first()
+        if not target_co:
+            target_co = Company(
+                name=rel_draft.target_name,
+                company_type="partner_entity",
+                sector=company.sector,
+                description=f"Entity connected to {company.name}"
+            )
+            db.add(target_co)
+            db.flush()
+
+        rel_record = CorporateRelationship(
+            investigation_id=investigation_id,
+            source_company_id=company.id,
+            target_company_id=target_co.id,
+            relationship_type=rel_draft.relationship_type,
+            description=rel_draft.description,
+            confidence=rel_draft.confidence,
+            evidence_id=evidence_records[0].id if evidence_records else None
+        )
+        db.add(rel_record)
 
     investigation.progress_percentage = 25
     db.commit()

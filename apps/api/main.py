@@ -12,7 +12,7 @@ from database import init_db, get_db
 from models import (
     User, Organization, OrganizationMember, Company, Investigation,
     InvestigationStatus, SpecialistRun, Source, EvidenceItem, Claim,
-    DebateSession, DebateArgument, Report, InvestigationEvent
+    DebateSession, DebateArgument, Report, InvestigationEvent, CorporateRelationship
 )
 from auth import (
     get_password_hash, verify_password, create_access_token,
@@ -271,6 +271,64 @@ def get_investigation_detail(
         "reports_count": len(inv.reports),
         "created_at": inv.created_at.isoformat(),
         "completed_at": inv.completed_at.isoformat() if inv.completed_at else None
+    }
+
+# ---- Corporate Graph Endpoints ----
+@app.get("/api/v1/investigations/{id}/graph")
+def get_corporate_graph(
+    id: str,
+    org: Organization = Depends(get_current_organization),
+    db: Session = Depends(get_db)
+):
+    inv = get_authorized_investigation(id, org, db)
+    rels = db.query(CorporateRelationship).filter(CorporateRelationship.investigation_id == inv.id).all()
+    
+    nodes_dict = {}
+    edges = []
+
+    # Center target company
+    nodes_dict[inv.company.id] = {
+        "id": inv.company.id,
+        "label": inv.company.name,
+        "type": "target_entity",
+        "sector": inv.company.sector,
+        "ticker": inv.company.ticker
+    }
+
+    for r in rels:
+        # Source node
+        if r.source_company_id not in nodes_dict:
+            src = r.source_company
+            nodes_dict[src.id] = {
+                "id": src.id,
+                "label": src.name,
+                "type": src.company_type,
+                "sector": src.sector,
+                "ticker": src.ticker
+            }
+        # Target node
+        if r.target_company_id not in nodes_dict:
+            tgt = r.target_company
+            nodes_dict[tgt.id] = {
+                "id": tgt.id,
+                "label": tgt.name,
+                "type": tgt.company_type,
+                "sector": tgt.sector,
+                "ticker": tgt.ticker
+            }
+
+        edges.append({
+            "id": r.id,
+            "source": r.source_company_id,
+            "target": r.target_company_id,
+            "relationship": r.relationship_type,
+            "description": r.description,
+            "confidence": r.confidence
+        })
+
+    return {
+        "nodes": list(nodes_dict.values()),
+        "edges": edges
     }
 
 # ---- Tenant-Isolated Boardroom Sub-Endpoints ----

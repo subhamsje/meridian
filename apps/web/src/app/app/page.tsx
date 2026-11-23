@@ -21,7 +21,9 @@ import {
   LogOut,
   FolderOpen,
   Printer,
-  Download
+  Download,
+  Share2,
+  Network
 } from "lucide-react";
 import { API_BASE } from "@/lib/utils";
 
@@ -49,7 +51,8 @@ export default function WorkspaceApp() {
   const [debates, setDebates] = useState<any[]>([]);
   const [evidence, setEvidence] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<"boardroom" | "evidence" | "reports" | "scenarios">("boardroom");
+  const [graphData, setGraphData] = useState<{ nodes: any[]; edges: any[] }>({ nodes: [], edges: [] });
+  const [activeTab, setActiveTab] = useState<"boardroom" | "graph" | "scenarios" | "evidence" | "reports">("boardroom");
 
   // Auth Form State
   const [email, setEmail] = useState("lead.analyst@meridian.internal");
@@ -145,13 +148,14 @@ export default function WorkspaceApp() {
     setSelectedInvId(id);
     if (!jwt) return;
     try {
-      const [detailRes, specsRes, claimsRes, debatesRes, evRes, reportsRes] = await Promise.all([
+      const [detailRes, specsRes, claimsRes, debatesRes, evRes, reportsRes, graphRes] = await Promise.all([
         fetch(`${API_BASE}/investigations/${id}`, { headers: { Authorization: `Bearer ${jwt}` } }),
         fetch(`${API_BASE}/investigations/${id}/specialists`, { headers: { Authorization: `Bearer ${jwt}` } }),
         fetch(`${API_BASE}/investigations/${id}/claims`, { headers: { Authorization: `Bearer ${jwt}` } }),
         fetch(`${API_BASE}/investigations/${id}/debates`, { headers: { Authorization: `Bearer ${jwt}` } }),
         fetch(`${API_BASE}/investigations/${id}/evidence`, { headers: { Authorization: `Bearer ${jwt}` } }),
         fetch(`${API_BASE}/investigations/${id}/reports`, { headers: { Authorization: `Bearer ${jwt}` } }),
+        fetch(`${API_BASE}/investigations/${id}/graph`, { headers: { Authorization: `Bearer ${jwt}` } }),
       ]);
 
       if (detailRes.ok) setInvDetail(await detailRes.json());
@@ -160,6 +164,7 @@ export default function WorkspaceApp() {
       if (debatesRes.ok) setDebates(await debatesRes.json());
       if (evRes.ok) setEvidence(await evRes.json());
       if (reportsRes.ok) setReports(await reportsRes.json());
+      if (graphRes.ok) setGraphData(await graphRes.json());
     } catch (e) {
       console.error(e);
     }
@@ -472,6 +477,14 @@ export default function WorkspaceApp() {
                     Adversarial Boardroom
                   </button>
                   <button
+                    onClick={() => setActiveTab("graph")}
+                    className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
+                      activeTab === "graph" ? "bg-emerald-950 text-emerald-300 border border-emerald-500/40" : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    Corporate Graph ({graphData.nodes.length})
+                  </button>
+                  <button
                     onClick={() => setActiveTab("scenarios")}
                     className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
                       activeTab === "scenarios" ? "bg-emerald-950 text-emerald-300 border border-emerald-500/40" : "text-slate-400 hover:text-slate-200"
@@ -636,7 +649,73 @@ export default function WorkspaceApp() {
               </div>
             )}
 
-            {/* Tab 2: Scenario Matrix & Quantitative Forecaster */}
+            {/* Tab 2: Corporate Relationship Graph */}
+            {activeTab === "graph" && (
+              <div className="flex-1 overflow-y-auto p-8 max-w-5xl mx-auto w-full">
+                <div className="mb-6 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-serif text-slate-100">Corporate Lineage & Relationship Graph</h2>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Entity relationship network spanning prime customers, key suppliers, strategic partners, and direct competitors.
+                    </p>
+                  </div>
+                  <div className="text-xs font-mono px-3 py-1.5 rounded bg-[#161c24] border border-[#20252e] text-emerald-400">
+                    {graphData.nodes.length} Verified Nodes • {graphData.edges.length} Edges
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  {graphData.edges.map((edge: any) => (
+                    <div key={edge.id} className="p-4 rounded-lg bg-[#141922] border border-[#20252e]">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded border ${
+                          edge.relationship === "customer" 
+                            ? "bg-emerald-950/50 text-emerald-400 border-emerald-500/30"
+                            : edge.relationship === "competitor"
+                            ? "bg-amber-950/50 text-amber-400 border-amber-500/30"
+                            : "bg-cyan-950/50 text-cyan-400 border-cyan-500/30"
+                        }`}>
+                          {edge.relationship}
+                        </span>
+                        <span className="text-xs font-mono text-slate-400">
+                          Confidence: {(edge.confidence * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="text-sm font-semibold text-slate-100 mb-1">
+                        {invDetail.company.name} <span className="text-slate-500">→</span> {graphData.nodes.find((n: any) => n.id === edge.target)?.label || "Connected Entity"}
+                      </div>
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        {edge.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="p-4 rounded-lg bg-[#12161e] border border-[#20252e]">
+                  <h3 className="text-xs font-mono uppercase text-slate-400 tracking-wider mb-3">
+                    Corporate Entity Nodes Registry
+                  </h3>
+                  <div className="divide-y divide-[#20252e]">
+                    {graphData.nodes.map((node: any) => (
+                      <div key={node.id} className="py-2.5 flex items-center justify-between text-xs">
+                        <div className="flex items-center space-x-2">
+                          <Network className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="font-medium text-slate-200">{node.label}</span>
+                          {node.ticker && (
+                            <span className="font-mono text-[10px] px-1 rounded bg-[#1c222b] text-emerald-400">
+                              {node.ticker}
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-mono text-slate-400 capitalize">{node.type.replace(/_/g, " ")}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Tab 3: Scenario Matrix */}
             {activeTab === "scenarios" && (
               <div className="flex-1 overflow-y-auto p-8 max-w-5xl mx-auto w-full">
                 <div className="mb-6">
@@ -695,7 +774,7 @@ export default function WorkspaceApp() {
               </div>
             )}
 
-            {/* Tab 3: Evidence Provenance */}
+            {/* Tab 4: Evidence Provenance */}
             {activeTab === "evidence" && (
               <div className="flex-1 overflow-y-auto p-6 max-w-5xl mx-auto w-full">
                 <div className="mb-6">
@@ -733,7 +812,7 @@ export default function WorkspaceApp() {
               </div>
             )}
 
-            {/* Tab 4: Institutional Dossier */}
+            {/* Tab 5: Institutional Dossier */}
             {activeTab === "reports" && (
               <div className="flex-1 overflow-y-auto p-8 max-w-4xl mx-auto w-full">
                 {reports.length === 0 ? (
