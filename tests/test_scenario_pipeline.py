@@ -84,3 +84,16 @@ def test_full_scenario_simulation_pipeline(client, db_session):
     assert "network_nodes" in analytics_data
     assert "network_links" in analytics_data
     assert len(analytics_data["confidence_series"]) == 6
+
+    # 8. Test Plenary Broadcast Survey Across Specialists
+    survey_res = client.post(
+        f"/api/v1/scenarios/{scenario_id}/survey",
+        json={"question": "What is the likelihood of sovereign regulatory intervention against this architecture?"},
+        headers=auth_headers
+    )
+    assert survey_res.status_code == 200
+    survey_data = survey_res.json()
+    assert survey_data["total_queried"] == 6
+    assert "sentiment_breakdown" in survey_data
+    assert "consensus_index" in survey_data
+    assert len(survey_data["responses"]) == 6

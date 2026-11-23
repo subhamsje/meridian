@@ -633,6 +633,66 @@ class DynamicScenarioEngine:
         }
 
     @classmethod
+    def survey_society(
+        cls,
+        investigation_id: str,
+        question: str,
+        agent_ids: Optional[List[str]],
+        db: Session
+    ) -> Dict[str, Any]:
+        """
+        Executes a plenary broadcast survey across active specialists in the scenario,
+        aggregating their grounded perspectives and computing institutional consensus.
+        """
+        inv = db.query(Investigation).filter(Investigation.id == investigation_id).first()
+        if not inv:
+            return {"error": "Investigation not found"}
+
+        query = db.query(SocietyAgent).filter(SocietyAgent.investigation_id == investigation_id)
+        if agent_ids and len(agent_ids) > 0:
+            query = query.filter(SocietyAgent.agent_id.in_(agent_ids))
+        agents = query.all()
+
+        responses = []
+        sentiment_tally = {"favorable": 0, "unfavorable": 0, "conditional": 0}
+
+        for ag in agents:
+            # Query the agent's memory
+            ans_data = cls.interview_agent(investigation_id, ag.agent_id, question, db)
+            ans_text = ans_data.get("response", "")
+
+            # Classify sentiment based on analytical indicators
+            lower_ans = ans_text.lower()
+            if any(w in lower_ans for w in ["risk", "danger", "vulnerability", "caution", "concede", "fatal", "flaw", "arbitrage"]):
+                verdict = "CONDITIONAL" if any(w in lower_ans for w in ["mitigat", "condition", "provided", "safeguard"]) else "UNFAVORABLE"
+            elif any(w in lower_ans for w in ["viable", "compelling", "positive", "strong", "resilient", "advantage"]):
+                verdict = "FAVORABLE"
+            else:
+                verdict = "CONDITIONAL"
+
+            sentiment_tally[verdict.lower()] += 1
+            responses.append({
+                "agent_id": ag.agent_id,
+                "name": ag.name,
+                "role": ag.role,
+                "verdict": verdict,
+                "response": ans_text,
+                "confidence": ag.confidence
+            })
+
+        total = len(responses)
+        consensus_index = round((sentiment_tally["favorable"] + 0.5 * sentiment_tally["conditional"]) / max(1, total) * 100, 1)
+
+        return {
+            "investigation_id": investigation_id,
+            "survey_question": question,
+            "total_queried": total,
+            "sentiment_breakdown": sentiment_tally,
+            "consensus_index": consensus_index,
+            "responses": responses
+        }
+
+    @classmethod
     def inject_god_view_intervention(
         cls,
         investigation_id: str,

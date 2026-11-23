@@ -145,6 +145,10 @@ class CreateScenarioRequest(BaseModel):
 class AgentInterviewRequest(BaseModel):
     question: str
 
+class ScenarioSurveyRequest(BaseModel):
+    question: str
+    agent_ids: Optional[List[str]] = None
+
 class GodViewInterventionRequest(BaseModel):
     intervention_text: str
 
@@ -421,6 +425,20 @@ def interview_agent_post_simulation(
     res = DynamicScenarioEngine.interview_agent(inv.id, agent_id, req.question, db)
     if "error" in res:
         raise HTTPException(status_code=404, detail=res["error"])
+    return res
+
+@app.post("/api/v1/scenarios/{id}/survey")
+def survey_scenario_agents(
+    id: str,
+    req: ScenarioSurveyRequest,
+    org: Organization = Depends(get_current_organization),
+    db: Session = Depends(get_db)
+):
+    """Plenary Broadcast Survey: Sends survey inquiry to all or selected specialists and computes consensus."""
+    inv = get_authorized_investigation(id, org, db)
+    res = DynamicScenarioEngine.survey_society(inv.id, req.question, req.agent_ids, db)
+    if "error" in res:
+        raise HTTPException(status_code=400, detail=res["error"])
     return res
 
 @app.get("/api/v1/scenarios/{id}/analytics")

@@ -114,6 +114,13 @@ export default function WorkspaceApp() {
   const [interviewHistory, setInterviewHistory] = useState<Array<{ q: string; a: string; time: string }>>([]);
   const [interviewLoading, setInterviewLoading] = useState(false);
 
+  // Plenary Broadcast Survey Modal State (MiroFish Step 5)
+  const [showSurveyModal, setShowSurveyModal] = useState(false);
+  const [surveyQuestion, setSurveyQuestion] = useState("What is the primary counterparty risk exposure under severe market liquidity contraction?");
+  const [selectedSurveyAgents, setSelectedSurveyAgents] = useState<string[]>([]);
+  const [surveyLoading, setSurveyLoading] = useState(false);
+  const [surveyResult, setSurveyResult] = useState<any>(null);
+
   // Simulation Running State
   const [isSimulating, setIsSimulating] = useState(false);
   const [viewMode, setViewMode] = useState<"tabs" | "split">("tabs");
@@ -357,6 +364,35 @@ export default function WorkspaceApp() {
       console.error(err);
     } finally {
       setInterviewLoading(false);
+    }
+  };
+
+  // Plenary Broadcast Survey Across Society (MiroFish Step 5)
+  const handleBroadcastSurvey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedInvId || !surveyQuestion.trim() || !token) return;
+    setSurveyLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/scenarios/${selectedInvId}/survey`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          question: surveyQuestion,
+          agent_ids: selectedSurveyAgents.length > 0 ? selectedSurveyAgents : undefined
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSurveyResult(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSurveyLoading(false);
     }
   };
 
@@ -610,6 +646,18 @@ export default function WorkspaceApp() {
                 >
                   <Zap className="w-3.5 h-3.5" />
                   <span>God-View Inject</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowSurveyModal(true);
+                    setSurveyResult(null);
+                  }}
+                  className="px-3 py-1.5 rounded bg-[#20242a] hover:bg-[#282d35] text-[#3b82f6] border border-[#3b82f6]/40 text-xs font-mono flex items-center space-x-1.5 cursor-pointer shadow-sm"
+                  title="Broadcast Survey to All Specialists"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Send Survey</span>
                 </button>
 
                 <button
@@ -1373,6 +1421,183 @@ export default function WorkspaceApp() {
                 <span>{interviewLoading ? "Asking..." : "Ask"}</span>
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 4: Plenary Broadcast Survey Modal (MiroFish Step 5 Feature)
+         ========================================================================= */}
+      {showSurveyModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#181b1f] border border-[#30353c] rounded-lg max-w-2xl w-full max-h-[85vh] flex flex-col p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#30353c] pb-3">
+              <div>
+                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#20242a] text-[#3b82f6] border border-[#30353c] inline-block mb-1">
+                  Plenary Interrogation & Consensus
+                </span>
+                <h3 className="text-base font-serif font-bold text-[#f8fafc]">
+                  Broadcast Survey Across Specialist Society
+                </h3>
+              </div>
+              <button 
+                onClick={() => setShowSurveyModal(false)}
+                className="text-[#737c88] hover:text-[#e5e7eb] text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Target Specialists Checklist */}
+            <div className="space-y-1.5 text-xs">
+              <div className="flex items-center justify-between text-[11px] font-mono text-[#737c88]">
+                <span>SELECT SPECIALISTS TO QUERY ({selectedSurveyAgents.length === 0 ? "ALL" : selectedSurveyAgents.length} SELECTED)</span>
+                <div className="space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSurveyAgents(societyAgents.map(a => a.agent_id))}
+                    className="text-[#3b82f6] hover:underline cursor-pointer"
+                  >
+                    Select All
+                  </button>
+                  <span>|</span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSurveyAgents([])}
+                    className="text-[#737c88] hover:text-[#e5e7eb] hover:underline cursor-pointer"
+                  >
+                    All (Default)
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto p-1 bg-[#111315] rounded border border-[#30353c]">
+                {societyAgents.map((ag) => {
+                  const isChecked = selectedSurveyAgents.length === 0 || selectedSurveyAgents.includes(ag.agent_id);
+                  return (
+                    <label
+                      key={ag.id}
+                      className={`p-2 rounded border flex items-center space-x-2 cursor-pointer transition-colors ${
+                        isChecked ? "bg-[#181b1f] border-[#3b82f6]/50 text-[#f8fafc]" : "bg-[#141619] border-[#30353c] text-[#737c88]"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          if (selectedSurveyAgents.includes(ag.agent_id)) {
+                            setSelectedSurveyAgents(selectedSurveyAgents.filter(id => id !== ag.agent_id));
+                          } else {
+                            setSelectedSurveyAgents([...selectedSurveyAgents, ag.agent_id]);
+                          }
+                        }}
+                        className="rounded border-[#30353c] text-[#2563eb] accent-[#2563eb]"
+                      />
+                      <div className="overflow-hidden">
+                        <div className="font-semibold text-[11px] truncate">{ag.name}</div>
+                        <div className="text-[10px] text-[#737c88] truncate">{ag.role}</div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Survey Question Input */}
+            <form onSubmit={handleBroadcastSurvey} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[10px] font-mono text-[#a0a7b1] uppercase mb-1">
+                  Survey Inquiry / Stress Dilemma
+                </label>
+                <textarea
+                  value={surveyQuestion}
+                  onChange={(e) => setSurveyQuestion(e.target.value)}
+                  required
+                  rows={2}
+                  placeholder="Pose a strategic question or risk inquiry to active specialists..."
+                  className="w-full px-3 py-2 rounded bg-[#111315] border border-[#30353c] text-[#e5e7eb] focus:outline-none focus:border-[#3b82f6] text-xs leading-relaxed"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-[10px] font-mono text-[#737c88]">
+                  Queries persistent individual memories with zero hallucination
+                </span>
+                <button
+                  type="submit"
+                  disabled={surveyLoading || !surveyQuestion.trim()}
+                  className="px-4 py-2 rounded bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-medium cursor-pointer shadow-sm disabled:opacity-50 flex items-center space-x-1.5 transition-colors"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{surveyLoading ? "Broadcasting to Society..." : "Broadcast Survey"}</span>
+                </button>
+              </div>
+            </form>
+
+            {/* Survey Results Breakdown */}
+            {surveyResult && (
+              <div className="flex-1 overflow-y-auto space-y-3 pt-3 border-t border-[#30353c]">
+                {/* Aggregate Metrics Bar */}
+                <div className="p-3 rounded bg-[#141619] border border-[#30353c] space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-mono text-[#737c88] uppercase">Institutional Consensus Score</span>
+                    <span className="font-mono font-bold text-[#10b981] text-sm">
+                      {surveyResult.consensus_index}% Alignment
+                    </span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-[#111315] overflow-hidden flex">
+                    <div
+                      style={{ width: `${(surveyResult.sentiment_breakdown.favorable / Math.max(1, surveyResult.total_queried)) * 100}%` }}
+                      className="bg-[#10b981] h-full"
+                      title="Favorable"
+                    />
+                    <div
+                      style={{ width: `${(surveyResult.sentiment_breakdown.conditional / Math.max(1, surveyResult.total_queried)) * 100}%` }}
+                      className="bg-[#f59e0b] h-full"
+                      title="Conditional"
+                    />
+                    <div
+                      style={{ width: `${(surveyResult.sentiment_breakdown.unfavorable / Math.max(1, surveyResult.total_queried)) * 100}%` }}
+                      className="bg-[#ef4444] h-full"
+                      title="Unfavorable"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] font-mono text-[#a0a7b1]">
+                    <span className="text-[#10b981]">Favorable: {surveyResult.sentiment_breakdown.favorable}</span>
+                    <span className="text-[#f59e0b]">Conditional: {surveyResult.sentiment_breakdown.conditional}</span>
+                    <span className="text-[#ef4444]">Unfavorable: {surveyResult.sentiment_breakdown.unfavorable}</span>
+                  </div>
+                </div>
+
+                {/* Individual Responses Feed */}
+                <div className="space-y-2 max-h-56 overflow-y-auto">
+                  {surveyResult.responses.map((resp: any, idx: number) => {
+                    const isFav = resp.verdict === "FAVORABLE";
+                    const isCond = resp.verdict === "CONDITIONAL";
+                    return (
+                      <div key={idx} className="p-2.5 rounded bg-[#111315] border border-[#30353c] space-y-1 text-xs">
+                        <div className="flex items-center justify-between text-[10px] font-mono">
+                          <div className="flex items-center space-x-1.5">
+                            <span className="font-semibold text-[#f8fafc]">{resp.name}</span>
+                            <span className="text-[#737c88]">({resp.role})</span>
+                          </div>
+                          <span className={`px-1.5 py-0.2 rounded font-mono ${
+                            isFav ? "bg-[#142922] text-[#10b981] border border-[#10b981]/30" :
+                            isCond ? "bg-[#292214] text-[#f59e0b] border border-[#f59e0b]/30" :
+                            "bg-[#291414] text-[#ef4444] border border-[#ef4444]/30"
+                          }`}>
+                            {resp.verdict} • {Math.round(resp.confidence * 100)}% Conf
+                          </span>
+                        </div>
+                        <p className="text-[#cbd5e1] font-serif leading-relaxed text-[11.5px]">
+                          {resp.response}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
