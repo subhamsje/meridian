@@ -22,6 +22,7 @@ from auth import (
 from multi_agent_society_engine import MultiAgentSocietyEngine
 from engine import run_investigation_pipeline
 from flagship_demo import ensure_flagship_demo_seeded, FLAGSHIP_DEMO_COMPANY, FLAGSHIP_DEMO_SEEDS
+from telemetry import telemetry
 
 app = FastAPI(
     title="MERIDIAN Multi-Agent Society & Intelligence API",
@@ -37,6 +38,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def telemetry_middleware(request, call_next):
+    span = telemetry.start_span(
+        name=f"{request.method} {request.url.path}",
+        component="fastapi_http",
+        attributes={"method": request.method, "path": request.url.path}
+    )
+    try:
+        response = await call_next(request)
+        telemetry.end_span(
+            span.span_id,
+            status="OK" if response.status_code < 400 else "ERROR",
+            additional_attributes={"status_code": response.status_code}
+        )
+        response.headers["X-Trace-Id"] = span.trace_id
+        response.headers["X-Span-Id"] = span.span_id
+        return response
+    except Exception as e:
+        telemetry.end_span(span.span_id, status="ERROR", additional_attributes={"error": str(e)})
+        raise e
 
 @app.on_event("startup")
 def on_startup():
@@ -773,3 +795,15 @@ async def stream_investigation_events(
             "X-Accel-Buffering": "no"
         }
     )
+
+# ---- OpenTelemetry Diagnostics & Metrics Endpoints ----
+
+@app.get("/api/v1/telemetry/metrics")
+def get_telemetry_metrics():
+    """Returns aggregated system metrics: latency percentiles, throughput, token counts."""
+    return telemetry.get_metrics_summary()
+
+@app.get("/api/v1/telemetry/traces")
+def get_telemetry_traces(limit: int = 50):
+    """Returns recent distributed tracing spans with trace IDs, span IDs, and durations."""
+    return telemetry.get_recent_traces(limit=limit)

@@ -236,36 +236,24 @@ class CompanyResearchResolver:
             relationships=relationships
         )
 
+from analytical_engine import InstitutionalAnalyticalEngine
+
 class ScenarioForecaster:
     @staticmethod
     def calculate_scenarios(rev: float, gm: float, ocf: float, cash: float, conc: float) -> Dict[str, Any]:
+        """
+        Calculates valuation and risk scenarios using embedded DuckDB and NumPy.
+        """
+        matrix = InstitutionalAnalyticalEngine.calculate_valuation_matrix(
+            revenue_m=rev,
+            gross_margin_pct=gm,
+            operating_cash_flow_m=ocf,
+            cash_reserves_m=cash,
+            concentration_pct=conc
+        )
         return {
-            "base_case": {
-                "growth_rate_pct": 18.0,
-                "projected_revenue_m": round(rev * 1.18, 1),
-                "ebitda_margin_pct": round(gm * 0.22, 1),
-                "terminal_multiple": "8.0x ARR",
-                "assumptions": "Normalized procurement cycles and stable renewal rates."
-            },
-            "bull_case": {
-                "growth_rate_pct": 28.5,
-                "projected_revenue_m": round(rev * 1.285, 1),
-                "ebitda_margin_pct": round(gm * 0.28, 1),
-                "terminal_multiple": "11.5x ARR",
-                "assumptions": "Accelerated enterprise expansion, multi-product consolidation, and NRR >120%."
-            },
-            "bear_case": {
-                "growth_rate_pct": 6.5,
-                "projected_revenue_m": round(rev * 1.065, 1),
-                "ebitda_margin_pct": round(gm * 0.12, 1),
-                "terminal_multiple": "4.5x ARR",
-                "assumptions": "Sales cycle expansion beyond 90 days and margin pressure from hyperscaler competition."
-            },
-            "stress_case": {
-                "growth_rate_pct": -12.0,
-                "projected_revenue_m": round(rev * 0.88, 1),
-                "ebitda_margin_pct": 3.5,
-                "terminal_multiple": "3.0x ARR",
-                "assumptions": f"Immediate loss of top client accounts ({conc}% of billings) requiring capital conservation."
-            }
+            "base_case": matrix["base"],
+            "bull_case": matrix["bull"],
+            "bear_case": matrix["bear"],
+            "stress_case": matrix["stress"]
         }
