@@ -21,6 +21,7 @@ from auth import (
 )
 from multi_agent_society_engine import MultiAgentSocietyEngine
 from engine import run_investigation_pipeline
+from flagship_demo import ensure_flagship_demo_seeded, FLAGSHIP_DEMO_COMPANY, FLAGSHIP_DEMO_SEEDS
 
 app = FastAPI(
     title="MERIDIAN Multi-Agent Society & Intelligence API",
@@ -90,6 +91,15 @@ class CreateInvestigationRequest(BaseModel):
 class AgentInterventionRequest(BaseModel):
     agent_id: str
     message: str
+
+# ---- Flagship Demonstration Endpoint ----
+@app.get("/api/v1/demo/flagship")
+def get_or_create_flagship_demo(db: Session = Depends(get_db)):
+    """
+    Public entry point for the MiroFish-style Flagship Demonstration.
+    Seeds and returns the Palantir Technologies investigation session.
+    """
+    return ensure_flagship_demo_seeded(db)
 
 # ---- Auth Endpoints ----
 @app.post("/api/v1/auth/register", response_model=TokenResponse)

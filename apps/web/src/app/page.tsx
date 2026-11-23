@@ -40,17 +40,17 @@ export default function LandingPage() {
 
           <div className="flex items-center space-x-4">
             <Link 
+              href="/demo"
+              className="text-sm px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-all shadow-sm shadow-emerald-950 flex items-center space-x-1.5"
+            >
+              <span>Explore Flagship Demo</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link 
               href="/app"
               className="text-sm px-4 py-2 rounded border border-[#2d3748] hover:border-slate-500 text-slate-200 transition-all font-medium"
             >
               Sign In
-            </Link>
-            <Link 
-              href="/app"
-              className="text-sm px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-all shadow-sm shadow-emerald-950 flex items-center space-x-1.5"
-            >
-              <span>Access Terminal</span>
-              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
@@ -75,18 +75,18 @@ export default function LandingPage() {
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
             <Link 
-              href="/app"
+              href="/demo"
               className="px-6 py-3.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-all flex items-center justify-center space-x-2 text-sm shadow-lg shadow-emerald-950/50"
             >
-              <span>Open Research Workspace</span>
+              <span>Explore Live Flagship Demo</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
-            <a 
-              href="#specialists"
+            <Link 
+              href="/app"
               className="px-6 py-3.5 rounded border border-[#2d3748] hover:border-slate-500 text-slate-300 font-medium transition-all text-sm flex items-center justify-center space-x-2"
             >
-              <span>Inspect Investigation Methodology</span>
-            </a>
+              <span>Open Custom Workspace</span>
+            </Link>
           </div>
         </div>
 

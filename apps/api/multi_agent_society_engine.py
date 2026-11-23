@@ -558,7 +558,9 @@ class MultiAgentSocietyEngine:
         })
 
         return {
+            "status": "answered",
             "user_query": message,
+            "response": reply_content,
             "agent_reply": reply_content,
             "agent_id": target_agent.agent_id,
             "agent_name": target_agent.name

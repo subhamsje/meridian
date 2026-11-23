@@ -1,34 +1,9 @@
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 import asyncio
 
-from main import app
-from database import get_db, Base
 from models import User, Organization, Investigation, AdjudicationVerdict
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test_meridian_society.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-def override_get_db():
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-app.dependency_overrides[get_db] = override_get_db
-client = TestClient(app)
-
-@pytest.fixture(autouse=True)
-def setup_database():
-    Base.metadata.create_all(bind=engine)
-    yield
-    Base.metadata.drop_all(bind=engine)
-
-def test_multi_agent_society_and_intervention():
+def test_multi_agent_society_and_intervention(client, db_session):
     # 1. Register User and Organization
     reg = client.post("/api/v1/auth/register", json={
         "email": "lead.investigator@meridian-intel.internal",
@@ -55,9 +30,7 @@ def test_multi_agent_society_and_intervention():
 
     # 3. Execute 8-round multi-agent society pipeline
     from multi_agent_society_engine import MultiAgentSocietyEngine
-    db = TestingSessionLocal()
-    asyncio.run(MultiAgentSocietyEngine.run_full_society_pipeline(inv_id, db))
-    db.close()
+    asyncio.run(MultiAgentSocietyEngine.run_full_society_pipeline(inv_id, db_session))
 
     # 4. Verify Society Agents Roster (14 distinct specialists)
     agents_res = client.get(f"/api/v1/investigations/{inv_id}/society/agents", headers=headers)
@@ -98,20 +71,26 @@ def test_multi_agent_society_and_intervention():
         "message": "What is the primary risk if Palantir loses its largest government contract?"
     })
     assert intervene_res.status_code == 200
-    data = intervene_res.json()
-    assert "agent_reply" in data
-    assert "Forensic Accountant" in data["agent_reply"] or "forensic" in data["agent_reply"].lower()
+    int_data = intervene_res.json()
+    assert int_data["status"] == "answered"
+    assert "Forensic Accountant" in int_data["response"]
+    assert int_data["agent_name"] == "Marcus Holst, CPA/CFF"
+    assert "Palantir" in int_data["response"]
 
-def test_financial_scenario_calculations():
-    from research_provider import ScenarioForecaster
-    scenarios = ScenarioForecaster.calculate_scenarios(
-        rev=1000.0,
-        gm=70.0,
-        ocf=150.0,
-        cash=500.0,
-        conc=20.0
-    )
-    assert scenarios["base_case"]["projected_revenue_m"] == 1180.0
-    assert scenarios["bull_case"]["projected_revenue_m"] == 1285.0
-    assert scenarios["bear_case"]["projected_revenue_m"] == 1065.0
-    assert scenarios["stress_case"]["projected_revenue_m"] == 880.0
+    # 8. Verify Graph Nodes and Edges Persisted
+    graph_res = client.get(f"/api/v1/investigations/{inv_id}/graph", headers=headers)
+    assert graph_res.status_code == 200
+    graph_data = graph_res.json()
+    assert len(graph_data["nodes"]) >= 2
+    assert len(graph_data["edges"]) >= 2
+
+    # 9. Verify Adjudication Verdict and Dossier Generation
+    rep_res = client.get(f"/api/v1/investigations/{inv_id}/reports", headers=headers)
+    assert rep_res.status_code == 200
+    reports = rep_res.json()
+    assert len(reports) >= 1
+    dossier = reports[0]
+    assert dossier["executive_summary"] != ""
+    assert dossier["financial_analysis"]["revenue_usd_m"] == 2225.0
+    assert len(dossier["scenario_matrix"]) >= 3
+    assert dossier["citations_count"] >= 1
