@@ -32,11 +32,11 @@ def test_multi_agent_society_and_intervention(client, db_session):
     from multi_agent_society_engine import MultiAgentSocietyEngine
     asyncio.run(MultiAgentSocietyEngine.run_full_society_pipeline(inv_id, db_session))
 
-    # 4. Verify Society Agents Roster (14 distinct specialists)
+    # 4. Verify Society Agents Roster (16 distinct specialists)
     agents_res = client.get(f"/api/v1/investigations/{inv_id}/society/agents", headers=headers)
     assert agents_res.status_code == 200
     agents = agents_res.json()
-    assert len(agents) == 14
+    assert len(agents) == 16
     
     agent_ids = [ag["agent_id"] for ag in agents]
     assert "chief_coordinator" in agent_ids
@@ -46,6 +46,8 @@ def test_multi_agent_society_and_intervention(client, db_session):
     assert "bear_analyst" in agent_ids
     assert "evidence_verifier" in agent_ids
     assert "final_adjudicator" in agent_ids
+    assert "corporate_structure_investigator" in agent_ids
+    assert "red_team_investigator" in agent_ids
 
     # 5. Verify Persistent Interactions (Direct messaging, challenges, concessions)
     inter_res = client.get(f"/api/v1/investigations/{inv_id}/society/interactions", headers=headers)

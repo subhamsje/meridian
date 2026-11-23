@@ -92,6 +92,9 @@ class AgentInterventionRequest(BaseModel):
     agent_id: str
     message: str
 
+class SocietyInterrogateAllRequest(BaseModel):
+    question: str
+
 class HypotheticalEventRequest(BaseModel):
     event_description: str
 
@@ -418,6 +421,23 @@ def intervene_with_agent(
         raise HTTPException(status_code=400, detail=result["error"])
     return result
 
+@app.post("/api/v1/investigations/{id}/society/interrogate-all")
+def interrogate_whole_society(
+    id: str,
+    req: SocietyInterrogateAllRequest,
+    org: Organization = Depends(get_current_organization),
+    db: Session = Depends(get_db)
+):
+    inv = get_authorized_investigation(id, org, db)
+    result = MultiAgentSocietyEngine.interrogate_all_agents(
+        investigation_id=inv.id,
+        question=req.question,
+        db=db
+    )
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
 @app.post("/api/v1/investigations/{id}/society/hypothetical")
 def inject_hypothetical(
     id: str,
@@ -666,7 +686,9 @@ def get_corporate_graph(
         "label": inv.company.name,
         "type": "target_entity",
         "sector": inv.company.sector,
-        "ticker": inv.company.ticker
+        "ticker": inv.company.ticker,
+        "description": inv.company.description,
+        "confidence": 1.0
     }
 
     for r in rels:
@@ -677,7 +699,9 @@ def get_corporate_graph(
                 "label": src.name,
                 "type": src.company_type,
                 "sector": src.sector,
-                "ticker": src.ticker
+                "ticker": src.ticker,
+                "description": src.description,
+                "confidence": 0.99
             }
         if r.target_company_id not in nodes_dict:
             tgt = r.target_company
@@ -686,7 +710,9 @@ def get_corporate_graph(
                 "label": tgt.name,
                 "type": tgt.company_type,
                 "sector": tgt.sector,
-                "ticker": tgt.ticker
+                "ticker": tgt.ticker,
+                "description": tgt.description,
+                "confidence": r.confidence
             }
 
         edges.append({
@@ -695,7 +721,8 @@ def get_corporate_graph(
             "target": r.target_company_id,
             "relationship": r.relationship_type,
             "description": r.description,
-            "confidence": r.confidence
+            "confidence": r.confidence,
+            "evidence_id": r.evidence_id
         })
 
     return {

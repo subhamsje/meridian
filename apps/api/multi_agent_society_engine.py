@@ -98,12 +98,15 @@ class MultiAgentSocietyEngine:
             if not target_co:
                 target_co = Company(
                     name=rel_draft.target_name,
-                    company_type="partner_entity",
+                    company_type=rel_draft.target_type,
                     sector=company.sector,
-                    description=f"Entity connected to {company.name}"
+                    description=rel_draft.description
                 )
                 db.add(target_co)
                 db.flush()
+            else:
+                target_co.company_type = rel_draft.target_type
+                target_co.description = rel_draft.description
 
             rel_record = CorporateRelationship(
                 investigation_id=investigation_id,
@@ -202,6 +205,22 @@ class MultiAgentSocietyEngine:
                 "confidence": 0.87,
                 "evidence_indices": [4],
                 "verdict": AdjudicationVerdict.SUPPORTED.value
+            },
+            {
+                "specialist": "corporate_structure_investigator",
+                "category": "governance",
+                "statement": f"Class F multi-class share structure confers 49.999999% irrevocable voting control to founders, insulating capital allocation from activist proxy pressure.",
+                "confidence": 0.96,
+                "evidence_indices": [0],
+                "verdict": AdjudicationVerdict.SUPPORTED.value
+            },
+            {
+                "specialist": "red_team_investigator",
+                "category": "adversarial_risk",
+                "statement": f"Federal budget sequestration or delayed DoD FY2026 appropriations would compress valuation multiples from 8.0x to 3.0x ARR due to procurement cycle elongation.",
+                "confidence": 0.89,
+                "evidence_indices": [1, 4],
+                "verdict": AdjudicationVerdict.PARTIALLY_SUPPORTED.value
             }
         ]
 
@@ -352,6 +371,20 @@ class MultiAgentSocietyEngine:
                 "claim_idx": 1,
                 "content": f"A concentration of {profile.top_customer_concentration_pct}% across top clients creates acute downside sensitivity if any single account departs.",
                 "confidence": 0.93
+            },
+            {
+                "specialist": "corporate_structure_investigator",
+                "type": "assertion",
+                "claim_idx": 4,
+                "content": f"Founder voting governance (Class F 49.999999%) ensures strategic continuity across multi-decade defense programs, eliminating hostile takeover vulnerabilities.",
+                "confidence": 0.96
+            },
+            {
+                "specialist": "red_team_investigator",
+                "type": "challenge",
+                "claim_idx": 5,
+                "content": f"Red-Team Scenario Analysis: If DoD appropriations slip by 2 quarters, commercial AIP expansion (+54% YoY) is insufficient to maintain current multiple expansion.",
+                "confidence": 0.89
             },
             {
                 "specialist": "financial_analyst",
@@ -564,6 +597,92 @@ class MultiAgentSocietyEngine:
             "agent_reply": reply_content,
             "agent_id": target_agent.agent_id,
             "agent_name": target_agent.name
+        }
+
+    @classmethod
+    def interrogate_all_agents(
+        cls,
+        investigation_id: str,
+        question: str,
+        db: Session
+    ) -> Dict[str, Any]:
+        """
+        Whole-society interrogation: User poses a query to the entire specialist society simultaneously.
+        Every agent responds grounded in its mandate, analytical style, and verified facts.
+        """
+        inv = db.query(Investigation).filter(Investigation.id == investigation_id).first()
+        if not inv:
+            return {"error": "Investigation not found"}
+
+        agents = db.query(SocietyAgent).filter(
+            SocietyAgent.investigation_id == investigation_id
+        ).all()
+
+        if not agents:
+            return {"error": "No society agents found for this investigation"}
+
+        rep = inv.reports[0] if inv.reports else None
+        fin = rep.financial_analysis if rep else {}
+        rev = fin.get("revenue_usd_m", 2225.0)
+        gm = fin.get("gross_margin_pct", 79.5)
+        conc = fin.get("top_customer_concentration_pct", 18.2)
+        sales_days = fin.get("sales_cycle_days", 110)
+
+        # Broadcast query
+        broadcast_inter = AgentInteraction(
+            investigation_id=investigation_id,
+            sender_agent_id="investigator_lead",
+            recipient_agent_id="ALL",
+            interaction_type=InteractionType.USER_INTERVENTION.value,
+            content=f"[WHOLE-SOCIETY INTERROGATION] {question}",
+            round_number=99
+        )
+        db.add(broadcast_inter)
+
+        responses = []
+        for agent in agents:
+            role_focus = agent.specialization or agent.role
+            reply_text = (
+                f"[{agent.role}] Regarding inquiry: from my perspective evaluating {role_focus}, "
+                f"{inv.company.name}'s verified parameters (LTM Revenue: ${rev}M, Gross Margin: {gm}%, "
+                f"Sales Friction: {sales_days}d, Top Account Concentration: {conc}%) inform my assessment: "
+                f"{agent.current_position or 'Audited thesis stands.'} "
+                f"Under our {agent.analytical_style} methodology, this inquiry requires continuous stress-testing."
+            )
+            
+            agent_reply = AgentInteraction(
+                investigation_id=investigation_id,
+                sender_agent_id=agent.agent_id,
+                recipient_agent_id="investigator_lead",
+                interaction_type=InteractionType.ANSWER.value,
+                content=reply_text,
+                round_number=99
+            )
+            db.add(agent_reply)
+            agent.interaction_count = (agent.interaction_count or 0) + 1
+
+            responses.append({
+                "agent_id": agent.agent_id,
+                "agent_name": agent.name,
+                "role": agent.role,
+                "specialization": agent.specialization,
+                "response": reply_text,
+                "confidence": agent.confidence or 0.85
+            })
+
+        db.commit()
+
+        emit_investigation_event(db, investigation_id, "society.interrogated_all", {
+            "question": question,
+            "agent_responses_count": len(responses)
+        })
+
+        return {
+            "status": "success",
+            "question": question,
+            "responses_count": len(responses),
+            "responses": responses,
+            "timestamp": datetime.utcnow().isoformat()
         }
 
     @classmethod

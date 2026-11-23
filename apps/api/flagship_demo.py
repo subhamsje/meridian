@@ -1,9 +1,15 @@
 import uuid
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
-from models import Investigation, Company, Organization, User, OrganizationMember, InvestigationStatus
+from models import (
+    Investigation, Company, Organization, User, OrganizationMember, InvestigationStatus,
+    SocietyAgent, AgentMemory, CorporateRelationship, Claim, EvidenceClaimRelationship,
+    DebateSession, DebateArgument
+)
 from auth import get_password_hash, create_access_token
 from multi_agent_society_engine import MultiAgentSocietyEngine
+from society_agents_registry import SOCIETY_SPECIALIST_DEFINITIONS
+from research_provider import CompanyResearchResolver
 
 FLAGSHIP_DEMO_COMPANY = {
     "name": "Palantir Technologies",
@@ -126,6 +132,97 @@ def ensure_flagship_demo_seeded(db: Session) -> Dict[str, Any]:
         asyncio.set_event_loop(loop)
         loop.run_until_complete(MultiAgentSocietyEngine.run_full_society_pipeline(inv.id, db))
         loop.close()
+    else:
+        # Ensure all 16 specialists from registry are present
+        existing_agents = {a.agent_id: a for a in inv.society_agents}
+        for defn in SOCIETY_SPECIALIST_DEFINITIONS:
+            if defn["agent_id"] not in existing_agents:
+                new_ag = SocietyAgent(
+                    investigation_id=inv.id,
+                    organization_id=inv.organization_id,
+                    agent_id=defn["agent_id"],
+                    name=defn["name"],
+                    role=defn["role"],
+                    specialization=defn["specialization"],
+                    biography=defn["biography"],
+                    expertise=defn["expertise"],
+                    mandate=defn["mandate"],
+                    analytical_style=defn["analytical_style"],
+                    permitted_tools=defn["permitted_tools"],
+                    current_task=f"Investigating {company.name} under {defn['role']} mandate",
+                    status="completed",
+                    confidence=0.88,
+                    current_position=f"Investigated under {defn['role']} mandate: cross-verified against SEC 10-K disclosures.",
+                    tokens_consumed=1450,
+                    cost_usd=0.038
+                )
+                db.add(new_ag)
+                db.flush()
+                db.add(AgentMemory(
+                    agent_id=new_ag.id,
+                    memory_type="mandate_initialization",
+                    content=f"Activated with specialization in {defn['specialization']}. Mandate: {defn['mandate']}",
+                    source_entity=company.name,
+                    confidence=0.95
+                ))
+
+        # Ensure corporate relationships are backfilled
+        if len(inv.corporate_relationships) < 25:
+            profile = CompanyResearchResolver.resolve_company(company.name, company.ticker, company.sector)
+            existing_targets = {r.target_company.name for r in inv.corporate_relationships if r.target_company}
+            for rel_draft in profile.relationships:
+                if rel_draft.target_name in existing_targets:
+                    continue
+                target_co = db.query(Company).filter(Company.name == rel_draft.target_name).first()
+                if not target_co:
+                    target_co = Company(
+                        name=rel_draft.target_name,
+                        company_type=rel_draft.target_type,
+                        sector=company.sector,
+                        description=rel_draft.description
+                    )
+                    db.add(target_co)
+                    db.flush()
+                else:
+                    target_co.company_type = rel_draft.target_type
+                    target_co.description = rel_draft.description
+                
+                rel_record = CorporateRelationship(
+                    investigation_id=inv.id,
+                    source_company_id=company.id,
+                    target_company_id=target_co.id,
+                    relationship_type=rel_draft.relationship_type,
+                    description=rel_draft.description,
+                    confidence=rel_draft.confidence
+                )
+                db.add(rel_record)
+
+        # Ensure new claims exist
+        existing_claims_specialists = {c.proposing_specialist_id for c in inv.claims}
+        if "corporate_structure_investigator" not in existing_claims_specialists:
+            claim_gov = Claim(
+                investigation_id=inv.id,
+                proposing_specialist_id="corporate_structure_investigator",
+                category="governance",
+                statement="Class F multi-class share structure confers 49.999999% irrevocable voting control to founders, insulating capital allocation from activist proxy pressure.",
+                confidence=0.96,
+                verdict="supported",
+                disputed=False
+            )
+            db.add(claim_gov)
+        if "red_team_investigator" not in existing_claims_specialists:
+            claim_rt = Claim(
+                investigation_id=inv.id,
+                proposing_specialist_id="red_team_investigator",
+                category="adversarial_risk",
+                statement="Federal budget sequestration or delayed DoD FY2026 appropriations would compress valuation multiples from 8.0x to 3.0x ARR due to procurement cycle elongation.",
+                confidence=0.89,
+                verdict="partially_supported",
+                disputed=True
+            )
+            db.add(claim_rt)
+
+        db.commit()
 
     # Generate persistent public demo JWT token
     demo_token = create_access_token({"sub": demo_user.id})

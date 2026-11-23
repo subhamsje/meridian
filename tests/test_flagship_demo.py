@@ -28,10 +28,33 @@ def test_flagship_demo_public_seeding_and_pipeline(client):
     assert len(graph["nodes"]) >= 4
     assert len(graph["edges"]) >= 3
 
-    # 3. Stage 03: Verify Society Roster (14 agents) & Interactions
+    # 3. Stage 03: Verify Society Roster (16 specialists) & Interactions
     agents_res = client.get(f"/api/v1/investigations/{inv_id}/society/agents", headers=headers)
     assert agents_res.status_code == 200
-    assert len(agents_res.json()) == 14
+    agents = agents_res.json()
+    assert len(agents) == 16
+    agent_ids = {a["agent_id"] for a in agents}
+    assert "corporate_structure_investigator" in agent_ids
+    assert "red_team_investigator" in agent_ids
+
+    # 3a. Stage 03: Test Whole-Society Interrogation
+    all_res = client.post(f"/api/v1/investigations/{inv_id}/society/interrogate-all", headers=headers, json={
+        "question": "What is Palantir's moat against cloud hyperscaler commoditization?"
+    })
+    assert all_res.status_code == 200
+    all_data = all_res.json()
+    assert all_data["status"] == "success"
+    assert len(all_data["responses"]) == 16
+
+    # 3b. Stage 03: Test Targeted Single-Agent Intervention
+    single_res = client.post(f"/api/v1/investigations/{inv_id}/society/intervene", headers=headers, json={
+        "agent_id": "red_team_investigator",
+        "message": "What is the single highest-probability vector for multiple compression?"
+    })
+    assert single_res.status_code == 200
+    single_data = single_res.json()
+    assert single_data["status"] == "answered"
+    assert "red_team_investigator" in single_data["agent_id"]
 
     inter_res = client.get(f"/api/v1/investigations/{inv_id}/society/interactions", headers=headers)
     assert inter_res.status_code == 200
