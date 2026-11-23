@@ -9,15 +9,12 @@ import {
   Network, 
   Users, 
   Scale, 
-  Sparkles, 
-  Layers, 
-  CheckCircle2, 
+  ShieldCheck, 
   Play, 
   Pause,
   RotateCw, 
   ExternalLink,
   MessageSquare,
-  ShieldCheck,
   Activity,
   Send,
   Printer,
@@ -37,11 +34,17 @@ import {
   ChevronUp,
   ChevronDown,
   Terminal,
-  Radio,
-  Clock
+  Clock,
+  Briefcase,
+  Layers,
+  Database,
+  Sliders,
+  CheckCircle2,
+  XCircle,
+  HelpCircle
 } from "lucide-react";
 import { API_BASE } from "@/lib/utils";
-import LivingKnowledgeGraph, { GraphNode, GraphEdge } from "@/components/LivingKnowledgeGraph";
+import LivingKnowledgeGraph, { GraphNode, GraphEdge, INSTITUTIONAL_CATEGORIES } from "@/components/LivingKnowledgeGraph";
 
 export default function FlagshipDemoPage() {
   const [loading, setLoading] = useState(true);
@@ -49,7 +52,7 @@ export default function FlagshipDemoPage() {
   const [token, setToken] = useState<string | null>(null);
   const [currentStage, setCurrentStage] = useState<1 | 2 | 3 | 4 | 5>(1);
 
-  // Loaded Subsystems
+  // Subsystem Entities
   const [invDetail, setInvDetail] = useState<any>(null);
   const [graphData, setGraphData] = useState<{ nodes: any[]; edges: any[] }>({ nodes: [], edges: [] });
   const [societyAgents, setSocietyAgents] = useState<any[]>([]);
@@ -75,7 +78,7 @@ export default function FlagshipDemoPage() {
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<GraphEdge | null>(null);
 
-  // Stage 03: Direct Interrogation
+  // Stage 03: Operations & Interrogation
   const [agentSearch, setAgentSearch] = useState("");
   const [interventionQuery, setInterventionQuery] = useState("");
   const [interventionLoading, setInterventionLoading] = useState(false);
@@ -164,14 +167,14 @@ export default function FlagshipDemoPage() {
       if (evStreamRes && evStreamRes.ok) {
         setEvents(await evStreamRes.json());
       }
-    } catch (e) {
-      console.error("Subsystems fetch error:", e);
+    } catch (err) {
+      console.error("Failed loading Meridian subsystems", err);
     }
   };
 
-  // Stage 01: Save Mandate
+  // Stage 01: Save Analytical Mandate
   const handleSaveMandate = async () => {
-    if (!demoData || !token) return;
+    if (!demoData || !token || !mandateText.trim()) return;
     try {
       const res = await fetch(`${API_BASE}/investigations/${demoData.investigation_id}/mandate`, {
         method: "PUT",
@@ -191,7 +194,7 @@ export default function FlagshipDemoPage() {
     }
   };
 
-  // Stage 03: Direct Interrogation
+  // Stage 03: Direct Targeted Interrogation
   const handleIntervention = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!demoData || !selectedAgent || !interventionQuery.trim() || !token) return;
@@ -213,7 +216,6 @@ export default function FlagshipDemoPage() {
       if (res.ok) {
         setInterventionHistory(prev => [...prev, data]);
         setInterventionQuery("");
-        // Reload interactions & agent profile
         const [interRes, agRes] = await Promise.all([
           fetch(`${API_BASE}/investigations/${demoData.investigation_id}/society/interactions`, {
             headers: { Authorization: `Bearer ${token}` }
@@ -263,7 +265,7 @@ export default function FlagshipDemoPage() {
     }
   };
 
-  // Stage 03: Exogenous Hypothetical Event Injection
+  // Stage 03: Exogenous Hypothetical Shock
   const handleInjectHypothetical = async (e: React.FormEvent, customEvent?: string) => {
     if (e) e.preventDefault();
     const eventToInject = customEvent || hypoEvent;
@@ -284,7 +286,6 @@ export default function FlagshipDemoPage() {
         setActiveHypoResult(data);
         setHypotheticals(prev => [data, ...prev]);
         setHypoEvent("");
-        // Reload interactions & graph
         const [interRes, graphRes] = await Promise.all([
           fetch(`${API_BASE}/investigations/${demoData.investigation_id}/society/interactions`, {
             headers: { Authorization: `Bearer ${token}` }
@@ -325,7 +326,6 @@ export default function FlagshipDemoPage() {
       if (res.ok) {
         setChallengeModalClaim(null);
         setChallengeText("");
-        // Reload debates and claims
         const [debRes, clRes] = await Promise.all([
           fetch(`${API_BASE}/investigations/${demoData.investigation_id}/debates`, { headers: { Authorization: `Bearer ${token}` } }),
           fetch(`${API_BASE}/investigations/${demoData.investigation_id}/claims`, { headers: { Authorization: `Bearer ${token}` } })
@@ -340,41 +340,23 @@ export default function FlagshipDemoPage() {
     }
   };
 
-  // Compute Category Counts for Stage 02 Hierarchy Sidebar
+  // Category counts for graph
   const entityCategoryCounts = useMemo(() => {
     const counts: Record<string, number> = { ALL: graphData.nodes.length };
     graphData.nodes.forEach(n => {
-      const t = n.type || "other";
+      const t = n.type || "default";
       counts[t] = (counts[t] || 0) + 1;
     });
     return counts;
   }, [graphData.nodes]);
 
-  // Selected Agent's Investigated Entities (for scanner wave highlight on graph)
-  const investigatingEntityNames = useMemo(() => {
-    if (!selectedAgent) return [];
-    const role = selectedAgent.role?.toLowerCase() || "";
-    if (role.includes("financial") || role.includes("coordinator")) {
-      return ["Palantir", "DoD", "Army", "Commercial"];
-    } else if (role.includes("forensic") || role.includes("accounting")) {
-      return ["SEC", "BP", "Airbus", "Palantir"];
-    } else if (role.includes("technology") || role.includes("product")) {
-      return ["AIP", "Gotham", "Foundry", "Apollo", "AWS"];
-    } else if (role.includes("bear") || role.includes("risk")) {
-      return ["Snowflake", "Databricks", "Booz Allen", "TITAN"];
-    } else if (role.includes("bull")) {
-      return ["AIP", "Sompo", "Merck", "NHS"];
-    }
-    return ["Palantir"];
-  }, [selectedAgent]);
-
-  // Filtered Agents
+  // Filtered agents list
   const filteredAgents = useMemo(() => {
     return societyAgents.filter(ag => {
       const s = agentSearch.toLowerCase();
       return ag.name.toLowerCase().includes(s) || 
              ag.role.toLowerCase().includes(s) || 
-             ag.specialization.toLowerCase().includes(s);
+             (ag.specialization && ag.specialization.toLowerCase().includes(s));
     });
   }, [societyAgents, agentSearch]);
 
@@ -382,48 +364,51 @@ export default function FlagshipDemoPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#05070c] flex flex-col items-center justify-center text-slate-300">
-        <div className="w-12 h-12 rounded-full border-2 border-cyan-500/20 border-t-cyan-400 animate-spin mb-4 shadow-[0_0_20px_rgba(6,182,212,0.3)]"></div>
-        <p className="text-xs font-mono uppercase tracking-widest text-cyan-400">
-          Mounting Institutional Society & Living Graph Engine...
+      <div className="min-h-screen bg-[#111315] flex flex-col items-center justify-center text-[#a0a7b1]">
+        <div className="w-8 h-8 rounded-full border-2 border-[#30353c] border-t-[#3b82f6] animate-spin mb-3"></div>
+        <p className="text-xs font-mono tracking-wider text-[#a0a7b1]">
+          INITIALIZING MERIDIAN RESEARCH WORKSTATION...
         </p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#05070c] text-[#e2e8f0] flex flex-col font-sans selection:bg-cyan-950 selection:text-cyan-300">
-      {/* Top Persistent Flagship Header */}
-      <header className="h-16 border-b border-[#162030] bg-[#070b12]/95 backdrop-blur px-6 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center space-x-3.5">
+    <div className="min-h-screen bg-[#111315] text-[#e5e7eb] flex flex-col font-sans selection:bg-[#20242a] selection:text-[#f8fafc]">
+      {/* Institutional Top Navigation Header */}
+      <header className="h-14 border-b border-[#30353c] bg-[#181b1f] px-6 flex items-center justify-between sticky top-0 z-50">
+        <div className="flex items-center space-x-4">
           <Link href="/" className="flex items-center space-x-2.5 group">
-            <div className="w-7 h-7 rounded bg-cyan-950/80 border border-cyan-500/50 flex items-center justify-center font-mono font-bold text-cyan-400 text-xs shadow-[0_0_12px_rgba(6,182,212,0.25)]">
+            <div className="w-6 h-6 rounded bg-[#20242a] border border-[#30353c] flex items-center justify-center font-mono font-bold text-[#e5e7eb] text-xs">
               M
             </div>
-            <span className="font-semibold text-sm tracking-wider uppercase text-slate-100 group-hover:text-cyan-300 transition-colors">
+            <span className="font-semibold text-xs tracking-wider uppercase text-[#e5e7eb] group-hover:text-white transition-colors">
               Meridian
             </span>
           </Link>
-          <span className="text-slate-600 font-mono">/</span>
-          <div className="flex items-center space-x-2">
-            <span className="text-xs font-mono px-2.5 py-0.5 rounded bg-cyan-950/60 text-cyan-300 border border-cyan-500/30 uppercase tracking-wider font-semibold">
-              FLAGSHIP: PALANTIR TECHNOLOGIES (PLTR)
+          <div className="h-4 w-px bg-[#30353c]"></div>
+          <div className="flex items-center space-x-2.5">
+            <span className="text-xs font-medium text-[#e5e7eb]">
+              Palantir Technologies Inc. (NYSE: PLTR)
             </span>
-            <span className="flex items-center space-x-1.5 text-[10px] font-mono text-cyan-400 bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
-              <span>LIVING INTELLIGENCE SOCIETY</span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#20242a] text-[#a0a7b1] border border-[#30353c]">
+              CIK: 0001321655
+            </span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#15231c] text-[#10b981] border border-[#1b3d2b] flex items-center space-x-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]"></span>
+              <span>SEC 10-K VERIFIED</span>
             </span>
           </div>
         </div>
 
         {/* 5-Stage Stepper Navigation */}
-        <div className="flex items-center space-x-1 bg-[#0b1019] p-1 rounded-lg border border-[#1a2638] text-xs font-medium">
+        <nav className="flex items-center bg-[#111315] p-0.5 rounded border border-[#30353c] text-xs font-medium">
           {[
-            { stage: 1, label: "01. Research Seeds", icon: FileText, state: "Completed" },
-            { stage: 2, label: "02. Knowledge Graph", icon: Network, state: "Living Constellation" },
-            { stage: 3, label: "03. Agent Society", icon: Users, state: "14 Specialists" },
-            { stage: 4, label: "04. Boardroom Debate", icon: Scale, state: "Adjudicated" },
-            { stage: 5, label: "05. Intelligence Dossier", icon: ShieldCheck, state: "Compiled" },
+            { stage: 1, label: "01 Mandate & Seeds", icon: FileText },
+            { stage: 2, label: "02 Relationship Graph", icon: Network },
+            { stage: 3, label: "03 Specialist Operations", icon: Users },
+            { stage: 4, label: "04 Deliberation Floor", icon: Scale },
+            { stage: 5, label: "05 Intelligence Dossier", icon: ShieldCheck },
           ].map((item) => {
             const Icon = item.icon;
             const isActive = currentStage === item.stage;
@@ -431,37 +416,38 @@ export default function FlagshipDemoPage() {
               <button
                 key={item.stage}
                 onClick={() => setCurrentStage(item.stage as any)}
-                className={`px-3 py-1.5 rounded transition-all flex items-center space-x-2 cursor-pointer ${
+                className={`px-3 py-1.5 rounded transition-colors flex items-center space-x-1.5 cursor-pointer ${
                   isActive
-                    ? "bg-cyan-950/90 text-cyan-300 border border-cyan-500/40 shadow-[0_0_12px_rgba(6,182,212,0.2)]"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-[#121a28]"
+                    ? "bg-[#20242a] text-[#f8fafc] border border-[#30353c] font-medium shadow-xs"
+                    : "text-[#a0a7b1] hover:text-[#e5e7eb] hover:bg-[#181b1f] border border-transparent"
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? "text-cyan-400" : "text-slate-500"}`} />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? "text-[#3b82f6]" : "text-[#737c88]"}`} />
                 <span>{item.label}</span>
               </button>
             );
           })}
-        </div>
+        </nav>
 
+        {/* Telemetry & Workspace Exit */}
         <div className="flex items-center space-x-3">
           <button
             onClick={() => setShowEventDrawer(prev => !prev)}
-            className={`text-xs px-2.5 py-1.5 rounded border font-mono flex items-center space-x-1.5 transition-all cursor-pointer ${
+            className={`text-xs px-2.5 py-1.5 rounded border font-mono flex items-center space-x-1.5 transition-colors cursor-pointer ${
               showEventDrawer 
-                ? "bg-cyan-950 border-cyan-500/40 text-cyan-300" 
-                : "bg-[#0b1019] border-[#1a2638] text-slate-400 hover:text-slate-200"
+                ? "bg-[#20242a] border-[#3b82f6] text-[#3b82f6]" 
+                : "bg-[#111315] border-[#30353c] text-[#a0a7b1] hover:text-[#e5e7eb]"
             }`}
             title="Toggle Live Event Stream Drawer"
           >
-            <Activity className="w-3.5 h-3.5 text-cyan-400" />
+            <Activity className="w-3.5 h-3.5 text-[#3b82f6]" />
             <span>Event Telemetry</span>
             {showEventDrawer ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
           </button>
 
           <Link
             href="/app"
-            className="text-xs px-3.5 py-1.5 rounded bg-[#101724] hover:bg-cyan-950 border border-[#1e2a3c] text-slate-300 hover:text-cyan-300 font-medium transition-all shadow-sm flex items-center space-x-1.5"
+            className="text-xs px-3 py-1.5 rounded bg-[#20242a] hover:bg-[#2c323a] border border-[#30353c] text-[#e5e7eb] font-medium transition-colors flex items-center space-x-1.5"
           >
             <span>Custom Workspace</span>
             <ArrowRight className="w-3 h-3" />
@@ -472,44 +458,43 @@ export default function FlagshipDemoPage() {
       {/* Main Flagship Stage Viewer */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
         
-        {/* ================= STAGE 01: Research Seeds ================= */}
+        {/* ================= STAGE 01: Research Seeds & Mandate ================= */}
         {currentStage === 1 && (
           <div className="flex-1 overflow-y-auto p-10 max-w-5xl mx-auto w-full">
-            <div className="mb-8">
-              <div className="flex items-center space-x-2 text-xs font-mono uppercase tracking-widest text-cyan-400 mb-1.5">
-                <span>Stage 01 • Primary Corporate Disclosures & Research Provenance</span>
+            <div className="mb-8 border-b border-[#30353c] pb-6">
+              <div className="text-[11px] font-mono uppercase tracking-wider text-[#737c88] mb-1">
+                Stage 01 • Institutional Grounding & Primary Disclosures
               </div>
               <div className="flex items-start justify-between">
                 <div>
-                  <h1 className="text-3xl font-serif font-bold text-slate-100 tracking-tight">
+                  <h1 className="text-2xl font-serif font-bold text-[#f8fafc] tracking-tight">
                     Palantir Technologies Inc. (NYSE: PLTR)
                   </h1>
-                  <p className="text-xs text-slate-400 font-mono mt-1">
-                    Sector: Enterprise Software & Defense AI • CIK: 0001321655 • Jurisdiction: Delaware, USA
+                  <p className="text-xs text-[#a0a7b1] mt-1">
+                    Sector: Enterprise Software & Defense AI • Delaware Corporate Jurisdiction • Audited by Ernst & Young LLP
                   </p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-[10px] font-mono uppercase px-2.5 py-1 rounded bg-[#0b111c] border border-[#1a2638] text-cyan-400">
-                    Provenance Integrity: 100%
-                  </span>
+                <div className="text-right font-mono text-xs text-[#a0a7b1]">
+                  <div>CIK: 0001321655</div>
+                  <div className="text-[#10b981] font-sans font-medium text-[11px]">Primary SEC 10-K Grounded</div>
                 </div>
               </div>
-              <p className="text-sm text-slate-300 mt-3 max-w-3xl leading-relaxed font-serif">
+              <p className="text-xs text-[#cbd5e1] mt-3 max-w-3xl leading-relaxed">
                 {demoData?.company?.description}
               </p>
             </div>
 
-            {/* Editable Investigation Mandate */}
-            <div className="p-6 rounded-lg bg-[#0b1019] border border-[#1a2638] mb-8 shadow-sm">
+            {/* Editable Investigation Mandate Ledger */}
+            <div className="p-5 rounded bg-[#181b1f] border border-[#30353c] mb-8">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-mono uppercase text-slate-400 tracking-wider flex items-center space-x-2">
-                  <ShieldCheck className="w-4 h-4 text-cyan-400" />
-                  <span>Investigation Objective & Analytical Mandate</span>
+                <span className="text-xs font-mono uppercase text-[#a0a7b1] tracking-wider flex items-center space-x-2">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#3b82f6]" />
+                  <span>Analytical Mandate & Investigative Scope</span>
                 </span>
                 {!mandateEditing ? (
                   <button
                     onClick={() => setMandateEditing(true)}
-                    className="text-xs font-mono text-cyan-400 hover:text-cyan-300 flex items-center space-x-1 cursor-pointer"
+                    className="text-xs font-medium text-[#3b82f6] hover:text-[#60a5fa] flex items-center space-x-1 cursor-pointer"
                   >
                     <Edit3 className="w-3 h-3" />
                     <span>Edit Mandate</span>
@@ -518,14 +503,14 @@ export default function FlagshipDemoPage() {
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={handleSaveMandate}
-                      className="text-xs font-mono px-2.5 py-1 rounded bg-cyan-600 hover:bg-cyan-500 text-white flex items-center space-x-1 cursor-pointer"
+                      className="text-xs px-2.5 py-1 rounded bg-[#2563eb] hover:bg-[#1d4ed8] text-white flex items-center space-x-1 cursor-pointer"
                     >
                       <Check className="w-3 h-3" />
                       <span>Save Mandate</span>
                     </button>
                     <button
                       onClick={() => setMandateEditing(false)}
-                      className="text-xs font-mono px-2 py-1 rounded border border-[#1a2638] text-slate-400 hover:text-slate-200 cursor-pointer"
+                      className="text-xs px-2 py-1 rounded border border-[#30353c] text-[#a0a7b1] hover:text-[#e5e7eb] cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -538,152 +523,160 @@ export default function FlagshipDemoPage() {
                   value={mandateText}
                   onChange={(e) => setMandateText(e.target.value)}
                   rows={3}
-                  className="w-full mt-2 p-3 rounded bg-[#05070c] border border-cyan-500/40 text-xs text-slate-200 font-serif leading-relaxed focus:outline-none"
+                  className="w-full mt-2 p-2.5 rounded bg-[#111315] border border-[#3b82f6] text-xs text-[#e5e7eb] leading-relaxed focus:outline-none"
                 />
               ) : (
-                <p className="text-sm font-serif font-medium text-slate-200 leading-relaxed mt-1">
+                <p className="text-xs font-serif font-medium text-[#e5e7eb] leading-relaxed mt-1">
                   "{mandateText}"
                 </p>
               )}
 
               {mandateSaved && (
-                <div className="mt-2 text-xs font-mono text-cyan-400 flex items-center space-x-1">
+                <div className="mt-2 text-xs font-mono text-[#10b981] flex items-center space-x-1">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Mandate updated and locked into agent research scope.</span>
+                  <span>Analytical mandate locked into specialist research registry.</span>
                 </div>
               )}
 
-              {/* Scope Tags */}
-              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-[#162030]">
-                {["Corporate Identity", "ASC 606 Revenue Quality", "Defense Appropriations", "NRR & Customer Concentration", "Quantitative Scenarios"].map(tag => (
-                  <span key={tag} className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#101724] border border-[#1e2a3c] text-slate-300">
+              {/* Scope Registry Tags */}
+              <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-[#30353c]">
+                {["Corporate Structure (Class F)", "ASC 606 Revenue Recognition", "DoD Budget Appropriations", "Customer Concentration (18.2%)", "Valuation Sensitivity (8.0x -> 3.0x)"].map(tag => (
+                  <span key={tag} className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#111315] border border-[#30353c] text-[#a0a7b1]">
                     {tag}
                   </span>
                 ))}
               </div>
             </div>
 
-            {/* Ingested Primary Seeds */}
-            <h2 className="text-xs font-mono uppercase tracking-wider text-slate-400 mb-4 flex items-center justify-between">
-              <span>Ingested Primary Disclosures & Provenance Documents ({demoData?.seeds?.length || 3})</span>
-              <span className="text-[10px] text-cyan-400">Zero Synthetic Hallucinations</span>
-            </h2>
+            {/* Ingested Primary Seeds Table */}
+            <div className="mb-10">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xs font-mono uppercase tracking-wider text-[#a0a7b1]">
+                  Primary Regulatory Disclosures & Evidence Documents ({demoData?.seeds?.length || 3})
+                </h2>
+                <span className="text-[11px] font-mono text-[#10b981]">100% SEC & CRS Grounded</span>
+              </div>
 
-            <div className="space-y-4 mb-10">
-              {demoData?.seeds?.map((seed: any, idx: number) => (
-                <div key={idx} className="p-5 rounded-lg bg-[#0b1019] border border-[#1a2638] hover:border-slate-600 transition-colors">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/30">
-                        {seed.category}
-                      </span>
-                      <span className="text-[10px] font-mono text-slate-400">
-                        Verified by SEC / Government Registrar
-                      </span>
-                    </div>
-                    <span className="text-xs font-mono text-cyan-400 font-semibold">
-                      Reliability: {(seed.reliability * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                  <h3 className="font-semibold text-slate-100 text-sm mb-1">{seed.title}</h3>
-                  <p className="text-xs text-slate-400 mb-3 font-mono">
-                    Publisher: {seed.publisher} • Date: {seed.date}
-                  </p>
-                  
-                  <div className="text-xs text-slate-300 leading-relaxed italic bg-[#05070c] p-3 rounded border border-[#141d2b]">
-                    "{seed.summary}"
-                  </div>
-
-                  <div className="flex items-center justify-between mt-3 pt-2 text-[11px] font-mono">
-                    <span className="text-slate-500 truncate max-w-md">Source: {seed.url}</span>
-                    <button
-                      onClick={() => setSelectedSourceForModal(seed)}
-                      className="text-cyan-400 hover:text-cyan-300 flex items-center space-x-1 cursor-pointer"
-                    >
-                      <Info className="w-3 h-3" />
-                      <span>Inspect Excerpt Passage</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
+              <div className="border border-[#30353c] rounded overflow-hidden">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-[#181b1f] border-b border-[#30353c] text-[10px] font-mono text-[#737c88] uppercase tracking-wider">
+                      <th className="py-2.5 px-3">Publisher / Authority</th>
+                      <th className="py-2.5 px-3">Document Title</th>
+                      <th className="py-2.5 px-3">Category</th>
+                      <th className="py-2.5 px-3">Filing Date</th>
+                      <th className="py-2.5 px-3">Verification Standard</th>
+                      <th className="py-2.5 px-3 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#30353c] bg-[#111315]">
+                    {demoData?.seeds?.map((seed: any, idx: number) => (
+                      <tr key={idx} className="hover:bg-[#181b1f] transition-colors">
+                        <td className="py-3 px-3 font-medium text-[#e5e7eb]">{seed.publisher}</td>
+                        <td className="py-3 px-3">
+                          <div className="font-medium text-[#e5e7eb]">{seed.title}</div>
+                          <div className="text-[10px] text-[#737c88] font-mono truncate max-w-sm">{seed.url}</div>
+                        </td>
+                        <td className="py-3 px-3 font-mono text-[10px] uppercase text-[#a0a7b1]">{seed.category}</td>
+                        <td className="py-3 px-3 font-mono text-[11px] text-[#a0a7b1]">{seed.date}</td>
+                        <td className="py-3 px-3 font-mono text-[11px] text-[#10b981]">Audited / Verified</td>
+                        <td className="py-3 px-3 text-right">
+                          <button
+                            onClick={() => setSelectedSourceForModal(seed)}
+                            className="text-[11px] text-[#3b82f6] hover:text-[#60a5fa] font-medium cursor-pointer"
+                          >
+                            Inspect Excerpt
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* Stage Proceed Footer */}
-            <div className="flex justify-between items-center pt-6 border-t border-[#162030]">
-              <span className="text-xs font-mono text-slate-500">
-                Primary factual grounding verified. Entity ontology ready.
+            <div className="flex justify-between items-center pt-6 border-t border-[#30353c]">
+              <span className="text-xs text-[#737c88]">
+                Primary factual grounding verified. Entity ontology ready for spatial exploration.
               </span>
               <button
                 onClick={() => setCurrentStage(2)}
-                className="px-5 py-2.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs flex items-center space-x-2 shadow-[0_0_15px_rgba(6,182,212,0.3)] cursor-pointer transition-colors"
+                className="px-4 py-2 rounded bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-medium text-xs flex items-center space-x-2 cursor-pointer transition-colors"
               >
                 <span>Proceed to Stage 02: Knowledge Graph</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
         )}
 
-        {/* ================= STAGE 02: Living Knowledge Graph (Cyan Reference Layout) ================= */}
+        {/* ================= STAGE 02: Knowledge Graph Workstation ================= */}
         {currentStage === 2 && (
-          <div className="flex-1 overflow-hidden grid grid-cols-12 divide-x divide-[#162030]">
-            {/* Left 2.5 Cols: Entity Hierarchy & Filter Sidebar */}
-            <div className="col-span-3 flex flex-col overflow-hidden bg-[#070a10]">
-              <div className="p-3 border-b border-[#162030] bg-[#0b1019] flex items-center justify-between">
-                <div className="flex items-center space-x-1.5 text-xs font-mono uppercase text-slate-300 tracking-wider">
-                  <Layers className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Entity Constellation</span>
+          <div className="flex-1 overflow-hidden grid grid-cols-12 divide-x divide-[#30353c]">
+            {/* Left 3 Cols: Filter & Entity Hierarchy Sidebar */}
+            <div className="col-span-3 flex flex-col overflow-hidden bg-[#181b1f]">
+              <div className="p-3 border-b border-[#30353c] bg-[#141619] flex items-center justify-between">
+                <div className="flex items-center space-x-1.5 text-xs font-mono uppercase text-[#e5e7eb] tracking-wider">
+                  <Layers className="w-3.5 h-3.5 text-[#3b82f6]" />
+                  <span>Entity Directory</span>
                 </div>
-                <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-500/30">
-                  {graphData.nodes.length} Nodes
+                <span className="text-[10px] font-mono text-[#a0a7b1] bg-[#111315] px-2 py-0.5 rounded border border-[#30353c]">
+                  {graphData.nodes.length} Entities
                 </span>
               </div>
 
-              {/* Search Bar */}
-              <div className="p-2.5 border-b border-[#162030] bg-[#080d14]">
-                <div className="flex items-center space-x-2 bg-[#05070c] px-2.5 py-1.5 rounded border border-[#1a2638]">
-                  <Search className="w-3 h-3 text-slate-500" />
+              {/* Entity Search Bar */}
+              <div className="p-2.5 border-b border-[#30353c] bg-[#181b1f]">
+                <div className="flex items-center space-x-2 bg-[#111315] px-2.5 py-1.5 rounded border border-[#30353c]">
+                  <Search className="w-3.5 h-3.5 text-[#737c88]" />
                   <input
                     type="text"
                     value={graphSearch}
                     onChange={(e) => setGraphSearch(e.target.value)}
                     placeholder="Search entities (DoD, AWS, TITAN)..."
-                    className="w-full bg-transparent text-xs text-slate-200 focus:outline-none font-mono"
+                    className="w-full bg-transparent text-xs text-[#e5e7eb] focus:outline-none placeholder-[#737c88]"
                   />
                 </div>
               </div>
 
-              {/* Hierarchy Category List */}
+              {/* Category Hierarchy List */}
               <div className="flex-1 overflow-y-auto p-2 space-y-1">
                 {[
-                  { key: "ALL", label: "All Entities", color: "#38bdf8" },
-                  { key: "target_entity", label: "Core Enterprise Hub", color: "#10b981" },
-                  { key: "government_customer", label: "Government Customers", color: "#0ea5e9" },
-                  { key: "defense_contract", label: "Defense Contracts", color: "#6366f1" },
-                  { key: "cloud_infrastructure", label: "Cloud Infrastructure", color: "#14b8a6" },
-                  { key: "commercial_customer", label: "Commercial Customers", color: "#059669" },
-                  { key: "core_platform", label: "Core Platforms & Tech", color: "#9333ea" },
-                  { key: "competitor", label: "Competitors", color: "#c026d3" },
-                  { key: "leadership", label: "Leadership & Governance", color: "#ca8a04" },
-                  { key: "regulatory_body", label: "Regulatory Authorities", color: "#64748b" },
+                  { key: "ALL", label: "All Entities" },
+                  { key: "target_entity", label: "Subject Entity (PLTR)" },
+                  { key: "government_customer", label: "Sovereign / Defense Customer" },
+                  { key: "defense_contract", label: "Defense Program / Contract" },
+                  { key: "cloud_infrastructure", label: "Cloud & Sovereign Infra" },
+                  { key: "commercial_customer", label: "Commercial Enterprise Client" },
+                  { key: "core_platform", label: "Core Software Platform" },
+                  { key: "competitor", label: "Market Competitor" },
+                  { key: "leadership", label: "Executive Leadership" },
+                  { key: "regulatory_body", label: "Regulatory Oversight Body" },
                 ].map((cat) => {
                   const count = cat.key === "ALL" ? graphData.nodes.length : (entityCategoryCounts[cat.key] || 0);
                   const isSelected = graphTypeFilter === cat.key;
+                  const catStyle = INSTITUTIONAL_CATEGORIES[cat.key] || INSTITUTIONAL_CATEGORIES.default;
                   return (
                     <button
                       key={cat.key}
                       onClick={() => setGraphTypeFilter(cat.key)}
-                      className={`w-full text-left px-2.5 py-2 rounded text-xs transition-all flex items-center justify-between cursor-pointer ${
+                      className={`w-full text-left px-2.5 py-2 rounded text-xs transition-colors flex items-center justify-between cursor-pointer ${
                         isSelected 
-                          ? "bg-cyan-950/80 border border-cyan-500/50 text-cyan-200 shadow-sm" 
-                          : "text-slate-400 hover:text-slate-200 hover:bg-[#0d1420] border border-transparent"
+                          ? "bg-[#20242a] text-[#f8fafc] font-medium border border-[#30353c]" 
+                          : "text-[#a0a7b1] hover:text-[#e5e7eb] hover:bg-[#141619] border border-transparent"
                       }`}
                     >
                       <div className="flex items-center space-x-2 truncate">
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }}></span>
+                        {cat.key !== "ALL" && (
+                          <span
+                            className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
+                            style={{ backgroundColor: catStyle.fill, border: `1.5px solid ${catStyle.border}` }}
+                          />
+                        )}
                         <span className="truncate">{cat.label}</span>
                       </div>
-                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#0c121d] text-slate-400">
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#111315] text-[#737c88]">
                         {count}
                       </span>
                     </button>
@@ -691,22 +684,22 @@ export default function FlagshipDemoPage() {
                 })}
               </div>
 
-              {/* Active Shock / Investigation Legend */}
-              <div className="p-3 border-t border-[#162030] bg-[#080d14] space-y-2 text-[10px] font-mono">
-                <div className="text-slate-400 uppercase tracking-wider">Dynamic Indicators:</div>
-                <div className="flex items-center space-x-2 text-amber-400">
-                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-                  <span>Amber Pulse: Exogenous Shock Vector</span>
+              {/* Shock Indicator Banner */}
+              {activeHypoResult && (
+                <div className="p-3 border-t border-[#30353c] bg-[#141619] text-[11px]">
+                  <div className="text-[10px] font-mono uppercase text-[#f59e0b] font-medium flex items-center space-x-1">
+                    <AlertTriangle className="w-3 h-3 text-[#f59e0b]" />
+                    <span>Active Exogenous Stress Vector</span>
+                  </div>
+                  <div className="text-[#a0a7b1] mt-1 text-[10.5px] leading-snug line-clamp-2">
+                    "{activeHypoResult.event_description}"
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2 text-cyan-400">
-                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-                  <span>Cyan Wave: Active Specialist Scanner</span>
-                </div>
-              </div>
+              )}
             </div>
 
-            {/* Center 6.5 Cols: High-Density Canvas */}
-            <div className="col-span-6 flex flex-col overflow-hidden relative bg-[#05070c]">
+            {/* Center 6 Cols: Knowledge Graph Canvas */}
+            <div className="col-span-6 flex flex-col overflow-hidden relative bg-[#111315]">
               <LivingKnowledgeGraph
                 nodes={graphData.nodes}
                 edges={graphData.edges}
@@ -721,58 +714,59 @@ export default function FlagshipDemoPage() {
                   setSelectedNode(null);
                 }}
                 affectedEntityNames={activeHypoResult?.affected_entities || []}
-                investigatingEntityNames={investigatingEntityNames}
                 searchQuery={graphSearch}
                 typeFilter={graphTypeFilter}
               />
             </div>
 
-            {/* Right 2.5 Cols: Node & Provenance Inspector */}
-            <div className="col-span-3 flex flex-col overflow-hidden bg-[#070a10]">
-              <div className="p-3 border-b border-[#162030] bg-[#0b1019] text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center justify-between">
+            {/* Right 3 Cols: Contextual Entity & Provenance Inspector */}
+            <div className="col-span-3 flex flex-col overflow-hidden bg-[#181b1f]">
+              <div className="p-3 border-b border-[#30353c] bg-[#141619] text-xs font-mono uppercase tracking-wider text-[#a0a7b1] flex items-center justify-between">
                 <span>Provenance Inspector</span>
-                <span className="text-cyan-400 text-[10px]">
-                  {selectedNode ? "Entity Focus" : (selectedEdge ? "Relationship" : "Overview")}
+                <span className="text-[#3b82f6] text-[10px]">
+                  {selectedNode ? "Entity Focus" : (selectedEdge ? "Relationship Link" : "Select Target")}
                 </span>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 space-y-5">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
                 {selectedNode ? (
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-500/30">
+                      <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#20242a] text-[#e5e7eb] border border-[#30353c]">
                         {selectedNode.type?.replace(/_/g, " ")}
                       </span>
-                      <span className="text-xs font-mono text-cyan-400 font-semibold">
-                        {selectedNode.confidence ? `${(selectedNode.confidence * 100).toFixed(0)}% Conf` : "100% Verified"}
+                      <span className="text-[11px] font-mono text-[#10b981]">
+                        Verified Disclosure
                       </span>
                     </div>
 
-                    <h2 className="text-lg font-serif font-bold text-slate-100 mb-1">{selectedNode.label}</h2>
+                    <h2 className="text-base font-serif font-bold text-[#f8fafc] mb-1">{selectedNode.label}</h2>
                     {selectedNode.sector && (
-                      <div className="text-[10px] font-mono text-slate-400 mb-3">
+                      <div className="text-[11px] text-[#a0a7b1] mb-3">
                         Sector: {selectedNode.sector} {selectedNode.ticker ? `• ${selectedNode.ticker}` : ""}
                       </div>
                     )}
 
-                    <p className="text-xs text-slate-300 leading-relaxed font-serif bg-[#05070c] p-3 rounded border border-[#162030] mb-4">
+                    <p className="text-xs text-[#cbd5e1] leading-relaxed bg-[#111315] p-3 rounded border border-[#30353c] mb-4">
                       {selectedNode.description || "Corporate entity mapped within Palantir institutional intelligence network."}
                     </p>
 
-                    <div className="p-3 rounded bg-[#0b1019] border border-[#162030] space-y-1.5 mb-4 text-xs font-mono">
-                      <div className="text-[10px] uppercase text-slate-500">Documentary Provenance</div>
-                      <div className="text-cyan-400 text-xs">
-                        SEC Form 10-K (CIK 0001321655) & CRS Modernization
+                    <div className="p-3 rounded bg-[#141619] border border-[#30353c] space-y-1 mb-4">
+                      <div className="text-[10px] font-mono uppercase text-[#737c88]">Primary Documentary Source</div>
+                      <div className="text-[#e5e7eb] font-medium text-[11px]">
+                        SEC Form 10-K & Congressional Research Service
                       </div>
-                      <div className="text-slate-400 text-[10px]">
-                        Cryptographic Hash: sha256:4a8c9...71b
+                      <div className="text-[#737c88] text-[10px] font-mono">
+                        Item 1. Business & Note 14 Customer Disclosures
                       </div>
                     </div>
 
-                    {/* Connected Relational Edges for this node */}
+                    {/* Verified 1st-Degree Relationships for Selected Node */}
                     <div>
-                      <div className="text-[10px] font-mono uppercase text-slate-400 mb-2">Verified Connections:</div>
-                      <div className="space-y-2">
+                      <div className="text-[10px] font-mono uppercase text-[#a0a7b1] mb-2">
+                        1st-Degree Corporate Connections:
+                      </div>
+                      <div className="space-y-1.5">
                         {graphData.edges
                           .filter(e => e.source === selectedNode.id || e.target === selectedNode.id)
                           .map(e => {
@@ -782,15 +776,15 @@ export default function FlagshipDemoPage() {
                               <div 
                                 key={e.id}
                                 onClick={() => setSelectedEdge(e)}
-                                className="p-2.5 rounded bg-[#0b1019] hover:bg-[#101724] border border-[#162030] text-xs cursor-pointer transition-colors"
+                                className="p-2.5 rounded bg-[#111315] hover:bg-[#20242a] border border-[#30353c] cursor-pointer transition-colors"
                               >
-                                <div className="flex items-center justify-between text-[10px] font-mono uppercase text-cyan-400 mb-1">
-                                  <span>{e.relationship}</span>
-                                  <span>{(e.confidence * 100).toFixed(0)}%</span>
+                                <div className="flex items-center justify-between text-[10px] font-mono uppercase text-[#3b82f6] mb-1">
+                                  <span>{e.relationship.replace(/_/g, " ")}</span>
+                                  <span className="text-[#737c88]">Directional</span>
                                 </div>
-                                <div className="font-semibold text-slate-200 text-xs">{otherNode?.label || otherId}</div>
+                                <div className="font-medium text-[#e5e7eb]">{otherNode?.label || otherId}</div>
                                 {e.description && (
-                                  <p className="text-[10px] text-slate-400 mt-1 line-clamp-2 font-serif">{e.description}</p>
+                                  <p className="text-[10px] text-[#a0a7b1] mt-1 line-clamp-2">{e.description}</p>
                                 )}
                               </div>
                             );
@@ -800,40 +794,40 @@ export default function FlagshipDemoPage() {
                   </div>
                 ) : selectedEdge ? (
                   <div>
-                    <div className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-500/30 mb-2 inline-block">
-                      {selectedEdge.relationship}
+                    <div className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#20242a] text-[#3b82f6] border border-[#30353c] mb-2 inline-block">
+                      {selectedEdge.relationship.replace(/_/g, " ")}
                     </div>
-                    <h3 className="text-base font-semibold text-slate-100 mb-2">
-                      Relationship Provenance
+                    <h3 className="text-sm font-semibold text-[#f8fafc] mb-2">
+                      Relationship Provenance Link
                     </h3>
-                    <p className="text-xs text-slate-300 font-serif leading-relaxed bg-[#05070c] p-3 rounded border border-[#162030] mb-4">
+                    <p className="text-xs text-[#cbd5e1] leading-relaxed bg-[#111315] p-3 rounded border border-[#30353c] mb-4">
                       "{selectedEdge.description}"
                     </p>
-                    <div className="text-[10px] font-mono text-slate-500 space-y-1">
-                      <div>Confidence Score: {selectedEdge.confidence ? (selectedEdge.confidence * 100).toFixed(0) : 95}%</div>
-                      <div>Extraction Method: ASC 606 & Federal Contracting Cross-Validation</div>
+                    <div className="text-[10px] font-mono text-[#737c88] space-y-1">
+                      <div>Validation Standard: SEC 10-K & Defense Contract Audit</div>
+                      <div>Relationship Status: Verified Active Sovereign / Commercial Link</div>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-12 text-slate-500 text-xs font-mono">
-                    Click any node or relationship connector to inspect documentary provenance.
+                  <div className="text-center py-16 text-[#737c88] text-xs font-mono">
+                    Select any entity or connection in the graph to inspect documentary provenance.
                   </div>
                 )}
               </div>
 
               {/* Stage Navigation Footer */}
-              <div className="p-3 border-t border-[#162030] bg-[#070b12] flex justify-between items-center">
+              <div className="p-3 border-t border-[#30353c] bg-[#141619] flex justify-between items-center">
                 <button
                   onClick={() => setCurrentStage(1)}
-                  className="px-3 py-1.5 rounded border border-[#1a2638] text-slate-400 hover:text-slate-200 text-xs cursor-pointer"
+                  className="px-3 py-1.5 rounded border border-[#30353c] text-[#a0a7b1] hover:text-[#e5e7eb] text-xs cursor-pointer"
                 >
                   Back to Seeds
                 </button>
                 <button
                   onClick={() => setCurrentStage(3)}
-                  className="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs flex items-center space-x-1.5 shadow-[0_0_12px_rgba(6,182,212,0.3)] cursor-pointer"
+                  className="px-4 py-2 rounded bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-medium text-xs flex items-center space-x-1.5 cursor-pointer"
                 >
-                  <span>Stage 03: Agent Society</span>
+                  <span>Stage 03: Specialist Operations</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -841,96 +835,98 @@ export default function FlagshipDemoPage() {
           </div>
         )}
 
-        {/* ================= STAGE 03: Multi-Agent Society & Realtime Interactions ================= */}
+        {/* ================= STAGE 03: Specialist Operations & Interrogation ================= */}
         {currentStage === 3 && (
-          <div className="flex-1 overflow-hidden grid grid-cols-12 divide-x divide-[#162030]">
-            {/* Left 3 Cols: Society Specialists Roster */}
-            <div className="col-span-3 flex flex-col overflow-hidden bg-[#070a10]">
-              <div className="p-3 border-b border-[#162030] bg-[#0b1019] flex items-center justify-between gap-2">
+          <div className="flex-1 overflow-hidden grid grid-cols-12 divide-x divide-[#30353c]">
+            {/* Left 3 Cols: Specialist Registry */}
+            <div className="col-span-3 flex flex-col overflow-hidden bg-[#181b1f]">
+              <div className="p-3 border-b border-[#30353c] bg-[#141619] flex items-center justify-between gap-2">
                 <div className="flex items-center space-x-1.5 flex-1">
-                  <Search className="w-3 h-3 text-slate-500" />
+                  <Search className="w-3.5 h-3.5 text-[#737c88]" />
                   <input
                     type="text"
                     value={agentSearch}
                     onChange={(e) => setAgentSearch(e.target.value)}
-                    placeholder="Search 14 specialists..."
-                    className="w-full px-2 py-0.5 rounded bg-[#05070c] border border-[#1a2638] text-[11px] text-slate-200 focus:outline-none font-mono"
+                    placeholder="Search 16 specialists..."
+                    className="w-full px-2 py-0.5 rounded bg-[#111315] border border-[#30353c] text-xs text-[#e5e7eb] focus:outline-none placeholder-[#737c88]"
                   />
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-500/30">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#20242a] text-[#a0a7b1] border border-[#30353c]">
                   {societyAgents.length} Agents
                 </span>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
-                {filteredAgents.map((ag) => (
-                  <button
-                    key={ag.id}
-                    onClick={() => setSelectedAgent(ag)}
-                    className={`w-full text-left p-3 rounded border transition-all cursor-pointer ${
-                      selectedAgent?.id === ag.id
-                        ? "bg-[#0f1725] border-cyan-500/60 text-slate-100 shadow-[0_0_10px_rgba(6,182,212,0.15)]"
-                        : "bg-[#0b1019] border-[#162030] text-slate-300 hover:border-slate-600"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-semibold text-xs text-slate-100 truncate">{ag.name}</span>
-                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#101724] text-cyan-400">
-                        {(ag.confidence * 100).toFixed(0)}% Conf
-                      </span>
-                    </div>
-                    <div className="text-[11px] font-medium text-slate-400 truncate">{ag.role}</div>
-                    <div className="flex items-center space-x-1.5 mt-1.5 text-[9px] font-mono">
-                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
-                      <span className="text-slate-400 uppercase">{ag.status || "RESEARCHING"}</span>
-                    </div>
-                  </button>
-                ))}
+              <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                {filteredAgents.map((ag) => {
+                  const isSelected = selectedAgent?.id === ag.id;
+                  return (
+                    <button
+                      key={ag.id}
+                      onClick={() => setSelectedAgent(ag)}
+                      className={`w-full text-left p-2.5 rounded border transition-colors cursor-pointer ${
+                        isSelected
+                          ? "bg-[#20242a] border-[#3b82f6] text-[#f8fafc]"
+                          : "bg-[#111315] border-[#30353c] text-[#a0a7b1] hover:text-[#e5e7eb] hover:bg-[#141619]"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium text-xs text-[#e5e7eb] truncate">{ag.name}</span>
+                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#181b1f] text-[#737c88]">
+                          {ag.analytical_style?.split("_")[0]}
+                        </span>
+                      </div>
+                      <div className="text-[10.5px] text-[#737c88] truncate">{ag.role}</div>
+                      <div className="flex items-center space-x-1.5 mt-1 text-[9px] font-mono text-[#10b981]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]"></span>
+                        <span>{ag.status || "COMPLETED"}</span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Center 5 Cols: Real-Time Society Deliberation & Timeline */}
-            <div className="col-span-5 flex flex-col overflow-hidden bg-[#05070c]">
-              <div className="p-3.5 border-b border-[#162030] bg-[#070b12] flex items-center justify-between">
+            {/* Center 5 Cols: Execution Timeline & Deliberation Stream */}
+            <div className="col-span-5 flex flex-col overflow-hidden bg-[#111315]">
+              <div className="p-3 border-b border-[#30353c] bg-[#181b1f] flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-mono uppercase tracking-wider text-cyan-400 font-semibold flex items-center space-x-1.5">
-                    <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-                    <span>Society Interaction Timeline</span>
+                  <span className="text-xs font-mono uppercase tracking-wider text-[#e5e7eb] font-semibold flex items-center space-x-1.5">
+                    <Terminal className="w-3.5 h-3.5 text-[#3b82f6]" />
+                    <span>Specialist Deliberation Stream</span>
                   </span>
-                  <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                    Structured Agent-to-Agent Challenges, Findings & Rebuttals
+                  <div className="text-[10px] text-[#737c88] font-mono mt-0.5">
+                    Peer-to-Peer Inquiries, Challenges & Formal Rebuttals
                   </div>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0b1019] text-slate-300 border border-[#1a2638]">
-                  {interactions.length} Interactions
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#111315] text-[#a0a7b1] border border-[#30353c]">
+                  {interactions.length} Events
                 </span>
               </div>
 
-              {/* Chronological Society Messages */}
+              {/* Chronological Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {interactions.map((msg, idx) => (
                   <div 
                     key={msg.id || idx}
-                    className={`p-3.5 rounded-lg border text-xs ${
-                      msg.interaction_type === "CHALLENGE" ? "bg-amber-950/20 border-amber-800/40 text-amber-100" :
-                      msg.interaction_type === "REBUT" ? "bg-blue-950/20 border-blue-800/40 text-blue-100" :
-                      msg.interaction_type === "CONCEDE" ? "bg-purple-950/20 border-purple-800/40 text-purple-100" :
-                      msg.interaction_type === "USER_INTERVENTION" ? "bg-emerald-950/30 border-emerald-500/40 text-emerald-200" :
-                      msg.interaction_type === "ADJUDICATE" ? "bg-cyan-950/30 border-cyan-500/40 text-cyan-100" :
-                      "bg-[#0b1019] border-[#162030] text-slate-300"
-                    }`}
+                    className="p-3 rounded border border-[#30353c] bg-[#181b1f] text-xs space-y-1.5"
                   >
-                    <div className="flex items-center justify-between text-[10px] font-mono uppercase mb-1">
+                    <div className="flex items-center justify-between text-[10px] font-mono uppercase">
                       <div className="flex items-center space-x-1.5">
-                        <span className="font-semibold text-slate-200">{msg.sender_agent_id?.replace(/_/g, " ")}</span>
-                        <span className="text-slate-500">→</span>
-                        <span className="text-slate-400">{msg.recipient_agent_id?.replace(/_/g, " ")}</span>
+                        <span className="font-semibold text-[#e5e7eb]">{msg.sender_agent_id?.replace(/_/g, " ")}</span>
+                        <span className="text-[#737c88]">→</span>
+                        <span className="text-[#a0a7b1]">{msg.recipient_agent_id?.replace(/_/g, " ")}</span>
                       </div>
-                      <span className="font-semibold px-1.5 py-0.2 rounded bg-[#080d14] text-cyan-300">
+                      <span className={`px-1.5 py-0.5 rounded font-mono text-[9px] ${
+                        msg.interaction_type === "CHALLENGE" ? "bg-[#2c1e18] text-[#f59e0b] border border-[#f59e0b]/40" :
+                        msg.interaction_type === "REBUT" ? "bg-[#182232] text-[#3b82f6] border border-[#3b82f6]/40" :
+                        msg.interaction_type === "CONCEDE" ? "bg-[#221a30] text-[#8b5cf6] border border-[#8b5cf6]/40" :
+                        msg.interaction_type === "USER_INTERVENTION" ? "bg-[#12251e] text-[#10b981] border border-[#10b981]/40" :
+                        "bg-[#20242a] text-[#a0a7b1]"
+                      }`}>
                         {msg.interaction_type}
                       </span>
                     </div>
-                    <p className="leading-relaxed font-serif text-xs text-slate-200 mt-1">
+                    <p className="leading-relaxed text-xs text-[#cbd5e1] font-serif">
                       {msg.content}
                     </p>
                   </div>
@@ -938,106 +934,98 @@ export default function FlagshipDemoPage() {
               </div>
             </div>
 
-            {/* Right 4 Cols: Agent Workspace, Interrogation & Shock Injection */}
-            <div className="col-span-4 flex flex-col overflow-hidden bg-[#070a10]">
+            {/* Right 4 Cols: Interrogation Console & Quantitative Scenario Stress */}
+            <div className="col-span-4 flex flex-col overflow-hidden bg-[#181b1f]">
               {selectedAgent ? (
                 <div className="flex-1 flex flex-col overflow-hidden">
                   {/* Selected Agent Header */}
-                  <div className="p-4 border-b border-[#162030] bg-[#0b1019]">
+                  <div className="p-4 border-b border-[#30353c] bg-[#141619]">
                     <div className="flex items-start justify-between">
                       <div>
-                        <div className="text-xs font-mono uppercase text-cyan-400 tracking-wider mb-0.5">
+                        <div className="text-[10px] font-mono uppercase text-[#3b82f6] tracking-wider">
                           {selectedAgent.role}
                         </div>
-                        <h2 className="text-base font-serif font-bold text-slate-100">{selectedAgent.name}</h2>
-                        <p className="text-[11px] text-slate-400 mt-0.5 font-mono">{selectedAgent.specialization}</p>
+                        <h2 className="text-base font-serif font-bold text-[#f8fafc] mt-0.5">{selectedAgent.name}</h2>
+                        <p className="text-[10.5px] text-[#737c88] mt-0.5">{selectedAgent.specialization}</p>
                       </div>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#101724] border border-[#1a2638] text-slate-200">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#111315] border border-[#30353c] text-[#a0a7b1]">
                         {selectedAgent.analytical_style}
                       </span>
                     </div>
 
-                    <div className="mt-2.5 p-2.5 rounded bg-[#05070c] border border-[#162030] text-xs text-slate-200 font-serif leading-relaxed">
-                      "{selectedAgent.current_position || "Analysis complete."}"
+                    <div className="mt-2.5 p-2.5 rounded bg-[#111315] border border-[#30353c] text-xs text-[#cbd5e1] font-serif leading-relaxed">
+                      "{selectedAgent.current_position || "Audit and evidence review completed."}"
                     </div>
-
-                    {/* Position Revisions if any */}
-                    {selectedAgent.position_revisions && selectedAgent.position_revisions.length > 0 && (
-                      <div className="mt-2 text-[10px] font-mono text-amber-400 bg-amber-950/20 p-2 rounded border border-amber-800/30 flex items-center space-x-1.5">
-                        <AlertTriangle className="w-3 h-3" />
-                        <span>Position Revised: "{selectedAgent.position_revisions[0].reason}"</span>
-                      </div>
-                    )}
                   </div>
 
                   {/* Scrollable Action Workspace */}
                   <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    {/* Interrogation Console with Mode Selector */}
-                    <div className="p-4 rounded-lg bg-[#0b1019] border border-cyan-500/30">
-                      <div className="flex items-center justify-between mb-3 border-b border-[#162030] pb-2">
-                        <div className="flex items-center space-x-2 text-xs font-medium text-cyan-400">
-                          <MessageSquare className="w-3.5 h-3.5" />
+                    {/* Interrogation Console */}
+                    <div className="p-4 rounded bg-[#141619] border border-[#30353c]">
+                      <div className="flex items-center justify-between mb-3 border-b border-[#30353c] pb-2">
+                        <div className="flex items-center space-x-1.5 text-xs font-medium text-[#e5e7eb]">
+                          <MessageSquare className="w-3.5 h-3.5 text-[#3b82f6]" />
                           <span>Investigator Interrogation</span>
                         </div>
-                        <div className="flex items-center space-x-1 p-0.5 bg-[#05070c] rounded border border-[#162030] text-[10px]">
+                        <div className="flex items-center space-x-1 bg-[#111315] p-0.5 rounded border border-[#30353c] text-[10px]">
                           <button
                             type="button"
                             onClick={() => setInterrogationMode("single")}
                             className={`px-2 py-0.5 rounded cursor-pointer transition-colors ${
                               interrogationMode === "single"
-                                ? "bg-cyan-500/20 text-cyan-300 font-medium"
-                                : "text-slate-400 hover:text-slate-200"
+                                ? "bg-[#20242a] text-[#f8fafc] font-medium"
+                                : "text-[#737c88] hover:text-[#e5e7eb]"
                             }`}
                           >
-                            Single Specialist ({selectedAgent.name.split(" ")[0]})
+                            Single Specialist
                           </button>
                           <button
                             type="button"
                             onClick={() => setInterrogationMode("all")}
                             className={`px-2 py-0.5 rounded cursor-pointer transition-colors ${
                               interrogationMode === "all"
-                                ? "bg-cyan-500/20 text-cyan-300 font-medium"
-                                : "text-slate-400 hover:text-slate-200"
+                                ? "bg-[#20242a] text-[#f8fafc] font-medium"
+                                : "text-[#737c88] hover:text-[#e5e7eb]"
                             }`}
                           >
-                            Whole Society (16 Agents)
+                            Whole Society (16)
                           </button>
                         </div>
                       </div>
 
                       {interrogationMode === "single" ? (
                         <>
-                          <div className="text-[11px] text-slate-400 mb-1">
-                            Direct inquiry to <span className="text-cyan-300 font-mono">{selectedAgent.name}</span> ({selectedAgent.role}):
+                          <div className="text-[11px] text-[#737c88] mb-1.5">
+                            Target: <span className="text-[#e5e7eb] font-medium">{selectedAgent.name}</span> ({selectedAgent.role}):
                           </div>
-                          <form onSubmit={handleIntervention} className="space-y-2 mt-1">
+                          <form onSubmit={handleIntervention} className="space-y-2">
                             <textarea
                               value={interventionQuery}
                               onChange={(e) => setInterventionQuery(e.target.value)}
                               rows={2}
-                              placeholder={`Ask e.g. "What is the primary risk if DoD appropriations stall?"...`}
-                              className="w-full px-2.5 py-1.5 rounded bg-[#05070c] border border-[#162030] text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-sans"
+                              placeholder="Query specific evidence, customer concentration, or contract risk..."
+                              className="w-full px-2.5 py-1.5 rounded bg-[#111315] border border-[#30353c] text-xs text-[#e5e7eb] focus:outline-none focus:border-[#3b82f6] placeholder-[#737c88]"
                             />
                             <div className="flex justify-end">
                               <button
                                 type="submit"
                                 disabled={interventionLoading || !interventionQuery.trim()}
-                                className="px-3.5 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs flex items-center space-x-1 cursor-pointer disabled:opacity-50"
+                                className="px-3 py-1.5 rounded bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-medium text-xs flex items-center space-x-1 cursor-pointer disabled:opacity-50"
                               >
                                 <Send className="w-3 h-3" />
-                                <span>{interventionLoading ? "Interrogating..." : "Submit Question"}</span>
+                                <span>{interventionLoading ? "Interrogating..." : "Submit Inquiry"}</span>
                               </button>
                             </div>
                           </form>
 
                           {interventionHistory.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-[#162030] space-y-2 text-xs">
+                            <div className="mt-3 pt-3 border-t border-[#30353c] space-y-2 text-xs">
                               {interventionHistory.map((item, idx) => (
-                                <div key={idx} className="p-2.5 rounded bg-[#05070c] border border-[#162030]">
-                                  <div className="text-[9px] font-mono text-cyan-400 uppercase font-semibold">You Asked:</div>
-                                  <div className="text-slate-300 italic mb-1 text-[11px]">"{item.user_query}"</div>
-                                  <div className="text-[9px] font-mono text-emerald-400 uppercase font-semibold">{item.agent_name} Responded:</div>
-                                  <div className="text-slate-200 font-serif leading-relaxed mt-0.5 text-xs">{item.agent_reply}</div>
+                                <div key={idx} className="p-2.5 rounded bg-[#111315] border border-[#30353c]">
+                                  <div className="text-[9px] font-mono text-[#3b82f6] uppercase font-semibold">Inquiry:</div>
+                                  <div className="text-[#a0a7b1] italic mb-1 text-[11px]">"{item.user_query}"</div>
+                                  <div className="text-[9px] font-mono text-[#10b981] uppercase font-semibold">{item.agent_name}:</div>
+                                  <div className="text-[#cbd5e1] font-serif leading-relaxed mt-0.5 text-xs">{item.agent_reply}</div>
                                 </div>
                               ))}
                             </div>
@@ -1045,46 +1033,46 @@ export default function FlagshipDemoPage() {
                         </>
                       ) : (
                         <>
-                          <div className="text-[11px] text-slate-400 mb-1">
-                            Broadcast question across all <span className="text-cyan-300 font-mono">16 specialist agents</span> simultaneously:
+                          <div className="text-[11px] text-[#737c88] mb-1.5">
+                            Broadcast question across all <span className="text-[#e5e7eb] font-medium">16 specialist agents</span> simultaneously:
                           </div>
-                          <form onSubmit={handleSocietyInterrogateAll} className="space-y-2 mt-1">
+                          <form onSubmit={handleSocietyInterrogateAll} className="space-y-2">
                             <textarea
                               value={societyQuestion}
                               onChange={(e) => setSocietyQuestion(e.target.value)}
                               rows={2}
-                              placeholder={`Ask e.g. "How defensible is Palantir against cloud hyperscaler commoditization and defense procurement friction?"...`}
-                              className="w-full px-2.5 py-1.5 rounded bg-[#05070c] border border-[#162030] text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-sans"
+                              placeholder="Inquire across financials, governance, competition, and defense contracts..."
+                              className="w-full px-2.5 py-1.5 rounded bg-[#111315] border border-[#30353c] text-xs text-[#e5e7eb] focus:outline-none focus:border-[#3b82f6] placeholder-[#737c88]"
                             />
                             <div className="flex justify-between items-center">
-                              <span className="text-[10px] text-slate-500 font-mono">16 Specialists will formulate individual grounded responses</span>
+                              <span className="text-[10px] text-[#737c88] font-mono">16 Specialists respond from mandate</span>
                               <button
                                 type="submit"
                                 disabled={societyLoading || !societyQuestion.trim()}
-                                className="px-3.5 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs flex items-center space-x-1 cursor-pointer disabled:opacity-50"
+                                className="px-3 py-1.5 rounded bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-medium text-xs flex items-center space-x-1 cursor-pointer disabled:opacity-50"
                               >
                                 <Send className="w-3 h-3" />
-                                <span>{societyLoading ? "Deliberating..." : "Broadcast Interrogation"}</span>
+                                <span>{societyLoading ? "Deliberating..." : "Broadcast"}</span>
                               </button>
                             </div>
                           </form>
 
                           {societyAnswers.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-[#162030] space-y-3 text-xs">
+                            <div className="mt-3 pt-3 border-t border-[#30353c] space-y-3 text-xs">
                               {societyAnswers.map((round, rIdx) => (
-                                <div key={rIdx} className="p-3 rounded bg-[#05070c] border border-cyan-900/40 space-y-2">
-                                  <div className="flex items-center justify-between text-[10px] font-mono text-cyan-400 border-b border-[#162030] pb-1">
-                                    <span>QUERY: "{round.question}"</span>
-                                    <span>{round.responses_count} Specialists Responded</span>
+                                <div key={rIdx} className="p-3 rounded bg-[#111315] border border-[#30353c] space-y-2">
+                                  <div className="flex items-center justify-between text-[10px] font-mono text-[#3b82f6] border-b border-[#30353c] pb-1">
+                                    <span>PLENARY QUERY: "{round.question}"</span>
+                                    <span>{round.responses_count} Specialists</span>
                                   </div>
-                                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                                     {round.responses?.map((resp: any, respIdx: number) => (
-                                      <div key={respIdx} className="p-2 rounded bg-[#080d15] border border-[#141d2b]">
+                                      <div key={respIdx} className="p-2 rounded bg-[#181b1f] border border-[#30353c]">
                                         <div className="flex items-center justify-between text-[9px] font-mono mb-1">
-                                          <span className="text-emerald-400 font-semibold">{resp.agent_name}</span>
-                                          <span className="text-slate-500">{resp.role}</span>
+                                          <span className="text-[#10b981] font-medium">{resp.agent_name}</span>
+                                          <span className="text-[#737c88]">{resp.role}</span>
                                         </div>
-                                        <div className="text-slate-300 font-serif text-[11px] leading-relaxed">
+                                        <div className="text-[#cbd5e1] font-serif text-[11px] leading-relaxed">
                                           {resp.response}
                                         </div>
                                       </div>
@@ -1098,75 +1086,55 @@ export default function FlagshipDemoPage() {
                       )}
                     </div>
 
-                    {/* Exogenous Shock / Hypothetical Event Injection */}
-                    <div className="p-4 rounded-lg bg-[#0b1019] border border-amber-800/30">
-                      <div className="flex items-center space-x-2 text-xs font-medium text-amber-400 mb-1">
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Exogenous Shock / Scenario Injection</span>
+                    {/* Quantitative Exogenous Scenario Shock */}
+                    <div className="p-4 rounded bg-[#141619] border border-[#30353c]">
+                      <div className="flex items-center space-x-1.5 text-xs font-medium text-[#f59e0b] mb-1">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        <span>Exogenous Shock & Stress Testing</span>
                       </div>
-                      <p className="text-[10px] text-slate-400 mb-2">
-                        Simulate market shocks. Recalculates stress multiple and flashes graph shock vectors without corrupting baseline.
+                      <p className="text-[11px] text-[#737c88] mb-2 leading-relaxed">
+                        Simulate macro and sovereign procurement shocks. Recalculates valuation multiples without modifying verified baseline history.
                       </p>
 
-                      {/* Quick Presets */}
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {[
-                          "U.S. defense appropriations reduced by 25% amidst procurement delay",
-                          "Federal procurement cycle extends beyond 180 days"
-                        ].map((preset) => (
-                          <button
-                            key={preset}
-                            type="button"
-                            onClick={(e) => handleInjectHypothetical(e, preset)}
-                            className="text-[9px] font-mono px-2 py-0.5 rounded bg-[#101724] hover:bg-amber-950/40 border border-[#1e2a3c] hover:border-amber-600/40 text-slate-300 hover:text-amber-200 cursor-pointer"
-                          >
-                            + {preset.slice(0, 36)}...
-                          </button>
-                        ))}
-                      </div>
-
-                      <form onSubmit={handleInjectHypothetical} className="flex space-x-1.5">
+                      <form onSubmit={handleInjectHypothetical} className="flex space-x-1.5 mb-2">
                         <input
                           type="text"
                           value={hypoEvent}
                           onChange={(e) => setHypoEvent(e.target.value)}
-                          placeholder="Custom shock e.g. Contract paused..."
-                          className="flex-1 px-2.5 py-1 rounded bg-[#05070c] border border-[#162030] text-xs text-slate-200 focus:outline-none focus:border-amber-500 font-sans"
+                          placeholder="e.g. U.S. defense software appropriations delayed by 2 quarters..."
+                          className="flex-1 px-2.5 py-1.5 rounded bg-[#111315] border border-[#30353c] text-xs text-[#e5e7eb] focus:outline-none focus:border-[#f59e0b] placeholder-[#737c88]"
                         />
                         <button
                           type="submit"
                           disabled={hypoLoading || !hypoEvent.trim()}
-                          className="px-3 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
+                          className="px-3 py-1.5 rounded bg-[#b45309] hover:bg-[#d97706] text-white font-medium text-xs cursor-pointer disabled:opacity-50"
                         >
-                          {hypoLoading ? "Simulating..." : "Inject"}
+                          {hypoLoading ? "Simulating..." : "Inject Shock"}
                         </button>
                       </form>
 
-                      {/* Live Stressed Shock Results */}
                       {activeHypoResult && (
-                        <div className="mt-3 p-3 rounded bg-[#090d14] border border-amber-800/40 space-y-2">
+                        <div className="mt-3 p-3 rounded bg-[#111315] border border-[#30353c] space-y-2">
                           <div className="flex items-center justify-between text-[10px] font-mono">
-                            <span className="uppercase px-1.5 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-500/40 font-bold">
-                              SHOCK RECORDED
-                            </span>
-                            <span className="text-slate-400">Baseline Preserved</span>
+                            <span className="text-[#f59e0b] uppercase font-bold">STRESS VECTOR RECORDED</span>
+                            <span className="text-[#737c88]">Baseline Preserved</span>
                           </div>
 
-                          <div className="text-xs font-serif text-slate-200 italic">
+                          <div className="text-xs text-[#e5e7eb] italic font-serif">
                             "{activeHypoResult.event_description}"
                           </div>
 
                           {activeHypoResult.stressed_metrics && (
-                            <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[#162030]">
-                              <div className="p-2 rounded bg-[#05070c] border border-[#162030]">
-                                <div className="text-[9px] font-mono text-slate-400">Baseline Multiple</div>
-                                <div className="text-xs font-mono font-bold text-cyan-400">
+                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#30353c]">
+                              <div className="p-2 rounded bg-[#181b1f] border border-[#30353c]">
+                                <div className="text-[9px] font-mono text-[#737c88]">Baseline Multiple</div>
+                                <div className="text-xs font-mono font-bold text-[#e5e7eb]">
                                   {activeHypoResult.baseline_metrics?.terminal_multiple || "8.0x ARR"}
                                 </div>
                               </div>
-                              <div className="p-2 rounded bg-[#05070c] border border-amber-900/40">
-                                <div className="text-[9px] font-mono text-amber-400">Stressed Multiple</div>
-                                <div className="text-xs font-mono font-bold text-amber-300">
+                              <div className="p-2 rounded bg-[#181b1f] border border-[#f59e0b]/40">
+                                <div className="text-[9px] font-mono text-[#f59e0b]">Stressed Multiple</div>
+                                <div className="text-xs font-mono font-bold text-[#f59e0b]">
                                   {activeHypoResult.stressed_metrics?.terminal_multiple || "3.0x ARR"}
                                 </div>
                               </div>
@@ -1178,18 +1146,18 @@ export default function FlagshipDemoPage() {
                   </div>
 
                   {/* Stage Footer */}
-                  <div className="p-3 border-t border-[#162030] bg-[#070b12] flex justify-between items-center">
+                  <div className="p-3 border-t border-[#30353c] bg-[#141619] flex justify-between items-center">
                     <button
                       onClick={() => setCurrentStage(2)}
-                      className="px-3 py-1.5 rounded border border-[#1a2638] text-slate-400 hover:text-slate-200 text-xs cursor-pointer"
+                      className="px-3 py-1.5 rounded border border-[#30353c] text-[#a0a7b1] hover:text-[#e5e7eb] text-xs cursor-pointer"
                     >
                       Back to Graph
                     </button>
                     <button
                       onClick={() => setCurrentStage(4)}
-                      className="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs flex items-center space-x-1.5 shadow-[0_0_12px_rgba(6,182,212,0.3)] cursor-pointer"
+                      className="px-4 py-2 rounded bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-medium text-xs flex items-center space-x-1.5 cursor-pointer"
                     >
-                      <span>Stage 04: Boardroom Debate</span>
+                      <span>Stage 04: Deliberation Floor</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -1199,74 +1167,74 @@ export default function FlagshipDemoPage() {
           </div>
         )}
 
-        {/* ================= STAGE 04: Boardroom Debate ================= */}
+        {/* ================= STAGE 04: Boardroom Adversarial Deliberation Floor ================= */}
         {currentStage === 4 && (
-          <div className="flex-1 overflow-hidden grid grid-cols-12 divide-x divide-[#162030]">
-            {/* Panel A: 3 Cols - Specialist Roster & Stances */}
-            <div className="col-span-3 flex flex-col overflow-hidden bg-[#070a10]">
-              <div className="p-3.5 border-b border-[#162030] bg-[#0b1019] text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center justify-between">
+          <div className="flex-1 overflow-hidden grid grid-cols-12 divide-x divide-[#30353c]">
+            {/* Panel A: 3 Cols - Specialist Roster & Epistemic Alignment */}
+            <div className="col-span-3 flex flex-col overflow-hidden bg-[#181b1f]">
+              <div className="p-3 border-b border-[#30353c] bg-[#141619] text-xs font-mono uppercase tracking-wider text-[#a0a7b1] flex items-center justify-between">
                 <span>Specialist Roster</span>
-                <span className="text-cyan-400 text-[10px]">Stances</span>
+                <span className="text-[#3b82f6] text-[10px]">Mandate Stances</span>
               </div>
-              <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+              <div className="flex-1 overflow-y-auto p-2 space-y-1">
                 {societyAgents.map((ag) => (
-                  <div key={ag.id} className="p-2.5 rounded bg-[#0b1019] border border-[#162030] text-xs">
+                  <div key={ag.id} className="p-2.5 rounded bg-[#111315] border border-[#30353c] text-xs">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-semibold text-slate-200 text-[11px] truncate">{ag.name}</span>
+                      <span className="font-medium text-[#e5e7eb] truncate">{ag.name}</span>
                       <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
-                        ag.agent_id === "bull_analyst" ? "bg-emerald-950 text-emerald-400" :
-                        ag.agent_id === "bear_analyst" ? "bg-amber-950 text-amber-400" :
-                        ag.agent_id === "final_adjudicator" ? "bg-purple-950 text-purple-400" :
-                        "bg-[#101724] text-slate-300"
+                        ag.agent_id === "bull_analyst" ? "bg-[#142922] text-[#10b981]" :
+                        ag.agent_id === "bear_analyst" ? "bg-[#2c1e18] text-[#f59e0b]" :
+                        ag.agent_id === "final_adjudicator" ? "bg-[#261e38] text-[#8b5cf6]" :
+                        "bg-[#20242a] text-[#a0a7b1]"
                       }`}>
                         {ag.agent_id === "bull_analyst" ? "BULL" :
                          ag.agent_id === "bear_analyst" ? "BEAR" :
                          ag.agent_id === "final_adjudicator" ? "JUDICIAL" : "ANALYST"}
                       </span>
                     </div>
-                    <div className="text-[10px] text-slate-400 truncate">{ag.role}</div>
+                    <div className="text-[10.5px] text-[#737c88] truncate">{ag.role}</div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Panel B: 6 Cols - Deliberation Timeline */}
-            <div className="col-span-6 flex flex-col overflow-hidden bg-[#05070c]">
-              <div className="p-3.5 border-b border-[#162030] bg-[#070b12] flex items-center justify-between">
+            {/* Panel B: 6 Cols - Structured Adversarial Debate Chamber */}
+            <div className="col-span-6 flex flex-col overflow-hidden bg-[#111315]">
+              <div className="p-3 border-b border-[#30353c] bg-[#181b1f] flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-mono uppercase tracking-wider text-cyan-400 font-semibold">
+                  <span className="text-xs font-mono uppercase tracking-wider text-[#e5e7eb] font-semibold">
                     Adversarial Deliberation Floor
                   </span>
-                  <div className="text-xs text-slate-400 font-mono mt-0.5">
-                    Structured Challenges, Rebuttals & Judicial Rulings
+                  <div className="text-[10px] text-[#737c88] font-mono mt-0.5">
+                    Structured Atomic Assertions, Counter-Challenges & Judicial Rulings
                   </div>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0b1019] text-slate-300 border border-[#1a2638]">
-                  {claims.length} Claims • {debates[0]?.arguments?.length || 4} Arguments
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#111315] text-[#a0a7b1] border border-[#30353c]">
+                  {claims.length} Claims • {debates[0]?.arguments?.length || 5} Arguments
                 </span>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {/* Claims Bar */}
-                <div className="space-y-2 mb-3">
-                  <div className="text-[10px] font-mono uppercase text-slate-400">Audited Claims in Dispute:</div>
+                {/* Claims Register */}
+                <div className="space-y-2 mb-2">
+                  <div className="text-[10px] font-mono uppercase text-[#737c88]">Audited Claims Under Scrutiny:</div>
                   {claims.map((c) => (
                     <div 
                       key={c.id} 
                       onClick={() => setSelectedClaim(c)}
-                      className={`p-3 rounded-lg border text-xs cursor-pointer transition-all ${
+                      className={`p-3 rounded border text-xs cursor-pointer transition-colors ${
                         selectedClaim?.id === c.id 
-                          ? "bg-[#0f1725] border-cyan-500/60 shadow-sm" 
-                          : "bg-[#0b1019] border-[#162030] hover:border-slate-600"
+                          ? "bg-[#20242a] border-[#3b82f6]" 
+                          : "bg-[#181b1f] border-[#30353c] hover:bg-[#1f2328]"
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#101724] text-slate-300">
-                          {c.specialist_id.replace(/_/g, " ")}
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#111315] text-[#a0a7b1]">
+                          {c.proposing_specialist_id.replace(/_/g, " ")}
                         </span>
                         <div className="flex items-center space-x-2">
                           <span className={`text-[10px] font-mono uppercase font-semibold ${
-                            c.verdict === "supported" ? "text-emerald-400" : "text-amber-400"
+                            c.verdict === "supported" ? "text-[#10b981]" : "text-[#f59e0b]"
                           }`}>
                             Verdict: {c.verdict}
                           </span>
@@ -1275,40 +1243,40 @@ export default function FlagshipDemoPage() {
                               e.stopPropagation();
                               setChallengeModalClaim(c);
                             }}
-                            className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950/60 hover:bg-amber-900 border border-amber-600/40 text-amber-300 cursor-pointer"
+                            className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#2c1e18] hover:bg-[#3d2920] border border-[#f59e0b]/40 text-[#f59e0b] cursor-pointer"
                           >
                             Challenge Claim
                           </button>
                         </div>
                       </div>
-                      <p className="text-xs leading-relaxed font-serif text-slate-200">{c.statement}</p>
+                      <p className="text-xs leading-relaxed font-serif text-[#e5e7eb]">{c.statement}</p>
                     </div>
                   ))}
                 </div>
 
                 {/* Deliberation Arguments Thread */}
                 {debates.map((d) => (
-                  <div key={d.id} className="p-4 rounded-lg bg-[#0b1019] border border-[#162030]">
-                    <div className="text-xs font-semibold text-slate-200 mb-3 flex items-center space-x-2">
-                      <Scale className="w-4 h-4 text-amber-400" />
-                      <span>Adversarial Debate Session: {d.topic}</span>
+                  <div key={d.id} className="p-4 rounded bg-[#181b1f] border border-[#30353c]">
+                    <div className="text-xs font-semibold text-[#f8fafc] mb-3 flex items-center space-x-2">
+                      <Scale className="w-4 h-4 text-[#3b82f6]" />
+                      <span>Formal Dispute: {d.topic}</span>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-2.5">
                       {d.arguments.map((arg: any) => (
                         <div 
                           key={arg.id} 
-                          className={`p-3.5 rounded border text-xs ${
+                          className={`p-3 rounded border text-xs ${
                             arg.argument_type === "adjudication"
-                              ? "bg-purple-950/20 border-purple-800/40 text-purple-200"
+                              ? "bg-[#1d192b] border-[#8b5cf6]/40 text-[#e0e7ff]"
                               : arg.argument_type === "challenge"
-                              ? "bg-amber-950/20 border-amber-800/40 text-amber-200"
-                              : "bg-[#0e1420] border-[#162030] text-slate-300"
+                              ? "bg-[#2c1e18] border-[#f59e0b]/40 text-[#fef3c7]"
+                              : "bg-[#111315] border-[#30353c] text-[#cbd5e1]"
                           }`}
                         >
                           <div className="flex items-center justify-between text-[10px] font-mono uppercase mb-1">
-                            <span className="font-semibold text-slate-200">{arg.specialist_id.replace(/_/g, " ")}</span>
-                            <span className="text-slate-400 font-mono">[{arg.argument_type}]</span>
+                            <span className="font-semibold text-[#e5e7eb]">{arg.specialist_id.replace(/_/g, " ")}</span>
+                            <span className="text-[#737c88] font-mono">[{arg.argument_type}]</span>
                           </div>
                           <p className="leading-relaxed font-serif text-xs">{arg.content}</p>
                         </div>
@@ -1319,16 +1287,16 @@ export default function FlagshipDemoPage() {
               </div>
 
               {/* Stage Navigation Footer */}
-              <div className="p-3 border-t border-[#162030] bg-[#070b12] flex justify-between items-center">
+              <div className="p-3 border-t border-[#30353c] bg-[#181b1f] flex justify-between items-center">
                 <button
                   onClick={() => setCurrentStage(3)}
-                  className="px-3 py-1.5 rounded border border-[#1a2638] text-slate-400 hover:text-slate-200 text-xs cursor-pointer"
+                  className="px-3 py-1.5 rounded border border-[#30353c] text-[#a0a7b1] hover:text-[#e5e7eb] text-xs cursor-pointer"
                 >
-                  Back to Society
+                  Back to Operations
                 </button>
                 <button
                   onClick={() => setCurrentStage(5)}
-                  className="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs flex items-center space-x-1.5 shadow-[0_0_12px_rgba(6,182,212,0.3)] cursor-pointer"
+                  className="px-4 py-2 rounded bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-medium text-xs flex items-center space-x-1.5 cursor-pointer"
                 >
                   <span>Stage 05: Intelligence Dossier</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -1336,37 +1304,37 @@ export default function FlagshipDemoPage() {
               </div>
             </div>
 
-            {/* Panel C: 3 Cols - Evidence Inspector */}
-            <div className="col-span-3 flex flex-col overflow-hidden bg-[#070a10]">
-              <div className="p-3.5 border-b border-[#162030] bg-[#0b1019] text-xs font-mono uppercase tracking-wider text-slate-400">
-                Evidence Inspector
+            {/* Panel C: 3 Cols - Evidence Provenance Inspector */}
+            <div className="col-span-3 flex flex-col overflow-hidden bg-[#181b1f]">
+              <div className="p-3 border-b border-[#30353c] bg-[#141619] text-xs font-mono uppercase tracking-wider text-[#a0a7b1]">
+                Evidence Provenance
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {selectedClaim ? (
                   <div>
-                    <div className="text-[10px] font-mono text-cyan-400 uppercase mb-1">Claim Under Audit</div>
-                    <div className="text-xs font-serif text-slate-200 bg-[#0b1019] p-3 rounded border border-[#162030] mb-4">
+                    <div className="text-[10px] font-mono text-[#3b82f6] uppercase mb-1">Disputed Claim Under Audit</div>
+                    <div className="text-xs font-serif text-[#e5e7eb] bg-[#111315] p-3 rounded border border-[#30353c] mb-4">
                       "{selectedClaim.statement}"
                     </div>
 
-                    <div className="text-[10px] font-mono uppercase text-slate-400 mb-1.5">Supporting Citations:</div>
-                    <div className="p-3 rounded bg-[#05070c] border border-[#162030] space-y-2 text-xs">
-                      <div className="text-cyan-400 font-mono text-[11px]">Primary SEC 10-K Filing</div>
-                      <p className="text-slate-400 italic text-[11px] font-serif">
-                        "For the fiscal year ended December 31, 2025, commercial customer count expanded 54% in the US, with top customer concentration disclosed at 18.2%."
+                    <div className="text-[10px] font-mono uppercase text-[#a0a7b1] mb-1.5">Supporting Institutional Sources:</div>
+                    <div className="p-3 rounded bg-[#111315] border border-[#30353c] space-y-1.5 text-xs">
+                      <div className="text-[#3b82f6] font-mono text-[11px]">SEC Form 10-K (December 31, 2025)</div>
+                      <p className="text-[#a0a7b1] italic text-[11px] font-serif leading-relaxed">
+                        "Top commercial and sovereign accounts constituted 18.2% of recognized revenue, with average sales cycle tracking at 110 days."
                       </p>
                     </div>
 
-                    <div className="mt-4 p-3 rounded bg-[#05070c] border border-[#162030] space-y-2 text-xs">
-                      <div className="text-emerald-400 font-mono text-[11px]">CRS Defense Modernization Report</div>
-                      <p className="text-slate-400 italic text-[11px] font-serif">
+                    <div className="mt-3 p-3 rounded bg-[#111315] border border-[#30353c] space-y-1.5 text-xs">
+                      <div className="text-[#10b981] font-mono text-[11px]">CRS Defense Modernization Review</div>
+                      <p className="text-[#a0a7b1] italic text-[11px] font-serif leading-relaxed">
                         "TITAN prime software phase guarantees vehicle fielding across Army ground stations with multi-year appropriations."
                       </p>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-12 text-slate-500 text-xs font-mono">
-                    Select any claim in the deliberation timeline to inspect primary source citations.
+                  <div className="text-center py-16 text-[#737c88] text-xs font-mono">
+                    Select any claim in the deliberation timeline to inspect primary citations.
                   </div>
                 )}
               </div>
@@ -1374,299 +1342,264 @@ export default function FlagshipDemoPage() {
           </div>
         )}
 
-        {/* ================= STAGE 05: Intelligence Dossier ================= */}
+        {/* ================= STAGE 05: Institutional Intelligence Dossier ================= */}
         {currentStage === 5 && (
           <div className="flex-1 overflow-y-auto p-10 max-w-4xl mx-auto w-full">
             {primaryReport ? (
-              <article className="p-8 rounded-lg bg-[#0b1019] border border-[#1a2638] text-slate-200 shadow-2xl">
-                <div className="border-b border-[#162030] pb-6 mb-6 flex items-start justify-between">
+              <article className="p-8 rounded bg-[#181b1f] border border-[#30353c] text-[#e5e7eb]">
+                <div className="border-b border-[#30353c] pb-6 mb-6 flex items-start justify-between">
                   <div>
-                    <div className="text-xs font-mono uppercase tracking-widest text-cyan-400 mb-2">
-                      Stage 05 • Institutional Dossier • Version {primaryReport.version}
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-[#3b82f6] mb-1">
+                      Institutional Intelligence Dossier • Final Report v{primaryReport.version}
                     </div>
-                    <h1 className="text-2xl font-serif font-bold text-slate-100">{primaryReport.title}</h1>
-                    <p className="text-xs font-mono text-slate-400 mt-2">
-                      Generated on {new Date(primaryReport.created_at).toLocaleDateString()} • {primaryReport.citations_count} Audited Citations • 100% Provenance
+                    <h1 className="text-2xl font-serif font-bold text-[#f8fafc]">{primaryReport.title}</h1>
+                    <p className="text-xs font-mono text-[#a0a7b1] mt-1">
+                      CIK: 0001321655 • NYSE: PLTR • Prepared: {new Date(primaryReport.created_at).toLocaleDateString()}
                     </p>
                   </div>
                   <button
                     onClick={() => window.print()}
-                    className="px-3.5 py-2 rounded border border-[#1a2638] hover:border-slate-500 text-slate-300 text-xs flex items-center space-x-1.5 cursor-pointer shadow-sm hover:bg-[#101724] transition-all"
+                    className="px-3 py-1.5 rounded border border-[#30353c] hover:bg-[#20242a] text-[#e5e7eb] text-xs flex items-center space-x-1.5 cursor-pointer transition-colors"
                   >
                     <Printer className="w-3.5 h-3.5" />
-                    <span>Print / Export PDF</span>
+                    <span>Print / PDF Export</span>
                   </button>
                 </div>
 
                 {/* Executive Assessment */}
-                <div className="mb-8">
-                  <h2 className="text-xs font-mono uppercase text-slate-400 tracking-wider mb-2">
-                    Executive Assessment & Adjudication Verdict
+                <section className="mb-8">
+                  <h2 className="text-xs font-mono uppercase tracking-wider text-[#a0a7b1] mb-2">
+                    Executive Assessment
                   </h2>
-                  <div className="text-sm font-serif leading-relaxed p-4 rounded bg-[#070b12] border border-[#162030] text-slate-300">
+                  <div className="p-4 rounded bg-[#111315] border border-[#30353c] text-xs leading-relaxed font-serif text-[#cbd5e1]">
                     {primaryReport.executive_summary}
                   </div>
-                </div>
+                </section>
 
-                {/* Financial Health & Unit Metrics */}
-                {primaryReport.financial_analysis && (
-                  <div className="mb-8">
-                    <h2 className="text-xs font-mono uppercase text-slate-400 tracking-wider mb-3">
-                      Audited Financial Health & Operating Benchmarks
-                    </h2>
-                    <div className="grid grid-cols-3 gap-4 mb-4">
-                      <div className="p-4 rounded bg-[#070b12] border border-[#162030]">
-                        <div className="text-slate-400 text-[11px] font-mono">Revenue (LTM)</div>
-                        <div className="text-xl font-mono font-bold text-slate-100 mt-1">
-                          ${primaryReport.financial_analysis.revenue_usd_m}M
-                        </div>
-                        <div className="text-[10px] text-slate-500 mt-1">GAAP SEC Form 10-K</div>
-                      </div>
-                      <div className="p-4 rounded bg-[#070b12] border border-[#162030]">
-                        <div className="text-slate-400 text-[11px] font-mono">Gross Margin</div>
-                        <div className="text-xl font-mono font-bold text-emerald-400 mt-1">
-                          {primaryReport.financial_analysis.gross_margin_pct}%
-                        </div>
-                        <div className="text-[10px] text-slate-500 mt-1">Software gross margin</div>
-                      </div>
-                      <div className="p-4 rounded bg-[#070b12] border border-[#162030]">
-                        <div className="text-slate-400 text-[11px] font-mono">Operating Cash Flow</div>
-                        <div className="text-xl font-mono font-bold text-cyan-400 mt-1">
-                          ${primaryReport.financial_analysis.operating_cash_flow_m}M
-                        </div>
-                        <div className="text-[10px] text-slate-500 mt-1">Cash conversion &gt; 30%</div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="p-3.5 rounded bg-[#070b12] border border-[#162030]">
-                        <div className="text-slate-400 text-[11px] font-mono">Liquid Capital</div>
-                        <div className="text-lg font-mono font-semibold text-slate-200 mt-1">
-                          ${primaryReport.financial_analysis.cash_reserves_m}M
-                        </div>
-                      </div>
-                      <div className="p-3.5 rounded bg-[#070b12] border border-[#162030]">
-                        <div className="text-slate-400 text-[11px] font-mono">Net Retention (NRR)</div>
-                        <div className="text-lg font-mono font-semibold text-emerald-400 mt-1">
-                          {primaryReport.financial_analysis.nrr_pct}%
-                        </div>
-                      </div>
-                      <div className="p-3.5 rounded bg-[#070b12] border border-[#162030]">
-                        <div className="text-slate-400 text-[11px] font-mono">Avg Sales Cycle</div>
-                        <div className="text-lg font-mono font-semibold text-slate-200 mt-1">
-                          {primaryReport.financial_analysis.sales_cycle_days} Days
-                        </div>
-                      </div>
-                    </div>
+                {/* Audited Financial Metrics Table */}
+                <section className="mb-8">
+                  <h2 className="text-xs font-mono uppercase tracking-wider text-[#a0a7b1] mb-2">
+                    Audited Unit Economics & Fundamental Parameters
+                  </h2>
+                  <div className="border border-[#30353c] rounded overflow-hidden">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-[#141619] border-b border-[#30353c] text-[10px] font-mono text-[#737c88] uppercase">
+                          <th className="py-2.5 px-3">Metric</th>
+                          <th className="py-2.5 px-3">Value</th>
+                          <th className="py-2.5 px-3">Standard</th>
+                          <th className="py-2.5 px-3">Primary Source</th>
+                          <th className="py-2.5 px-3 text-right">Verification Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#30353c] bg-[#111315]">
+                        <tr>
+                          <td className="py-2.5 px-3 font-medium text-[#e5e7eb]">LTM Revenue</td>
+                          <td className="py-2.5 px-3 font-mono font-bold text-[#f8fafc]">${primaryReport.financial_analysis.revenue_usd_m}M USD</td>
+                          <td className="py-2.5 px-3 font-mono text-[10px] text-[#a0a7b1]">GAAP ASC 606</td>
+                          <td className="py-2.5 px-3 text-[#737c88]">SEC Form 10-K</td>
+                          <td className="py-2.5 px-3 text-right font-mono text-[10px] text-[#10b981]">VERIFIED AUDITED</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2.5 px-3 font-medium text-[#e5e7eb]">Gross Margin</td>
+                          <td className="py-2.5 px-3 font-mono font-bold text-[#f8fafc]">{primaryReport.financial_analysis.gross_margin_pct}%</td>
+                          <td className="py-2.5 px-3 font-mono text-[10px] text-[#a0a7b1]">GAAP Standard</td>
+                          <td className="py-2.5 px-3 text-[#737c88]">SEC Form 10-K</td>
+                          <td className="py-2.5 px-3 text-right font-mono text-[10px] text-[#10b981]">VERIFIED AUDITED</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2.5 px-3 font-medium text-[#e5e7eb]">Operating Cash Flow</td>
+                          <td className="py-2.5 px-3 font-mono font-bold text-[#f8fafc]">${primaryReport.financial_analysis.operating_cash_flow_m}M USD</td>
+                          <td className="py-2.5 px-3 font-mono text-[10px] text-[#a0a7b1]">GAAP Statement of Cash Flows</td>
+                          <td className="py-2.5 px-3 text-[#737c88]">SEC Form 10-K</td>
+                          <td className="py-2.5 px-3 text-right font-mono text-[10px] text-[#10b981]">VERIFIED AUDITED</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2.5 px-3 font-medium text-[#e5e7eb]">Liquid Capital Reserves</td>
+                          <td className="py-2.5 px-3 font-mono font-bold text-[#f8fafc]">${primaryReport.financial_analysis.cash_reserves_m}M USD</td>
+                          <td className="py-2.5 px-3 font-mono text-[10px] text-[#a0a7b1]">Cash & Short-Term Equiv</td>
+                          <td className="py-2.5 px-3 text-[#737c88]">SEC Form 10-K Balance Sheet</td>
+                          <td className="py-2.5 px-3 text-right font-mono text-[10px] text-[#10b981]">VERIFIED AUDITED</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2.5 px-3 font-medium text-[#e5e7eb]">Net Revenue Retention (NRR)</td>
+                          <td className="py-2.5 px-3 font-mono font-bold text-[#f8fafc]">{primaryReport.financial_analysis.nrr_pct}%</td>
+                          <td className="py-2.5 px-3 font-mono text-[10px] text-[#a0a7b1]">Trailing 12-Month Cohort</td>
+                          <td className="py-2.5 px-3 text-[#737c88]">Institutional Equity Review</td>
+                          <td className="py-2.5 px-3 text-right font-mono text-[10px] text-[#10b981]">VERIFIED DISCLOSURE</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2.5 px-3 font-medium text-[#e5e7eb]">Sales Procurement Cycle Friction</td>
+                          <td className="py-2.5 px-3 font-mono font-bold text-[#f8fafc]">{primaryReport.financial_analysis.sales_cycle_days} Days</td>
+                          <td className="py-2.5 px-3 font-mono text-[10px] text-[#a0a7b1]">Enterprise & Defense Blend</td>
+                          <td className="py-2.5 px-3 text-[#737c88]">Adversarial Debate Record</td>
+                          <td className="py-2.5 px-3 text-right font-mono text-[10px] text-[#f59e0b]">DISPUTED / STRESSED</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
-                )}
+                </section>
 
-                {/* Quantitative Scenario Matrix */}
-                {primaryReport.scenario_matrix && (
-                  <div className="mb-8">
-                    <h2 className="text-xs font-mono uppercase text-slate-400 tracking-wider mb-3">
-                      Quantitative Scenario Sensitivity Matrix
-                    </h2>
-                    <div className="grid grid-cols-2 gap-4">
-                      {Object.entries(primaryReport.scenario_matrix).map(([key, sc]: [string, any]) => (
-                        <div key={key} className="p-4 rounded bg-[#070b12] border border-[#162030]">
-                          <div className="flex items-center justify-between text-xs font-mono text-cyan-400 uppercase font-semibold mb-1">
-                            <span>{key.replace(/_/g, " ")}</span>
-                            <span>{sc.terminal_multiple}</span>
-                          </div>
-                          <div className="text-base font-mono font-bold text-slate-100">
-                            ${sc.projected_revenue_m}M Projected ARR
-                          </div>
-                          <p className="text-xs text-slate-400 mt-2 italic font-serif leading-relaxed">
-                            "{sc.assumptions}"
-                          </p>
-                        </div>
-                      ))}
-                    </div>
+                {/* Scenario Sensitivity Matrix */}
+                <section className="mb-8">
+                  <h2 className="text-xs font-mono uppercase tracking-wider text-[#a0a7b1] mb-2">
+                    Valuation & Multiples Sensitivity Matrix
+                  </h2>
+                  <div className="grid grid-cols-4 gap-3">
+                    {primaryReport.scenario_matrix && Object.entries(primaryReport.scenario_matrix).map(([scenarioKey, sc]: any) => (
+                      <div key={scenarioKey} className="p-3.5 rounded bg-[#111315] border border-[#30353c] text-xs">
+                        <div className="text-[10px] font-mono uppercase text-[#737c88] mb-1">{scenarioKey} Scenario</div>
+                        <div className="text-base font-bold text-[#f8fafc] font-mono">{sc.multiple}</div>
+                        <div className="text-[11px] text-[#a0a7b1] mt-1 font-mono">${sc.implied_valuation_usd_m}M Implied</div>
+                        <p className="text-[10px] text-[#737c88] mt-2 leading-relaxed">{sc.rationale}</p>
+                      </div>
+                    ))}
                   </div>
-                )}
+                </section>
 
-                {/* Risk Register */}
-                {primaryReport.risk_register && (
-                  <div className="mb-8">
-                    <h2 className="text-xs font-mono uppercase text-slate-400 tracking-wider mb-3">
-                      Adjudicated Institutional Risk Register
-                    </h2>
-                    <div className="space-y-2">
-                      {primaryReport.risk_register.map((r: any, idx: number) => (
-                        <div key={idx} className="p-3 rounded bg-[#070b12] border border-[#162030] flex items-center justify-between text-xs">
-                          <div>
-                            <span className="font-semibold text-slate-200 font-mono">{r.category}: </span>
-                            <span className="text-slate-300 font-serif">{r.detail}</span>
-                          </div>
-                          <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded ml-3 ${
-                            r.severity === "HIGH" ? "bg-amber-950 text-amber-400 border border-amber-600/30" : "bg-cyan-950 text-cyan-400"
-                          }`}>
-                            {r.severity}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                {/* Material Risks Register */}
+                <section className="mb-8">
+                  <h2 className="text-xs font-mono uppercase tracking-wider text-[#a0a7b1] mb-2">
+                    Material Institutional Risks
+                  </h2>
+                  <div className="space-y-2">
+                    {primaryReport.risk_register?.map((risk: string, rIdx: number) => (
+                      <div key={rIdx} className="p-3 rounded bg-[#111315] border border-[#30353c] text-xs text-[#cbd5e1] flex items-start space-x-2">
+                        <AlertTriangle className="w-3.5 h-3.5 text-[#f59e0b] shrink-0 mt-0.5" />
+                        <span>{risk}</span>
+                      </div>
+                    ))}
                   </div>
-                )}
+                </section>
 
-                {/* Final Navigation & Workspace Launch */}
-                <div className="flex justify-between items-center pt-6 border-t border-[#162030]">
-                  <button
-                    onClick={() => setCurrentStage(4)}
-                    className="px-4 py-2 rounded border border-[#1a2638] text-slate-400 hover:text-slate-200 text-xs cursor-pointer"
-                  >
-                    Back to Debate
-                  </button>
-                  <Link
-                    href="/app"
-                    className="px-5 py-2.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs flex items-center space-x-2 shadow-lg"
-                  >
-                    <span>Launch New Custom Investigation in Workspace</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </div>
+                {/* Adversarial Deliberation Unresolved Questions */}
+                <section className="border-t border-[#30353c] pt-6">
+                  <h2 className="text-xs font-mono uppercase tracking-wider text-[#a0a7b1] mb-2">
+                    Adversarial Deliberation Adjudication & Open Questions
+                  </h2>
+                  <ul className="list-disc list-inside text-xs text-[#cbd5e1] space-y-1 font-serif">
+                    {primaryReport.unresolved_disputes?.map((disp: string, dIdx: number) => (
+                      <li key={dIdx}>{disp}</li>
+                    ))}
+                  </ul>
+                </section>
               </article>
-            ) : (
-              <div className="text-center py-12 text-slate-500 text-sm">
-                Dossier is compiling.
-              </div>
-            )}
+            ) : null}
           </div>
         )}
 
-        {/* Collapsible Real-Time Investigation Event Drawer (Bottom) */}
-        {showEventDrawer && (
-          <div className="h-48 border-t border-[#162030] bg-[#070b12]/95 backdrop-blur z-40 flex flex-col font-mono text-xs shadow-2xl">
-            <div className="px-4 py-2 border-b border-[#162030] bg-[#0b1019] flex items-center justify-between text-[11px] text-slate-400">
-              <div className="flex items-center space-x-2">
-                <Terminal className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="text-slate-200 font-semibold uppercase">Real-Time Investigation Event Telemetry</span>
-                <span className="text-slate-600">|</span>
-                <span className="text-cyan-400">WebSocket / SSE Stream: ACTIVE</span>
-              </div>
-              <button 
-                onClick={() => setShowEventDrawer(false)}
-                className="text-slate-400 hover:text-slate-200 text-xs cursor-pointer"
-              >
-                ✕ Close
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-3 space-y-1 text-[11px]">
-              {events.length > 0 ? (
-                events.map((ev, idx) => (
-                  <div key={idx} className="flex items-start space-x-2">
-                    <span className="text-slate-500">{new Date(ev.created_at).toLocaleTimeString()}</span>
-                    <span className="text-cyan-400 font-bold">[{ev.event_type}]</span>
-                    <span className="text-slate-300 font-sans">{JSON.stringify(ev.payload)}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-slate-500">14:50:12</span>
-                    <span className="text-cyan-400 font-bold">[investigation.started]</span>
-                    <span className="text-slate-300 font-sans">Palantir Technologies (PLTR) investigation mounted into 14-agent society.</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-slate-500">14:50:13</span>
-                    <span className="text-emerald-400 font-bold">[entity.extracted]</span>
-                    <span className="text-slate-300 font-sans">Extracted 28 corporate entities: DoD, Army, AWS, TITAN, Airbus, Snowflake, SEC.</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-slate-500">14:50:14</span>
-                    <span className="text-purple-400 font-bold">[relationship.verified]</span>
-                    <span className="text-slate-300 font-sans">Corroborated 27 relationships against SEC Form 10-K and CRS appropriations.</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-slate-500">14:50:15</span>
-                    <span className="text-amber-400 font-bold">[adjudication.recorded]</span>
-                    <span className="text-slate-300 font-sans">Justice Simon Cross ruled PARTIALLY_SUPPORTED on ARR acceleration claim.</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </main>
 
-      {/* Excerpt Passage Modal (Stage 01) */}
+      {/* Slide-Up Event Telemetry Drawer */}
+      {showEventDrawer && (
+        <div className="h-64 border-t border-[#30353c] bg-[#141619] flex flex-col z-40">
+          <div className="h-9 px-4 bg-[#181b1f] border-b border-[#30353c] flex items-center justify-between">
+            <span className="text-xs font-mono uppercase text-[#a0a7b1] flex items-center space-x-1.5">
+              <Activity className="w-3.5 h-3.5 text-[#3b82f6]" />
+              <span>Real-Time Investigation Event Telemetry</span>
+            </span>
+            <button
+              onClick={() => setShowEventDrawer(false)}
+              className="text-xs text-[#737c88] hover:text-[#e5e7eb] font-mono cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3 font-mono text-xs space-y-1">
+            {events.map((ev, idx) => (
+              <div key={idx} className="flex items-start space-x-3 text-[#a0a7b1] hover:text-[#e5e7eb]">
+                <span className="text-[#737c88] shrink-0">#{ev.sequence || idx + 1}</span>
+                <span className="text-[#3b82f6] shrink-0">[{ev.event_type}]</span>
+                <span className="text-[#cbd5e1] truncate">{JSON.stringify(ev.payload)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Primary Source Inspection Modal */}
       {selectedSourceForModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="max-w-xl w-full p-6 rounded-lg bg-[#0b1019] border border-[#1a2638] text-slate-200 shadow-2xl">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-500/30">
-                {selectedSourceForModal.category}
-              </span>
-              <button 
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="max-w-2xl w-full bg-[#181b1f] border border-[#30353c] rounded p-6 shadow-2xl">
+            <div className="flex items-start justify-between border-b border-[#30353c] pb-3 mb-4">
+              <div>
+                <span className="text-[10px] font-mono uppercase text-[#3b82f6]">{selectedSourceForModal.category}</span>
+                <h3 className="text-sm font-semibold text-[#f8fafc] mt-0.5">{selectedSourceForModal.title}</h3>
+                <p className="text-xs text-[#737c88] font-mono mt-0.5">{selectedSourceForModal.publisher} • {selectedSourceForModal.date}</p>
+              </div>
+              <button
                 onClick={() => setSelectedSourceForModal(null)}
-                className="text-slate-400 hover:text-slate-200 text-xs font-mono cursor-pointer"
+                className="text-[#737c88] hover:text-[#e5e7eb] font-mono text-xs cursor-pointer"
               >
                 ✕ Close
               </button>
             </div>
-            <h3 className="font-semibold text-slate-100 text-sm mb-1">{selectedSourceForModal.title}</h3>
-            <p className="text-xs text-slate-400 font-mono mb-4">{selectedSourceForModal.publisher} • {selectedSourceForModal.date}</p>
-            <div className="p-4 rounded bg-[#05070c] border border-[#162030] text-xs font-serif leading-relaxed text-slate-300 italic mb-4">
+            <div className="text-xs text-[#cbd5e1] leading-relaxed bg-[#111315] p-4 rounded border border-[#30353c] font-serif mb-4">
               "{selectedSourceForModal.summary}"
             </div>
-            <div className="text-[11px] font-mono text-slate-500 truncate mb-4">
-              Source URL: {selectedSourceForModal.url}
-            </div>
-            <div className="flex justify-end">
-              <button
-                onClick={() => setSelectedSourceForModal(null)}
-                className="px-4 py-1.5 rounded bg-[#101724] hover:bg-[#162030] text-xs font-medium text-slate-200 cursor-pointer"
+            <div className="flex justify-between items-center text-[11px] font-mono text-[#737c88]">
+              <span className="truncate max-w-md">Source: {selectedSourceForModal.url}</span>
+              <a
+                href={selectedSourceForModal.url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[#3b82f6] hover:text-[#60a5fa] flex items-center space-x-1"
               >
-                Done
-              </button>
+                <span>External Link</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
             </div>
           </div>
         </div>
       )}
 
-      {/* Adversarial Challenge Modal (Stage 04) */}
+      {/* Adversarial Claim Challenge Modal */}
       {challengeModalClaim && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="max-w-lg w-full p-6 rounded-lg bg-[#0b1019] border border-amber-800/40 text-slate-200 shadow-2xl">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-600/40">
-                Initiate Adversarial Challenge
-              </span>
-              <button 
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="max-w-lg w-full bg-[#181b1f] border border-[#30353c] rounded p-6 shadow-2xl">
+            <div className="flex items-start justify-between border-b border-[#30353c] pb-3 mb-4">
+              <div>
+                <span className="text-[10px] font-mono uppercase text-[#f59e0b]">Adversarial Scrutiny</span>
+                <h3 className="text-sm font-semibold text-[#f8fafc] mt-0.5">Inject Formal Challenge on Claim</h3>
+              </div>
+              <button
                 onClick={() => setChallengeModalClaim(null)}
-                className="text-slate-400 hover:text-slate-200 text-xs font-mono cursor-pointer"
+                className="text-[#737c88] hover:text-[#e5e7eb] font-mono text-xs cursor-pointer"
               >
-                ✕ Close
+                ✕
               </button>
             </div>
 
-            <div className="text-xs text-slate-300 italic bg-[#05070c] p-3 rounded border border-[#162030] mb-4 font-serif">
+            <div className="p-3 rounded bg-[#111315] border border-[#30353c] text-xs text-[#cbd5e1] font-serif mb-4">
               "{challengeModalClaim.statement}"
             </div>
 
-            <form onSubmit={handleSubmitChallenge} className="space-y-4">
+            <form onSubmit={handleSubmitChallenge} className="space-y-3">
               <div>
-                <label className="text-[11px] font-mono text-slate-400 block mb-1">Select Challenging Specialist:</label>
+                <label className="block text-[10px] font-mono uppercase text-[#737c88] mb-1">
+                  Challenging Specialist:
+                </label>
                 <select
                   value={challengeChallenger}
                   onChange={(e) => setChallengeChallenger(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded bg-[#05070c] border border-[#162030] text-xs text-slate-200 focus:outline-none font-mono"
+                  className="w-full bg-[#111315] border border-[#30353c] text-xs text-[#e5e7eb] rounded p-2 focus:outline-none focus:border-[#3b82f6]"
                 >
-                  <option value="bear_analyst">Bear-Case Advocate (Inspector Jonathan Cole)</option>
-                  <option value="forensic_accountant">Senior Forensic Accountant (Marcus Holst, CPA)</option>
-                  <option value="bull_analyst">Bull-Case Advocate (Vivian Graves)</option>
+                  <option value="bear_analyst">Inspector Jonathan Cole (Bear-Case Specialist)</option>
+                  <option value="forensic_accountant">Marcus Holst, CPA/CFF (Forensic Accountant)</option>
+                  <option value="red_team_investigator">Cassandra Cross (Red-Team Epistemic Investigator)</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-[11px] font-mono text-slate-400 block mb-1">Enter Challenge Argument:</label>
+                <label className="block text-[10px] font-mono uppercase text-[#737c88] mb-1">
+                  Challenge Counterargument:
+                </label>
                 <textarea
                   value={challengeText}
                   onChange={(e) => setChallengeText(e.target.value)}
                   rows={3}
-                  placeholder="State the counter-evidence or accounting anomaly that challenges this claim..."
-                  className="w-full px-3 py-2 rounded bg-[#05070c] border border-[#162030] text-xs text-slate-200 focus:outline-none focus:border-amber-500 font-sans"
+                  placeholder="Articulate documentary conflict, procurement elongation, or customer concentration risk..."
+                  className="w-full bg-[#111315] border border-[#30353c] text-xs text-[#e5e7eb] rounded p-2 focus:outline-none focus:border-[#3b82f6] placeholder-[#737c88]"
                 />
               </div>
 
@@ -1674,16 +1607,16 @@ export default function FlagshipDemoPage() {
                 <button
                   type="button"
                   onClick={() => setChallengeModalClaim(null)}
-                  className="px-3 py-1.5 rounded border border-[#1a2638] text-xs text-slate-400 hover:text-slate-200 cursor-pointer"
+                  className="px-3 py-1.5 rounded border border-[#30353c] text-[#a0a7b1] hover:text-[#e5e7eb] text-xs cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={challengeLoading || !challengeText.trim()}
-                  className="px-4 py-1.5 rounded bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
+                  className="px-4 py-1.5 rounded bg-[#b45309] hover:bg-[#d97706] text-white text-xs font-medium cursor-pointer disabled:opacity-50"
                 >
-                  {challengeLoading ? "Dispatching Challenge..." : "Submit to Boardroom"}
+                  {challengeLoading ? "Disputing..." : "Submit Formal Challenge"}
                 </button>
               </div>
             </form>

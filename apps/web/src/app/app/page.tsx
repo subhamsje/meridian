@@ -33,6 +33,7 @@ import {
   Activity
 } from "lucide-react";
 import { API_BASE } from "@/lib/utils";
+import LivingKnowledgeGraph from "@/components/LivingKnowledgeGraph";
 
 interface Investigation {
   id: string;
@@ -61,6 +62,8 @@ export default function WorkspaceApp() {
   const [evidence, setEvidence] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
   const [graphData, setGraphData] = useState<{ nodes: any[]; edges: any[] }>({ nodes: [], edges: [] });
+  const [selectedNode, setSelectedNode] = useState<any>(null);
+  const [selectedEdge, setSelectedEdge] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"society" | "timeline" | "boardroom" | "graph" | "scenarios" | "evidence" | "reports">("society");
 
   // User Intervention / Question State
@@ -287,30 +290,30 @@ export default function WorkspaceApp() {
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-[#080a0d]">
-        <div className="w-full max-w-md bg-[#10141a] border border-[#20252e] rounded-lg p-8 shadow-2xl">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-[#111315]">
+        <div className="w-full max-w-md bg-[#181b1f] border border-[#30353c] rounded p-8">
           <div className="flex items-center space-x-3 mb-6">
-            <div className="w-8 h-8 rounded bg-emerald-950 border border-emerald-500/40 flex items-center justify-center font-mono font-bold text-emerald-400 text-sm">
+            <div className="w-7 h-7 rounded bg-[#20242a] border border-[#30353c] flex items-center justify-center font-mono font-bold text-[#e5e7eb] text-xs">
               M
             </div>
             <div>
-              <div className="font-semibold text-slate-100 uppercase tracking-wider text-sm">Meridian</div>
-              <div className="text-[11px] text-slate-400 font-mono">Institutional Intelligence Terminal</div>
+              <div className="font-semibold text-[#f8fafc] uppercase tracking-wider text-xs">Meridian</div>
+              <div className="text-[11px] text-[#737c88] font-mono">Institutional Intelligence Terminal</div>
             </div>
           </div>
 
-          <h2 className="text-xl font-serif text-slate-100 mb-2">
+          <h2 className="text-xl font-serif text-[#f8fafc] mb-1.5">
             {isRegistering ? "Create Institutional Seat" : "Authenticate Workspace"}
           </h2>
-          <p className="text-xs text-slate-400 mb-6 leading-relaxed">
+          <p className="text-xs text-[#a0a7b1] mb-6 leading-relaxed">
             {isRegistering 
               ? "Establish your organization domain and lead investigator seat."
               : "Enter your institutional credentials to access investigations and audit trails."}
           </p>
 
           {authError && (
-            <div className="mb-4 p-3 rounded bg-red-950/40 border border-red-800/50 text-red-300 text-xs flex items-center space-x-2">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <div className="mb-4 p-3 rounded bg-[#2c1818] border border-[#ef4444]/40 text-[#fca5a5] text-xs flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{authError}</span>
             </div>
           )}
@@ -319,64 +322,64 @@ export default function WorkspaceApp() {
             {isRegistering && (
               <>
                 <div>
-                  <label className="block text-slate-300 mb-1 font-mono uppercase text-[10px]">Full Name</label>
+                  <label className="block text-[#a0a7b1] mb-1 font-mono uppercase text-[10px]">Full Name</label>
                   <input 
                     type="text" 
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     required
-                    className="w-full px-3 py-2 rounded bg-[#161c24] border border-[#20252e] text-slate-200 focus:outline-none focus:border-emerald-500"
+                    className="w-full px-3 py-2 rounded bg-[#111315] border border-[#30353c] text-[#e5e7eb] focus:outline-none focus:border-[#3b82f6]"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-300 mb-1 font-mono uppercase text-[10px]">Organization Name</label>
+                  <label className="block text-[#a0a7b1] mb-1 font-mono uppercase text-[10px]">Organization Name</label>
                   <input 
                     type="text" 
                     value={orgName}
                     onChange={(e) => setOrgName(e.target.value)}
                     required
-                    className="w-full px-3 py-2 rounded bg-[#161c24] border border-[#20252e] text-slate-200 focus:outline-none focus:border-emerald-500"
+                    className="w-full px-3 py-2 rounded bg-[#111315] border border-[#30353c] text-[#e5e7eb] focus:outline-none focus:border-[#3b82f6]"
                   />
                 </div>
               </>
             )}
 
             <div>
-              <label className="block text-slate-300 mb-1 font-mono uppercase text-[10px]">Work Email</label>
+              <label className="block text-[#a0a7b1] mb-1 font-mono uppercase text-[10px]">Work Email</label>
               <input 
                 type="email" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-3 py-2 rounded bg-[#161c24] border border-[#20252e] text-slate-200 focus:outline-none focus:border-emerald-500"
+                className="w-full px-3 py-2 rounded bg-[#111315] border border-[#30353c] text-[#e5e7eb] focus:outline-none focus:border-[#3b82f6]"
               />
             </div>
 
             <div>
-              <label className="block text-slate-300 mb-1 font-mono uppercase text-[10px]">Password</label>
+              <label className="block text-[#a0a7b1] mb-1 font-mono uppercase text-[10px]">Password</label>
               <input 
                 type="password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-3 py-2 rounded bg-[#161c24] border border-[#20252e] text-slate-200 focus:outline-none focus:border-emerald-500"
+                className="w-full px-3 py-2 rounded bg-[#111315] border border-[#30353c] text-[#e5e7eb] focus:outline-none focus:border-[#3b82f6]"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-all text-xs flex items-center justify-center space-x-1 shadow-sm mt-2 cursor-pointer disabled:opacity-50"
+              className="w-full py-2.5 rounded bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-medium transition-colors text-xs flex items-center justify-center space-x-1 mt-2 cursor-pointer disabled:opacity-50"
             >
               <span>{loading ? "Authenticating..." : isRegistering ? "Register Organization Seat" : "Sign In to Terminal"}</span>
             </button>
           </form>
 
-          <div className="mt-6 pt-4 border-t border-[#20252e] text-center">
+          <div className="mt-6 pt-4 border-t border-[#30353c] text-center">
             <button
               type="button"
               onClick={() => setIsRegistering(!isRegistering)}
-              className="text-xs text-emerald-400 hover:underline cursor-pointer"
+              className="text-xs text-[#3b82f6] hover:underline cursor-pointer"
             >
               {isRegistering ? "Existing seat? Sign In" : "Need an institutional workspace? Register"}
             </button>
@@ -389,49 +392,49 @@ export default function WorkspaceApp() {
   const primaryReport = reports[0];
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0b0d10] text-[#e1e4ea] font-sans">
+    <div className="flex h-screen overflow-hidden bg-[#111315] text-[#e5e7eb] font-sans">
       {/* Sidebar: Navigation & Dossier Registry */}
-      <aside className="w-80 border-r border-[#20252e] bg-[#0e1217] flex flex-col justify-between">
+      <aside className="w-80 border-r border-[#30353c] bg-[#181b1f] flex flex-col justify-between">
         <div className="flex flex-col flex-1 overflow-hidden">
-          <div className="h-14 border-b border-[#20252e] px-4 flex items-center justify-between">
+          <div className="h-14 border-b border-[#30353c] px-4 flex items-center justify-between">
             <Link href="/" className="flex items-center space-x-2.5">
-              <div className="w-6 h-6 rounded bg-emerald-950 border border-emerald-500/40 flex items-center justify-center font-mono font-bold text-emerald-400 text-xs">
+              <div className="w-6 h-6 rounded bg-[#20242a] border border-[#30353c] flex items-center justify-center font-mono font-bold text-[#e5e7eb] text-xs">
                 M
               </div>
-              <span className="font-semibold text-sm tracking-wider uppercase text-slate-100">
+              <span className="font-semibold text-xs tracking-wider uppercase text-[#e5e7eb]">
                 Meridian
               </span>
             </Link>
             <button 
               onClick={() => setShowNewModal(true)}
-              className="p-1.5 rounded bg-[#1c222b] hover:bg-emerald-950 hover:text-emerald-400 border border-[#2d3748] text-slate-300 transition-all text-xs flex items-center space-x-1 cursor-pointer"
+              className="px-2 py-1 rounded bg-[#20242a] hover:bg-[#282e36] border border-[#30353c] text-[#e5e7eb] transition-colors text-xs flex items-center space-x-1 cursor-pointer"
               title="New Company Investigation"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5 text-[#3b82f6]" />
               <span>New</span>
             </button>
           </div>
 
-          <div className="px-4 py-2.5 border-b border-[#20252e] bg-[#12161e] flex items-center justify-between text-xs">
+          <div className="px-4 py-2.5 border-b border-[#30353c] bg-[#141619] flex items-center justify-between text-xs">
             <div className="flex items-center space-x-2 overflow-hidden">
-              <Building2 className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-              <span className="text-slate-300 truncate font-medium">
+              <Building2 className="w-3.5 h-3.5 text-[#737c88] shrink-0" />
+              <span className="text-[#a0a7b1] truncate font-medium text-[11px]">
                 {user?.organization?.name || "Corporate Strategy Org"}
               </span>
             </div>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-600/30 font-mono">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#20242a] text-[#a0a7b1] border border-[#30353c] font-mono">
               INSTITUTIONAL
             </span>
           </div>
 
-          <div className="p-3 text-[11px] font-mono text-slate-400 uppercase tracking-wider flex items-center justify-between">
+          <div className="p-3 text-[11px] font-mono text-[#737c88] uppercase tracking-wider flex items-center justify-between">
             <span>Dossier Registry</span>
             <span>{investigations.length} Total</span>
           </div>
 
           <div className="flex-1 overflow-y-auto px-2 space-y-1">
             {investigations.length === 0 ? (
-              <div className="p-6 text-center text-xs text-slate-500">
+              <div className="p-6 text-center text-xs text-[#737c88]">
                 No active investigations found. Click "New" to start an investigation.
               </div>
             ) : (
@@ -439,31 +442,31 @@ export default function WorkspaceApp() {
                 <button
                   key={inv.id}
                   onClick={() => selectInvestigation(inv.id)}
-                  className={`w-full text-left p-3 rounded border transition-all cursor-pointer ${
+                  className={`w-full text-left p-3 rounded border transition-colors cursor-pointer ${
                     selectedInvId === inv.id
-                      ? "bg-[#181f2a] border-emerald-500/50 text-slate-100"
-                      : "bg-[#12161e] border-[#20252e] text-slate-300 hover:border-slate-600"
+                      ? "bg-[#20242a] border-[#3b82f6] text-[#f8fafc]"
+                      : "bg-[#111315] border-[#30353c] text-[#a0a7b1] hover:text-[#e5e7eb] hover:bg-[#141619]"
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-semibold text-xs text-slate-100 truncate">
+                    <span className="font-semibold text-xs text-[#e5e7eb] truncate">
                       {inv.company_name}
                     </span>
                     {inv.ticker && (
-                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#1c222b] text-emerald-400 border border-[#2d3748]">
+                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#181b1f] text-[#3b82f6] border border-[#30353c]">
                         {inv.ticker}
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <div className="flex items-center justify-between text-[11px] text-[#737c88]">
                     <span className="capitalize">{inv.depth}</span>
-                    <span className="font-mono text-slate-300">
+                    <span className="font-mono text-[#a0a7b1]">
                       {inv.status === "completed" ? "100%" : `${inv.progress_percentage}%`}
                     </span>
                   </div>
-                  <div className="w-full bg-[#20252e] h-1 rounded-full mt-2 overflow-hidden">
+                  <div className="w-full bg-[#111315] h-1 rounded-full mt-2 overflow-hidden border border-[#30353c]/40">
                     <div 
-                      className={`h-full ${inv.status === "completed" ? "bg-emerald-500" : "bg-cyan-500"}`} 
+                      className={`h-full ${inv.status === "completed" ? "bg-[#10b981]" : "bg-[#3b82f6]"}`} 
                       style={{ width: `${inv.progress_percentage}%` }}
                     ></div>
                   </div>
@@ -473,14 +476,14 @@ export default function WorkspaceApp() {
           </div>
         </div>
 
-        <div className="p-3 border-t border-[#20252e] bg-[#10141a] flex items-center justify-between text-xs">
+        <div className="p-3 border-t border-[#30353c] bg-[#141619] flex items-center justify-between text-xs">
           <div className="overflow-hidden">
-            <div className="font-medium text-slate-200 truncate">{user?.full_name}</div>
-            <div className="text-[11px] text-slate-500 truncate">{user?.email}</div>
+            <div className="font-medium text-[#e5e7eb] truncate">{user?.full_name}</div>
+            <div className="text-[11px] text-[#737c88] truncate">{user?.email}</div>
           </div>
           <button 
             onClick={handleLogout}
-            className="p-1.5 rounded hover:bg-red-950/40 text-slate-400 hover:text-red-300 transition-colors"
+            className="p-1.5 rounded hover:bg-[#20242a] text-[#737c88] hover:text-[#e5e7eb] transition-colors"
             title="Log out"
           >
             <LogOut className="w-4 h-4" />
@@ -489,89 +492,87 @@ export default function WorkspaceApp() {
       </aside>
 
       {/* Main Investigation Panel */}
-      <main className="flex-1 flex flex-col overflow-hidden bg-[#0b0d10]">
+      <main className="flex-1 flex flex-col overflow-hidden bg-[#111315]">
         {invDetail ? (
           <>
             {/* Top Navigation Bar */}
-            <header className="h-16 border-b border-[#20252e] px-6 flex items-center justify-between bg-[#0e1217]">
+            <header className="h-14 border-b border-[#30353c] px-6 flex items-center justify-between bg-[#181b1f]">
               <div>
                 <div className="flex items-center space-x-3">
-                  <h1 className="text-lg font-serif font-semibold text-slate-100">
+                  <h1 className="text-base font-serif font-semibold text-[#f8fafc]">
                     {invDetail.company.name}
                   </h1>
                   {invDetail.company.ticker && (
-                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-[#1c222b] text-emerald-400 border border-[#2d3748]">
+                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-[#20242a] text-[#a0a7b1] border border-[#30353c]">
                       {invDetail.company.ticker}
                     </span>
                   )}
-                  <span className={`text-[11px] font-mono uppercase px-2 py-0.5 rounded border ${
+                  <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded border ${
                     invDetail.status === "completed" 
-                      ? "bg-emerald-950/50 text-emerald-400 border-emerald-500/30" 
-                      : "bg-cyan-950/50 text-cyan-400 border-cyan-500/30"
+                      ? "bg-[#142922] text-[#10b981] border-[#10b981]/30" 
+                      : "bg-[#182232] text-[#3b82f6] border-[#3b82f6]/30"
                   }`}>
                     {invDetail.status}
                   </span>
                 </div>
-                <div className="text-xs text-slate-400 flex items-center space-x-3 mt-0.5 font-mono">
+                <div className="text-[11px] text-[#737c88] flex items-center space-x-2 mt-0.5 font-mono">
                   <span>Sector: {invDetail.company.sector}</span>
                   <span>•</span>
-                  <span>Society: {societyAgents.length} Agents</span>
+                  <span>Society: {societyAgents.length} Specialists</span>
                   <span>•</span>
                   <span>Interactions: {interactions.length}</span>
-                  <span>•</span>
-                  <span>Cost: ${invDetail.current_cost_usd.toFixed(2)} USD</span>
                 </div>
               </div>
 
               {/* Action Tabs */}
               <div className="flex items-center space-x-3">
-                <div className="flex items-center bg-[#141922] p-1 rounded border border-[#20252e] text-xs font-medium">
+                <div className="flex items-center bg-[#111315] p-0.5 rounded border border-[#30353c] text-xs font-medium">
                   <button
                     onClick={() => setActiveTab("society")}
-                    className={`px-3 py-1.5 rounded transition-all cursor-pointer flex items-center space-x-1.5 ${
-                      activeTab === "society" ? "bg-emerald-950 text-emerald-300 border border-emerald-500/40" : "text-slate-400 hover:text-slate-200"
+                    className={`px-3 py-1 rounded transition-colors cursor-pointer flex items-center space-x-1.5 ${
+                      activeTab === "society" ? "bg-[#20242a] text-[#f8fafc] border border-[#30353c]" : "text-[#a0a7b1] hover:text-[#e5e7eb]"
                     }`}
                   >
-                    <Users className="w-3.5 h-3.5" />
-                    <span>Agent Society ({societyAgents.length})</span>
+                    <Users className="w-3.5 h-3.5 text-[#3b82f6]" />
+                    <span>Specialists ({societyAgents.length})</span>
                   </button>
                   <button
                     onClick={() => setActiveTab("timeline")}
-                    className={`px-3 py-1.5 rounded transition-all cursor-pointer flex items-center space-x-1.5 ${
-                      activeTab === "timeline" ? "bg-emerald-950 text-emerald-300 border border-emerald-500/40" : "text-slate-400 hover:text-slate-200"
+                    className={`px-3 py-1 rounded transition-colors cursor-pointer flex items-center space-x-1.5 ${
+                      activeTab === "timeline" ? "bg-[#20242a] text-[#f8fafc] border border-[#30353c]" : "text-[#a0a7b1] hover:text-[#e5e7eb]"
                     }`}
                   >
-                    <Activity className="w-3.5 h-3.5" />
-                    <span>Live Interactions ({interactions.length})</span>
+                    <Activity className="w-3.5 h-3.5 text-[#10b981]" />
+                    <span>Timeline ({interactions.length})</span>
                   </button>
                   <button
                     onClick={() => setActiveTab("boardroom")}
-                    className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
-                      activeTab === "boardroom" ? "bg-emerald-950 text-emerald-300 border border-emerald-500/40" : "text-slate-400 hover:text-slate-200"
+                    className={`px-3 py-1 rounded transition-colors cursor-pointer ${
+                      activeTab === "boardroom" ? "bg-[#20242a] text-[#f8fafc] border border-[#30353c]" : "text-[#a0a7b1] hover:text-[#e5e7eb]"
                     }`}
                   >
                     Adversarial Debate
                   </button>
                   <button
                     onClick={() => setActiveTab("graph")}
-                    className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
-                      activeTab === "graph" ? "bg-emerald-950 text-emerald-300 border border-emerald-500/40" : "text-slate-400 hover:text-slate-200"
+                    className={`px-3 py-1 rounded transition-colors cursor-pointer ${
+                      activeTab === "graph" ? "bg-[#20242a] text-[#f8fafc] border border-[#30353c]" : "text-[#a0a7b1] hover:text-[#e5e7eb]"
                     }`}
                   >
                     Corporate Graph ({graphData.nodes.length})
                   </button>
                   <button
                     onClick={() => setActiveTab("scenarios")}
-                    className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
-                      activeTab === "scenarios" ? "bg-emerald-950 text-emerald-300 border border-emerald-500/40" : "text-slate-400 hover:text-slate-200"
+                    className={`px-3 py-1 rounded transition-colors cursor-pointer ${
+                      activeTab === "scenarios" ? "bg-[#20242a] text-[#f8fafc] border border-[#30353c]" : "text-[#a0a7b1] hover:text-[#e5e7eb]"
                     }`}
                   >
                     Scenario Matrix
                   </button>
                   <button
                     onClick={() => setActiveTab("reports")}
-                    className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
-                      activeTab === "reports" ? "bg-emerald-950 text-emerald-300 border border-emerald-500/40" : "text-slate-400 hover:text-slate-200"
+                    className={`px-3 py-1 rounded transition-colors cursor-pointer ${
+                      activeTab === "reports" ? "bg-[#20242a] text-[#f8fafc] border border-[#30353c]" : "text-[#a0a7b1] hover:text-[#e5e7eb]"
                     }`}
                   >
                     Intelligence Dossier
@@ -581,7 +582,7 @@ export default function WorkspaceApp() {
                 {invDetail.status !== "completed" && (
                   <button
                     onClick={handleStartPipeline}
-                    className="px-3.5 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium flex items-center space-x-1.5 shadow-sm cursor-pointer"
+                    className="px-3.5 py-1.5 rounded bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-medium flex items-center space-x-1.5 cursor-pointer transition-colors"
                   >
                     <Play className="w-3.5 h-3.5" />
                     <span>Run Society Pipeline</span>
@@ -853,67 +854,21 @@ export default function WorkspaceApp() {
 
             {/* TAB 4: Corporate Relationship Graph */}
             {activeTab === "graph" && (
-              <div className="flex-1 overflow-y-auto p-8 max-w-5xl mx-auto w-full">
-                <div className="mb-6 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-serif text-slate-100">Corporate Lineage & Relationship Graph</h2>
-                    <p className="text-xs text-slate-400 mt-1">
-                      Entity relationship network spanning prime customers, key suppliers, strategic partners, and direct competitors.
-                    </p>
-                  </div>
-                  <div className="text-xs font-mono px-3 py-1.5 rounded bg-[#161c24] border border-[#20252e] text-emerald-400">
-                    {graphData.nodes.length} Verified Nodes • {graphData.edges.length} Edges
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  {graphData.edges.map((edge: any) => (
-                    <div key={edge.id} className="p-4 rounded-lg bg-[#141922] border border-[#20252e]">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded border ${
-                          edge.relationship === "customer" 
-                            ? "bg-emerald-950/50 text-emerald-400 border-emerald-500/30"
-                            : edge.relationship === "competitor"
-                            ? "bg-amber-950/50 text-amber-400 border-amber-500/30"
-                            : "bg-cyan-950/50 text-cyan-400 border-cyan-500/30"
-                        }`}>
-                          {edge.relationship}
-                        </span>
-                        <span className="text-xs font-mono text-slate-400">
-                          Confidence: {(edge.confidence * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                      <div className="text-sm font-semibold text-slate-100 mb-1">
-                        {invDetail.company.name} <span className="text-slate-500">→</span> {graphData.nodes.find((n: any) => n.id === edge.target)?.label || "Connected Entity"}
-                      </div>
-                      <p className="text-xs text-slate-400 leading-relaxed">
-                        {edge.description}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="p-4 rounded-lg bg-[#12161e] border border-[#20252e]">
-                  <h3 className="text-xs font-mono uppercase text-slate-400 tracking-wider mb-3">
-                    Corporate Entity Nodes Registry
-                  </h3>
-                  <div className="divide-y divide-[#20252e]">
-                    {graphData.nodes.map((node: any) => (
-                      <div key={node.id} className="py-2.5 flex items-center justify-between text-xs">
-                        <div className="flex items-center space-x-2">
-                          <Network className="w-3.5 h-3.5 text-slate-400" />
-                          <span className="font-medium text-slate-200">{node.label}</span>
-                          {node.ticker && (
-                            <span className="font-mono text-[10px] px-1 rounded bg-[#1c222b] text-emerald-400">
-                              {node.ticker}
-                            </span>
-                          )}
-                        </div>
-                        <span className="font-mono text-slate-400 capitalize">{node.type.replace(/_/g, " ")}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              <div className="flex-1 flex flex-col overflow-hidden bg-[#111315]">
+                <LivingKnowledgeGraph
+                  nodes={graphData.nodes}
+                  edges={graphData.edges}
+                  selectedNode={selectedNode}
+                  onSelectNode={(node) => {
+                    setSelectedNode(node);
+                    setSelectedEdge(null);
+                  }}
+                  selectedEdge={selectedEdge}
+                  onSelectEdge={(edge) => {
+                    setSelectedEdge(edge);
+                    setSelectedNode(null);
+                  }}
+                />
               </div>
             )}
 
