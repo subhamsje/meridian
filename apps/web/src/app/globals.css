@@ -20,8 +20,84 @@
 body {
   background-color: #111315;
   color: #e5e7eb;
-  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", Roboto, sans-serif;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+}
+
+/* =========================================================================
+   APPLE-INSPIRED REFINED GLASS MATERIAL SYSTEM
+   ========================================================================= */
+
+/* Material A — Clear Glass: Navigation, floating controls, and compact overlays */
+.glass-clear {
+  background: rgba(24, 27, 31, 0.72);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+}
+
+/* Material B — Frosted Glass: Sidebars, contextual panels, inspectors, and floating toolbars */
+.glass-frosted {
+  background: rgba(20, 22, 25, 0.82);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* Material C — Elevated Glass: Modals, command palettes, contextual menus */
+.glass-elevated {
+  background: rgba(26, 29, 34, 0.90);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* Material D — Solid Enterprise Surface: Dense tables, financial statements, evidence records */
+.surface-enterprise {
+  background: #181b1f;
+  border: 1px solid #30353c;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+}
+
+.surface-subtle {
+  background: #111315;
+  border: 1px solid #262a30;
+}
+
+/* Fallbacks when backdrop-filter is unsupported */
+@supports not (backdrop-filter: blur(10px)) {
+  .glass-clear { background: #181b1f; }
+  .glass-frosted { background: #141619; }
+  .glass-elevated { background: #20242a; }
+}
+
+/* Accessibility: Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Custom Minimalist Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #111315;
+}
+::-webkit-scrollbar-thumb {
+  background: #30353c;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #404752;
 }
