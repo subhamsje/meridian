@@ -19,7 +19,9 @@ import {
   ExternalLink,
   ChevronRight,
   LogOut,
-  FolderOpen
+  FolderOpen,
+  Printer,
+  Download
 } from "lucide-react";
 import { API_BASE } from "@/lib/utils";
 
@@ -63,9 +65,8 @@ export default function WorkspaceApp() {
   const [newCompany, setNewCompany] = useState("Snowflake Inc.");
   const [newTicker, setNewTicker] = useState("SNOW");
   const [newDomain, setNewDomain] = useState("snowflake.com");
-  const [newSector, setNewSector] = useState("Cloud Data & Analytics");
+  const [newSector, setNewSector] = useState("Cloud Data & AI Infrastructure");
 
-  // Auto login or check stored token
   useEffect(() => {
     const savedToken = localStorage.getItem("meridian_token");
     if (savedToken) {
@@ -187,7 +188,6 @@ export default function WorkspaceApp() {
       const data = await res.json();
       if (res.ok) {
         setShowNewModal(false);
-        // Start pipeline immediately
         await fetch(`${API_BASE}/investigations/${data.investigation_id}/start`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` }
@@ -207,7 +207,6 @@ export default function WorkspaceApp() {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
       });
-      // Polling refresh
       setTimeout(() => {
         selectInvestigation(selectedInvId, token);
         fetchInvestigations(token);
@@ -225,7 +224,6 @@ export default function WorkspaceApp() {
     setInvDetail(null);
   };
 
-  // If unauthenticated, show institutional sign-in / registration
   if (!token) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-[#080a0d]">
@@ -327,13 +325,13 @@ export default function WorkspaceApp() {
     );
   }
 
-  // Authenticated Research Workspace
+  const primaryReport = reports[0];
+
   return (
     <div className="flex h-screen overflow-hidden bg-[#0b0d10] text-[#e1e4ea] font-sans">
       {/* Sidebar: Navigation & Investigation Registry */}
       <aside className="w-80 border-r border-[#20252e] bg-[#0e1217] flex flex-col justify-between">
         <div className="flex flex-col flex-1 overflow-hidden">
-          {/* Header */}
           <div className="h-14 border-b border-[#20252e] px-4 flex items-center justify-between">
             <Link href="/" className="flex items-center space-x-2.5">
               <div className="w-6 h-6 rounded bg-emerald-950 border border-emerald-500/40 flex items-center justify-center font-mono font-bold text-emerald-400 text-xs">
@@ -353,7 +351,6 @@ export default function WorkspaceApp() {
             </button>
           </div>
 
-          {/* Org Scoping Pill */}
           <div className="px-4 py-2.5 border-b border-[#20252e] bg-[#12161e] flex items-center justify-between text-xs">
             <div className="flex items-center space-x-2 overflow-hidden">
               <Building2 className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
@@ -366,7 +363,6 @@ export default function WorkspaceApp() {
             </span>
           </div>
 
-          {/* Investigation List */}
           <div className="p-3 text-[11px] font-mono text-slate-400 uppercase tracking-wider flex items-center justify-between">
             <span>Dossier Registry</span>
             <span>{investigations.length} Total</span>
@@ -416,7 +412,6 @@ export default function WorkspaceApp() {
           </div>
         </div>
 
-        {/* User Profile & Sign Out */}
         <div className="p-3 border-t border-[#20252e] bg-[#10141a] flex items-center justify-between text-xs">
           <div className="overflow-hidden">
             <div className="font-medium text-slate-200 truncate">{user?.full_name}</div>
@@ -436,7 +431,7 @@ export default function WorkspaceApp() {
       <main className="flex-1 flex flex-col overflow-hidden bg-[#0b0d10]">
         {invDetail ? (
           <>
-            {/* Investigation Top Navigation Bar */}
+            {/* Top Navigation Bar */}
             <header className="h-16 border-b border-[#20252e] px-6 flex items-center justify-between bg-[#0e1217]">
               <div>
                 <div className="flex items-center space-x-3">
@@ -465,7 +460,7 @@ export default function WorkspaceApp() {
                 </div>
               </div>
 
-              {/* Action Buttons & Tabs */}
+              {/* Action Tabs */}
               <div className="flex items-center space-x-3">
                 <div className="flex items-center bg-[#141922] p-1 rounded border border-[#20252e] text-xs font-medium">
                   <button
@@ -475,6 +470,14 @@ export default function WorkspaceApp() {
                     }`}
                   >
                     Adversarial Boardroom
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("scenarios")}
+                    className={`px-3 py-1.5 rounded transition-all cursor-pointer ${
+                      activeTab === "scenarios" ? "bg-emerald-950 text-emerald-300 border border-emerald-500/40" : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    Scenario Matrix
                   </button>
                   <button
                     onClick={() => setActiveTab("evidence")}
@@ -506,7 +509,7 @@ export default function WorkspaceApp() {
               </div>
             </header>
 
-            {/* Tab 1: Adversarial Boardroom & Multi-Specialist Deliberation */}
+            {/* Tab 1: Adversarial Boardroom */}
             {activeTab === "boardroom" && (
               <div className="flex-1 overflow-hidden grid grid-cols-12 divide-x divide-[#20252e]">
                 {/* Specialists Column (Left 3 cols) */}
@@ -542,7 +545,6 @@ export default function WorkspaceApp() {
                   </div>
                   
                   <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    {/* Disputed Claims */}
                     <div className="space-y-2">
                       <div className="text-[11px] font-mono uppercase text-slate-400">Investigative Claims & Adjudication</div>
                       {claims.map((c) => (
@@ -578,7 +580,6 @@ export default function WorkspaceApp() {
                       ))}
                     </div>
 
-                    {/* Debate Exchanges */}
                     {debates.map((d) => (
                       <div key={d.id} className="pt-4 border-t border-[#20252e]">
                         <div className="text-xs font-medium text-slate-300 mb-3 flex items-center space-x-1.5">
@@ -635,7 +636,66 @@ export default function WorkspaceApp() {
               </div>
             )}
 
-            {/* Tab 2: Evidence Provenance */}
+            {/* Tab 2: Scenario Matrix & Quantitative Forecaster */}
+            {activeTab === "scenarios" && (
+              <div className="flex-1 overflow-y-auto p-8 max-w-5xl mx-auto w-full">
+                <div className="mb-6">
+                  <h2 className="text-xl font-serif text-slate-100">Quantitative Scenario Matrix & Stress Testing</h2>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Deterministic financial scenario modeling across baseline, enterprise expansion, sales friction, and concentration shock assumptions.
+                  </p>
+                </div>
+
+                {primaryReport?.scenario_matrix ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {Object.entries(primaryReport.scenario_matrix).map(([key, sc]: [string, any]) => (
+                      <div key={key} className="p-5 rounded-lg bg-[#141922] border border-[#20252e]">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-xs font-mono uppercase font-semibold text-emerald-400">
+                            {key.replace(/_/g, " ")}
+                          </span>
+                          <span className="text-xs font-mono px-2 py-0.5 rounded bg-[#1c222b] text-slate-300 border border-[#2d3748]">
+                            Multiple: {sc.terminal_multiple}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div className="p-2.5 rounded bg-[#0b0d10] border border-[#20252e]">
+                            <div className="text-[10px] text-slate-400 font-mono uppercase">Projected Rev</div>
+                            <div className="text-base font-mono font-semibold text-slate-100 mt-0.5">
+                              ${sc.projected_revenue_m}M
+                            </div>
+                            <div className={`text-[10px] font-mono mt-0.5 ${sc.growth_rate_pct >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                              {sc.growth_rate_pct >= 0 ? `+${sc.growth_rate_pct}%` : `${sc.growth_rate_pct}%`} YoY
+                            </div>
+                          </div>
+
+                          <div className="p-2.5 rounded bg-[#0b0d10] border border-[#20252e]">
+                            <div className="text-[10px] text-slate-400 font-mono uppercase">EBITDA Margin</div>
+                            <div className="text-base font-mono font-semibold text-cyan-400 mt-0.5">
+                              {sc.ebitda_margin_pct}%
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                              Normalized Run-rate
+                            </div>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-slate-300 font-serif leading-relaxed italic bg-[#10141a] p-2.5 rounded border border-[#20252e]">
+                          "{sc.assumptions}"
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-slate-500 text-sm">
+                    Scenario data pending investigation execution.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Tab 3: Evidence Provenance */}
             {activeTab === "evidence" && (
               <div className="flex-1 overflow-y-auto p-6 max-w-5xl mx-auto w-full">
                 <div className="mb-6">
@@ -673,7 +733,7 @@ export default function WorkspaceApp() {
               </div>
             )}
 
-            {/* Tab 3: Institutional Intelligence Dossier / Reports */}
+            {/* Tab 4: Institutional Dossier */}
             {activeTab === "reports" && (
               <div className="flex-1 overflow-y-auto p-8 max-w-4xl mx-auto w-full">
                 {reports.length === 0 ? (
@@ -683,17 +743,25 @@ export default function WorkspaceApp() {
                 ) : (
                   reports.map((r) => (
                     <article key={r.id} className="p-8 rounded-lg bg-[#12161e] border border-[#20252e] text-slate-200">
-                      <div className="border-b border-[#20252e] pb-6 mb-6">
-                        <div className="text-xs font-mono uppercase tracking-widest text-emerald-400 mb-2">
-                          Institutional Dossier • Version {r.version}
+                      <div className="border-b border-[#20252e] pb-6 mb-6 flex items-start justify-between">
+                        <div>
+                          <div className="text-xs font-mono uppercase tracking-widest text-emerald-400 mb-2">
+                            Institutional Dossier • Version {r.version}
+                          </div>
+                          <h1 className="text-2xl font-serif font-bold text-slate-100">{r.title}</h1>
+                          <p className="text-xs font-mono text-slate-400 mt-2">
+                            Generated on {new Date(r.created_at).toLocaleDateString()} • {r.citations_count} Verified Citations
+                          </p>
                         </div>
-                        <h1 className="text-2xl font-serif font-bold text-slate-100">{r.title}</h1>
-                        <p className="text-xs font-mono text-slate-400 mt-2">
-                          Generated on {new Date(r.created_at).toLocaleDateString()} • {r.citations_count} Verified Citations
-                        </p>
+                        <button
+                          onClick={() => window.print()}
+                          className="px-3 py-1.5 rounded border border-[#2d3748] hover:border-slate-500 text-slate-300 text-xs flex items-center space-x-1.5 cursor-pointer"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>Print / Export PDF</span>
+                        </button>
                       </div>
 
-                      {/* Executive Summary */}
                       <div className="mb-8">
                         <h2 className="text-xs font-mono uppercase text-slate-400 tracking-wider mb-2">
                           Executive Assessment
@@ -703,7 +771,6 @@ export default function WorkspaceApp() {
                         </div>
                       </div>
 
-                      {/* Financial Analysis Grid */}
                       {r.financial_analysis && (
                         <div className="mb-8">
                           <h2 className="text-xs font-mono uppercase text-slate-400 tracking-wider mb-3">
@@ -732,7 +799,6 @@ export default function WorkspaceApp() {
                         </div>
                       )}
 
-                      {/* Sections */}
                       <div className="space-y-6">
                         {r.sections?.map((sec: any, idx: number) => (
                           <div key={idx} className="space-y-2">
@@ -742,7 +808,6 @@ export default function WorkspaceApp() {
                         ))}
                       </div>
 
-                      {/* Risk Register */}
                       {r.risk_register && (
                         <div className="mt-8 pt-6 border-t border-[#20252e]">
                           <h2 className="text-xs font-mono uppercase text-slate-400 tracking-wider mb-3">

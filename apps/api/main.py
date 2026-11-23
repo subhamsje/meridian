@@ -1,7 +1,7 @@
 import asyncio
 import json
 from typing import List, Optional, Dict, Any
-from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, EmailStr
@@ -38,6 +38,23 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     init_db()
+
+# ---- Helper for strict tenant isolation ----
+def get_authorized_investigation(
+    investigation_id: str,
+    org: Organization,
+    db: Session
+) -> Investigation:
+    inv = db.query(Investigation).filter(
+        Investigation.id == investigation_id,
+        Investigation.organization_id == org.id
+    ).first()
+    if not inv:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Investigation not found or unauthorized for this organization"
+        )
+    return inv
 
 # ---- Schemas ----
 class RegisterRequest(BaseModel):
@@ -174,7 +191,6 @@ def create_investigation(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Resolve or create company
     company = db.query(Company).filter(Company.name == req.company_name).first()
     if not company:
         company = Company(
@@ -210,12 +226,8 @@ def start_investigation(
     org: Organization = Depends(get_current_organization),
     db: Session = Depends(get_db)
 ):
-    inv = db.query(Investigation).filter(Investigation.id == id, Investigation.organization_id == org.id).first()
-    if not inv:
-        raise HTTPException(status_code=404, detail="Investigation not found")
+    inv = get_authorized_investigation(id, org, db)
     
-    # Run async pipeline in background task
-    # For robust db session handling, pass a new db session or handle inside
     def run_job(inv_id: str):
         from database import SessionLocal
         job_db = SessionLocal()
@@ -235,10 +247,7 @@ def get_investigation_detail(
     org: Organization = Depends(get_current_organization),
     db: Session = Depends(get_db)
 ):
-    inv = db.query(Investigation).filter(Investigation.id == id, Investigation.organization_id == org.id).first()
-    if not inv:
-        raise HTTPException(status_code=404, detail="Investigation not found")
-    
+    inv = get_authorized_investigation(id, org, db)
     return {
         "id": inv.id,
         "title": inv.title,
@@ -264,14 +273,15 @@ def get_investigation_detail(
         "completed_at": inv.completed_at.isoformat() if inv.completed_at else None
     }
 
-# ---- Boardroom & Multi-Specialist Endpoints ----
+# ---- Tenant-Isolated Boardroom Sub-Endpoints ----
 @app.get("/api/v1/investigations/{id}/specialists")
 def get_specialists(
     id: str,
     org: Organization = Depends(get_current_organization),
     db: Session = Depends(get_db)
 ):
-    specs = db.query(SpecialistRun).filter(SpecialistRun.investigation_id == id).all()
+    inv = get_authorized_investigation(id, org, db)
+    specs = db.query(SpecialistRun).filter(SpecialistRun.investigation_id == inv.id).all()
     return [
         {
             "id": s.id,
@@ -293,7 +303,8 @@ def get_claims(
     org: Organization = Depends(get_current_organization),
     db: Session = Depends(get_db)
 ):
-    claims = db.query(Claim).filter(Claim.investigation_id == id).all()
+    inv = get_authorized_investigation(id, org, db)
+    claims = db.query(Claim).filter(Claim.investigation_id == inv.id).all()
     results = []
     for c in claims:
         ev_refs = []
@@ -325,7 +336,8 @@ def get_debates(
     org: Organization = Depends(get_current_organization),
     db: Session = Depends(get_db)
 ):
-    debates = db.query(DebateSession).filter(DebateSession.investigation_id == id).all()
+    inv = get_authorized_investigation(id, org, db)
+    debates = db.query(DebateSession).filter(DebateSession.investigation_id == inv.id).all()
     results = []
     for d in debates:
         args = []
@@ -352,7 +364,8 @@ def get_evidence(
     org: Organization = Depends(get_current_organization),
     db: Session = Depends(get_db)
 ):
-    evs = db.query(EvidenceItem).filter(EvidenceItem.investigation_id == id).all()
+    inv = get_authorized_investigation(id, org, db)
+    evs = db.query(EvidenceItem).filter(EvidenceItem.investigation_id == inv.id).all()
     return [
         {
             "id": e.id,
@@ -375,7 +388,8 @@ def get_reports(
     org: Organization = Depends(get_current_organization),
     db: Session = Depends(get_db)
 ):
-    reports = db.query(Report).filter(Report.investigation_id == id).all()
+    inv = get_authorized_investigation(id, org, db)
+    reports = db.query(Report).filter(Report.investigation_id == inv.id).all()
     return [
         {
             "id": r.id,
@@ -393,11 +407,17 @@ def get_reports(
         for r in reports
     ]
 
-# ---- SSE Realtime Stream ----
+# ---- SSE Realtime Stream with Last-Event-ID Resume ----
 @app.get("/api/v1/investigations/{id}/stream")
-async def stream_investigation_events(id: str, db: Session = Depends(get_db)):
+async def stream_investigation_events(
+    id: str,
+    last_event_id: Optional[str] = Header(None, alias="Last-Event-ID"),
+    db: Session = Depends(get_db)
+):
+    last_seq = int(last_event_id) if (last_event_id and last_event_id.isdigit()) else 0
+    
     async def event_generator():
-        last_seq = 0
+        nonlocal last_seq
         while True:
             events = db.query(InvestigationEvent).filter(
                 InvestigationEvent.investigation_id == id,
@@ -412,14 +432,21 @@ async def stream_investigation_events(id: str, db: Session = Depends(get_db)):
                     "payload": ev.payload,
                     "created_at": ev.created_at.isoformat()
                 })
-                yield f"data: {data}\n\n"
+                yield f"id: {ev.sequence}\nevent: {ev.event_type}\ndata: {data}\n\n"
 
             inv = db.query(Investigation).filter(Investigation.id == id).first()
             if inv and inv.status in [InvestigationStatus.COMPLETED.value, InvestigationStatus.FAILED.value]:
-                # Yield final state and close
-                yield f"data: {json.dumps({'event_type': 'stream.ended', 'status': inv.status})}\n\n"
+                yield f"event: stream.ended\ndata: {json.dumps({'status': inv.status})}\n\n"
                 break
             
-            await asyncio.sleep(0.8)
+            await asyncio.sleep(0.6)
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )

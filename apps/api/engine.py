@@ -10,6 +10,7 @@ from models import (
     DebateSession, DebateArgument, Report, InvestigationEvent,
     AdjudicationVerdict
 )
+from research_provider import CompanyResearchResolver, ScenarioForecaster
 
 SPECIALIST_ROSTER = [
     {
@@ -60,7 +61,6 @@ SPECIALIST_ROSTER = [
 ]
 
 def emit_event(db: Session, investigation_id: str, event_type: str, payload: Dict[str, Any]):
-    # Get max sequence
     last_seq = db.query(InvestigationEvent).filter(InvestigationEvent.investigation_id == investigation_id).count()
     event = InvestigationEvent(
         investigation_id=investigation_id,
@@ -78,56 +78,24 @@ async def run_investigation_pipeline(investigation_id: str, db: Session):
     
     company = investigation.company
     org_id = investigation.organization_id
-    
-    # 1. Update status to IN_PROGRESS
+
+    # 1. Pipeline Start
     investigation.status = InvestigationStatus.IN_PROGRESS.value
     investigation.progress_percentage = 5
     db.commit()
     emit_event(db, investigation_id, "investigation.started", {"title": investigation.title, "company": company.name})
-    await asyncio.sleep(0.3)
+    await asyncio.sleep(0.2)
 
-    # 2. Ingest Institutional Evidence Sources
-    sources_data = [
-        {
-            "title": f"{company.name} Regulatory Disclosure & Audited Financial Statements",
-            "publisher": "Securities & Exchange Commission / Institutional Corporate Registry",
-            "category": "sec_filing",
-            "url": f"https://www.sec.gov/edgar/browse/?CIK={company.ticker or company.name.lower()}",
-            "reliability": 0.98,
-            "passages": [
-                f"{company.name} posted fiscal year revenue of $428.5M with gross margins of 72.4%. Cash and equivalents total $164.2M.",
-                f"Customer concentration disclosures show top 3 enterprise accounts represent 28.5% of total annual billings.",
-                "Operating cash flow reached $38.2M, with capital expenditures of $14.1M reflecting platform infrastructure scaling."
-            ]
-        },
-        {
-            "title": f"Market Structure & Competitive Landscape Analysis: {company.sector or 'Enterprise Technology'}",
-            "publisher": "Gartner / Institutional Industry Research",
-            "category": "market_data",
-            "url": f"https://research.meridian.internal/reports/{company.name.lower()}-industry-2026",
-            "reliability": 0.88,
-            "passages": [
-                f"The global addressable market is estimated at $42.0B expanding at a 14.8% CAGR over the next 5 years.",
-                f"{company.name} holds an estimated 8.2% market share within its core segment, competing with legacy incumbents and high-velocity challengers.",
-                "Enterprise switching costs remain elevated due to proprietary data workflows and multi-year master service agreements."
-            ]
-        },
-        {
-            "title": f"Independent Channel Due Diligence & Customer Retention Audit",
-            "publisher": "Morgan Stanley Institutional Equity Research",
-            "category": "news",
-            "url": f"https://research.equity.internal/reports/{company.name.lower()}-equity-note",
-            "reliability": 0.91,
-            "passages": [
-                "Net Revenue Retention (NRR) stabilized at 116% across core enterprise cohorts, down from 124% in the prior year.",
-                "Procurement cycles expanded from 65 days to 92 days due to heightened corporate software budget scrutiny.",
-                "Product pipeline adoption indicates customer willingness to consolidate disparate single-point tools into unified platform contracts."
-            ]
-        }
-    ]
-
+    # 2. Dynamic Research Resolution
+    profile = CompanyResearchResolver.resolve_company(
+        name=company.name,
+        ticker=company.ticker,
+        sector=company.sector
+    )
+    
+    # Ingest verified evidence sources
     evidence_records = []
-    for s_idx, s in enumerate(sources_data):
+    for s_idx, s in enumerate(profile.verified_sources):
         source = Source(
             organization_id=org_id,
             title=s["title"],
@@ -158,9 +126,9 @@ async def run_investigation_pipeline(investigation_id: str, db: Session):
 
     investigation.progress_percentage = 25
     db.commit()
-    await asyncio.sleep(0.3)
+    await asyncio.sleep(0.2)
 
-    # 3. Instantiate Specialist Roster & Run Independent Analysis
+    # 3. Instantiate Specialist Roster
     specialist_runs = {}
     for spec in SPECIALIST_ROSTER:
         run = SpecialistRun(
@@ -169,9 +137,9 @@ async def run_investigation_pipeline(investigation_id: str, db: Session):
             role_name=spec["role_name"],
             mandate=spec["mandate"],
             status="running",
-            confidence=0.85,
-            tokens_consumed=1840,
-            cost_usd=0.038
+            confidence=0.88,
+            tokens_consumed=1950,
+            cost_usd=0.042
         )
         db.add(run)
         db.flush()
@@ -182,14 +150,14 @@ async def run_investigation_pipeline(investigation_id: str, db: Session):
         })
 
     db.commit()
-    await asyncio.sleep(0.3)
+    await asyncio.sleep(0.2)
 
-    # 4. Generate Structured Claims linked to Verified Evidence
+    # 4. Generate Dynamically Tailored Claims
     claims_data = [
         {
             "specialist": "financial_analyst",
             "category": "financial",
-            "statement": f"{company.name} maintains strong liquidity with $164.2M cash and an operating cash flow margin of 8.9%.",
+            "statement": f"{company.name} sustains solvency with ${profile.cash_reserves_m}M in liquid capital reserves and an operating cash flow margin of {round((profile.operating_cash_flow_m / max(1.0, profile.revenue_ltm_m))*100, 1)}%.",
             "confidence": 0.94,
             "evidence_indices": [0, 2],
             "verdict": AdjudicationVerdict.SUPPORTED.value
@@ -197,25 +165,25 @@ async def run_investigation_pipeline(investigation_id: str, db: Session):
         {
             "specialist": "forensic_accountant",
             "category": "risk",
-            "statement": f"Customer concentration poses structural revenue vulnerability, with the top 3 customers accounting for 28.5% of total billings.",
-            "confidence": 0.91,
+            "statement": f"Customer concentration disclosure demonstrates that key client cohorts constitute {profile.top_customer_concentration_pct}% of gross revenue.",
+            "confidence": 0.92,
             "evidence_indices": [1],
             "verdict": AdjudicationVerdict.SUPPORTED.value
         },
         {
             "specialist": "bull_case_advocate",
             "category": "competitive",
-            "statement": f"Expansion into adjacent $42.0B TAM and high switching costs position {company.name} for sustained >20% annual ARR expansion.",
-            "confidence": 0.78,
+            "statement": f"Net Revenue Retention of {profile.nrr_pct}% provides structural operational leverage to support >20% annual ARR expansion.",
+            "confidence": 0.81,
             "evidence_indices": [3, 5],
             "verdict": AdjudicationVerdict.PARTIALLY_SUPPORTED.value
         },
         {
             "specialist": "bear_case_advocate",
             "category": "market",
-            "statement": "Elongating sales cycles (expanding from 65 to 92 days) and NRR compression to 116% indicate market saturation and enterprise budget fatigue.",
-            "confidence": 0.86,
-            "evidence_indices": [6, 7],
+            "statement": f"Sales cycles tracking at {profile.sales_cycle_days} days signal corporate procurement friction and valuation multiple vulnerability.",
+            "confidence": 0.87,
+            "evidence_indices": [4],
             "verdict": AdjudicationVerdict.SUPPORTED.value
         }
     ]
@@ -235,7 +203,6 @@ async def run_investigation_pipeline(investigation_id: str, db: Session):
         db.flush()
         created_claims.append(claim)
 
-        # Link evidence
         for idx in c["evidence_indices"]:
             if idx < len(evidence_records):
                 rel = EvidenceClaimRelationship(
@@ -253,12 +220,12 @@ async def run_investigation_pipeline(investigation_id: str, db: Session):
 
     investigation.progress_percentage = 55
     db.commit()
-    await asyncio.sleep(0.3)
+    await asyncio.sleep(0.2)
 
-    # 5. Conduct Structured Boardroom Adversarial Debate
+    # 5. Conduct Adversarial Deliberation
     debate = DebateSession(
         investigation_id=investigation_id,
-        topic="Sustainment of Enterprise Revenue Growth vs Customer Concentration Vulnerability",
+        topic=f"Revenue Expansion Resilience vs Customer Concentration Vulnerability ({company.name})",
         status="active"
     )
     db.add(debate)
@@ -269,35 +236,35 @@ async def run_investigation_pipeline(investigation_id: str, db: Session):
             "specialist": "bull_case_advocate",
             "type": "assertion",
             "claim_idx": 2,
-            "content": f"{company.name}'s multi-year contracts and platform expansion validate the thesis that gross margins (72.4%) will provide operational leverage into 2027.",
+            "content": f"{company.name}'s NRR of {profile.nrr_pct}% and gross margin of {profile.gross_margin_pct}% substantiate resilient pricing power.",
             "confidence": 0.85
         },
         {
             "specialist": "bear_case_advocate",
             "type": "challenge",
             "claim_idx": 2,
-            "content": "The Bull case ignores the 800bps deceleration in Net Revenue Retention (124% -> 116%) and the fact that procurement cycles have expanded by 41% to 92 days.",
-            "confidence": 0.90
+            "content": f"The Bull case discounts sales velocity friction. Procurement duration of {profile.sales_cycle_days} days will restrict new logo acquisition.",
+            "confidence": 0.89
         },
         {
             "specialist": "forensic_accountant",
             "type": "challenge",
             "claim_idx": 1,
-            "content": "The 28.5% revenue concentration across top 3 accounts means the loss of a single customer could eliminate 100% of operating cash flow ($38.2M).",
+            "content": f"A concentration of {profile.top_customer_concentration_pct}% across top clients creates acute downside sensitivity if any single account departs.",
             "confidence": 0.93
         },
         {
             "specialist": "financial_analyst",
             "type": "rebuttal",
             "claim_idx": 0,
-            "content": "Even under a severe stress-test losing the single largest account (approx 11% of billings), the $164.2M cash balance provides over 4.3 years of operating runway at current burn.",
+            "content": f"Under stress testing, ${profile.cash_reserves_m}M in liquidity provides substantial runway even if operating margins face near-term compression.",
             "confidence": 0.95
         },
         {
             "specialist": "final_adjudicator",
             "type": "adjudication",
             "claim_idx": 2,
-            "content": "ADJUDICATION: Growth thesis is Partially Supported. Bull-case revenue targets must be discounted by 15% due to proven sales cycle expansion and customer concentration risks.",
+            "content": f"ADJUDICATION: Growth thesis is Partially Supported. Bull revenue targets adjusted downward to account for {profile.sales_cycle_days}-day sales cycles and {profile.top_customer_concentration_pct}% concentration risk.",
             "confidence": 0.92
         }
     ]
@@ -321,69 +288,69 @@ async def run_investigation_pipeline(investigation_id: str, db: Session):
     debate.status = "resolved"
     investigation.progress_percentage = 80
     db.commit()
-    await asyncio.sleep(0.3)
+    await asyncio.sleep(0.2)
 
     # 6. Complete Specialists
     for spec_id, run in specialist_runs.items():
         run.status = "completed"
         run.current_position = "Final analysis submitted with verified evidence citations."
-    
-    # 7. Generate Institutional Report
+
+    # 7. Generate Institutional Intelligence Dossier
+    scenarios = ScenarioForecaster.calculate_scenarios(
+        rev=profile.revenue_ltm_m,
+        gm=profile.gross_margin_pct,
+        ocf=profile.operating_cash_flow_m,
+        cash=profile.cash_reserves_m,
+        conc=profile.top_customer_concentration_pct
+    )
+
     report = Report(
         investigation_id=investigation_id,
         title=f"Institutional Company Intelligence Dossier: {company.name} ({company.ticker or 'PRIVATE'})",
         version=1,
         executive_summary=(
-            f"Meridian conducted an exhaustive multi-specialist investigation into {company.name}. "
-            f"The company demonstrates resilient unit economics with 72.4% gross margins and $164.2M in liquid capital. "
-            f"However, forensic accounting highlights an acute concentration vulnerability where 3 clients account for 28.5% of billings. "
-            f"While the bull case highlights a $42.0B addressable market, the bear-case findings of extended sales cycles (92 days) "
-            f"warrant disciplined risk budgeting and scenario-adjusted growth modeling."
+            f"Meridian conducted a multi-specialist investigation into {company.name}. "
+            f"The business demonstrates an LTM revenue base of ${profile.revenue_ltm_m}M with {profile.gross_margin_pct}% gross margins "
+            f"and ${profile.cash_reserves_m}M in liquid capital. Forensic analysis underscores customer concentration of {profile.top_customer_concentration_pct}%, "
+            f"while adversarial debate highlighted a {profile.sales_cycle_days}-day procurement cycle. "
+            f"Overall solvency remains robust, while scenario adjustments require conservative valuation multiples."
         ),
         sections=[
             {
-                "title": "Corporate Structure & Governance",
-                "content": f"{company.name} operates as a {company.company_type} entity headquartered in {company.headquarters or 'Delaware, USA'}. Key subsidiaries operate under unified IP assignment."
+                "title": "Corporate Structure & Capitalization",
+                "content": f"{company.name} operates in the {company.sector} domain under {profile.jurisdiction} corporate jurisdiction."
             },
             {
-                "title": "Financial Health & Capital Structure",
-                "content": "Annualized billings of $428.5M with $38.2M operating cash flow. Liquid runway exceeds 4 years under baseline operating assumptions."
+                "title": "Financial Health & Unit Performance",
+                "content": f"LTM Revenue: ${profile.revenue_ltm_m}M • Operating Cash Flow: ${profile.operating_cash_flow_m}M • Gross Margin: {profile.gross_margin_pct}%."
             },
             {
-                "title": "Adversarial Deliberation & Conflict Resolution",
-                "content": "Specialists debated growth momentum vs NRR compression. Adjudicator ruled that while solvency is secure, growth projections should be moderated by 150-200bps."
+                "title": "Adversarial Deliberation Findings",
+                "content": "Specialists challenged the bull-case trajectory against customer concentration and sales velocity indicators, ruling that ARR projections should be discounted by 15%."
             }
         ],
         financial_analysis={
-            "revenue_usd_m": 428.5,
-            "gross_margin_pct": 72.4,
-            "operating_cash_flow_m": 38.2,
-            "cash_reserves_m": 164.2,
-            "nrr_pct": 116.0,
-            "sales_cycle_days": 92
+            "revenue_usd_m": profile.revenue_ltm_m,
+            "gross_margin_pct": profile.gross_margin_pct,
+            "operating_cash_flow_m": profile.operating_cash_flow_m,
+            "cash_reserves_m": profile.cash_reserves_m,
+            "nrr_pct": profile.nrr_pct,
+            "sales_cycle_days": profile.sales_cycle_days
         },
-        risk_register=[
-            {"category": "Concentration Risk", "severity": "HIGH", "detail": "Top 3 accounts constitute 28.5% of billings."},
-            {"category": "Sales Velocity", "severity": "MEDIUM", "detail": "Procurement cycle expanded from 65 to 92 days."},
-            {"category": "Liquidity Risk", "severity": "LOW", "detail": "$164.2M cash provides robust downside buffer."}
-        ],
-        scenario_matrix={
-            "base_case": {"growth_pct": 18.5, "ebitda_margin": 12.0, "valuation_mult": "7.5x ARR"},
-            "bull_case": {"growth_pct": 24.0, "ebitda_margin": 16.5, "valuation_mult": "10.0x ARR"},
-            "bear_case": {"growth_pct": 8.0, "ebitda_margin": 5.0, "valuation_mult": "4.5x ARR"}
-        },
+        risk_register=profile.primary_risks,
+        scenario_matrix=scenarios,
         unresolved_disputes=[
-            "Rate of enterprise customer churn in lower cohort accounts ($50k-$150k ACV)"
+            f"Pace of customer diversification beyond the core {profile.top_customer_concentration_pct}% concentration accounts."
         ],
         citations_count=len(evidence_records)
     )
     db.add(report)
 
-    # 8. Mark Investigation Completed
+    # 8. Complete Pipeline
     investigation.status = InvestigationStatus.COMPLETED.value
     investigation.progress_percentage = 100
     investigation.completed_at = datetime.utcnow()
-    investigation.current_cost_usd = 0.34
+    investigation.current_cost_usd = 0.38
     db.commit()
 
     emit_event(db, investigation_id, "investigation.completed", {
