@@ -129,6 +129,7 @@ class Investigation(Base):
     society_agents = relationship("SocietyAgent", back_populates="investigation", cascade="all, delete-orphan")
     interactions = relationship("AgentInteraction", back_populates="investigation", cascade="all, delete-orphan")
     simulation_runs = relationship("SimulationRun", back_populates="investigation", cascade="all, delete-orphan")
+    hypothetical_events = relationship("HypotheticalEvent", back_populates="investigation", cascade="all, delete-orphan")
 
 class SpecialistRun(Base):
     __tablename__ = "specialist_runs"
@@ -238,6 +239,21 @@ class SimulationRun(Base):
     completed_at = Column(DateTime, nullable=True)
 
     investigation = relationship("Investigation", back_populates="simulation_runs")
+
+class HypotheticalEvent(Base):
+    __tablename__ = "hypothetical_events"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    investigation_id = Column(String(36), ForeignKey("investigations.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_description = Column(Text, nullable=False)
+    affected_entities = Column(JSON, default=list)
+    affected_agents = Column(JSON, default=list)
+    baseline_metrics = Column(JSON, default=dict)
+    stressed_metrics = Column(JSON, default=dict)
+    agent_reactions = Column(JSON, default=list)
+    is_hypothetical = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    investigation = relationship("Investigation", back_populates="hypothetical_events")
 
 # ----------------- END MULTI-AGENT SOCIETY ENTITIES -----------------
 

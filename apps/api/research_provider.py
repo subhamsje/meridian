@@ -53,9 +53,14 @@ class CompanyResearchResolver:
                 {"category": "Procurement Velocity", "severity": "MEDIUM", "detail": "Federal budget authorization cycles introduce quarterly lumpy billings."}
             ],
             "relationships": [
-                CorporateRelationshipDraft("U.S. Department of Defense", "government_agency", "customer", "Prime enterprise software and intelligence operating system contract.", 0.99),
-                CorporateRelationshipDraft("Amazon Web Services", "cloud_provider", "partner", "Strategic cloud infrastructure and IL6 security accreditation alliance.", 0.95),
-                CorporateRelationshipDraft("Microsoft Azure", "cloud_provider", "competitor", "Direct competition in government cloud analytics and defense deployments.", 0.92)
+                CorporateRelationshipDraft("U.S. Department of Defense", "government_agency", "customer", "Prime enterprise software and intelligence operating system contract under Project Maven and Army modernization programs.", 0.99),
+                CorporateRelationshipDraft("TITAN Ground Station Program", "defense_program", "contract", "Prime software contractor for Tactical Intelligence Targeting Access Node (TITAN) vehicle integration.", 0.98),
+                CorporateRelationshipDraft("Amazon Web Services", "cloud_infrastructure", "partner", "Strategic cloud infrastructure and IL6 FedRAMP High security accreditation alliance for GovCloud hosting.", 0.96),
+                CorporateRelationshipDraft("Microsoft Azure Government", "cloud_infrastructure", "competitor", "Direct competition in government cloud analytics, defense AI infrastructure, and DoD joint warfighting contracts.", 0.93),
+                CorporateRelationshipDraft("AIP Enterprise Platform", "core_product", "product", "Artificial Intelligence Platform integrating LLMs and ontologies across commercial corporate enterprises and defense command.", 0.99),
+                CorporateRelationshipDraft("Alex Karp", "leadership", "executive", "Co-founder and Chief Executive Officer directing sovereign defense contracts and US commercial expansion.", 0.99),
+                CorporateRelationshipDraft("Peter Thiel", "leadership", "founder", "Co-founder and Chairman of the Board providing strategic capital allocation guidance.", 0.99),
+                CorporateRelationshipDraft("Snowflake", "competitor", "competitor", "Enterprise competition in corporate data warehousing, semantic layers, and commercial business intelligence.", 0.90)
             ]
         },
         "SNOW": {

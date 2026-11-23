@@ -92,6 +92,17 @@ class AgentInterventionRequest(BaseModel):
     agent_id: str
     message: str
 
+class HypotheticalEventRequest(BaseModel):
+    event_description: str
+
+class MandateUpdateRequest(BaseModel):
+    mandate: str
+
+class DebateChallengeRequest(BaseModel):
+    claim_id: str
+    challenger_agent_id: str
+    challenge_text: str
+
 # ---- Flagship Demonstration Endpoint ----
 @app.get("/api/v1/demo/flagship")
 def get_or_create_flagship_demo(db: Session = Depends(get_db)):
@@ -401,6 +412,84 @@ def intervene_with_agent(
         investigation_id=inv.id,
         agent_id=req.agent_id,
         message=req.message,
+        db=db
+    )
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+@app.post("/api/v1/investigations/{id}/society/hypothetical")
+def inject_hypothetical(
+    id: str,
+    req: HypotheticalEventRequest,
+    org: Organization = Depends(get_current_organization),
+    db: Session = Depends(get_db)
+):
+    inv = get_authorized_investigation(id, org, db)
+    result = MultiAgentSocietyEngine.inject_hypothetical_event(
+        investigation_id=inv.id,
+        event_description=req.event_description,
+        db=db
+    )
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+@app.get("/api/v1/investigations/{id}/society/hypotheticals")
+def get_hypotheticals(
+    id: str,
+    org: Organization = Depends(get_current_organization),
+    db: Session = Depends(get_db)
+):
+    inv = get_authorized_investigation(id, org, db)
+    from models import HypotheticalEvent
+    events = db.query(HypotheticalEvent).filter(
+        HypotheticalEvent.investigation_id == inv.id
+    ).order_by(HypotheticalEvent.created_at.desc()).all()
+    return [
+        {
+            "id": h.id,
+            "event_description": h.event_description,
+            "affected_entities": h.affected_entities,
+            "affected_agents": h.affected_agents,
+            "baseline_metrics": h.baseline_metrics,
+            "stressed_metrics": h.stressed_metrics,
+            "agent_reactions": h.agent_reactions,
+            "is_hypothetical": h.is_hypothetical,
+            "created_at": h.created_at.isoformat()
+        }
+        for h in events
+    ]
+
+@app.put("/api/v1/investigations/{id}/mandate")
+def update_mandate(
+    id: str,
+    req: MandateUpdateRequest,
+    org: Organization = Depends(get_current_organization),
+    db: Session = Depends(get_db)
+):
+    inv = get_authorized_investigation(id, org, db)
+    if inv.company:
+        inv.company.description = req.mandate
+    inv.title = f"Investigation: {inv.company.name} • {req.mandate[:60]}..."
+    db.commit()
+    return {"status": "updated", "mandate": req.mandate}
+
+@app.post("/api/v1/investigations/{id}/debates/{debate_id}/challenge")
+def challenge_debate_claim(
+    id: str,
+    debate_id: str,
+    req: DebateChallengeRequest,
+    org: Organization = Depends(get_current_organization),
+    db: Session = Depends(get_db)
+):
+    inv = get_authorized_investigation(id, org, db)
+    result = MultiAgentSocietyEngine.submit_debate_challenge(
+        investigation_id=inv.id,
+        debate_id=debate_id,
+        claim_id=req.claim_id,
+        challenger_agent_id=req.challenger_agent_id,
+        challenge_text=req.challenge_text,
         db=db
     )
     if "error" in result:

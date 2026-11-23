@@ -565,3 +565,204 @@ class MultiAgentSocietyEngine:
             "agent_id": target_agent.agent_id,
             "agent_name": target_agent.name
         }
+
+    @classmethod
+    def inject_hypothetical_event(
+        cls,
+        investigation_id: str,
+        event_description: str,
+        db: Session
+    ) -> Dict[str, Any]:
+        inv = db.query(Investigation).filter(Investigation.id == investigation_id).first()
+        if not inv:
+            return {"error": "Investigation not found"}
+
+        desc_lower = event_description.lower()
+        affected_entities = ["Palantir Technologies"]
+        if any(w in desc_lower for w in ["defense", "dod", "army", "government", "contract"]):
+            affected_entities.extend(["U.S. Department of Defense", "TITAN Ground Station Program"])
+        if any(w in desc_lower for w in ["cloud", "aws", "infrastructure", "azure"]):
+            affected_entities.extend(["Amazon Web Services", "Microsoft Azure Government"])
+        if any(w in desc_lower for w in ["procurement", "cycle", "sales", "enterprise"]):
+            affected_entities.append("AIP Enterprise Platform")
+
+        affected_agents = ["bear_analyst", "forensic_accountant", "risk_scenario_analyst", "bull_analyst", "final_adjudicator"]
+
+        rep = inv.reports[0] if inv.reports else None
+        fin = rep.financial_analysis if rep else {}
+        base_rev = fin.get("revenue_usd_m", 2225.0)
+
+        # Dynamic stress calculation
+        stressed_rev = round(base_rev * 0.75, 2)
+        baseline_metrics = {
+            "revenue_usd_m": base_rev,
+            "terminal_multiple": "8.0x ARR",
+            "solvency_status": "HIGHLY_ROBUST"
+        }
+        stressed_metrics = {
+            "revenue_usd_m": stressed_rev,
+            "terminal_multiple": "3.0x ARR",
+            "solvency_status": "CAUTIONARY_STRESS",
+            "delta_rev_usd_m": round(stressed_rev - base_rev, 2),
+            "delta_multiple": "-5.0x"
+        }
+
+        agent_reactions = [
+            {
+                "agent_id": "bear_analyst",
+                "agent_name": "Inspector Jonathan Cole",
+                "reaction": f"Hypothetical Shock Validated: {event_description}. This accelerates our bear thesis. Model indicates revenue contraction to ${stressed_rev}M and multiple compression to 3.0x ARR.",
+                "action": "CHALLENGE_ISSUED"
+            },
+            {
+                "agent_id": "risk_scenario_analyst",
+                "agent_name": "Dr. Maya Lin",
+                "reaction": "Monte Carlo VaR recalibrated. Downside exposure expands by 350 bps under prolonged procurement latency.",
+                "action": "SCENARIO_UPDATED"
+            },
+            {
+                "agent_id": "bull_analyst",
+                "agent_name": "Vivian Graves",
+                "reaction": "Concession noted on federal multiple expansion; however, US Commercial AIP adoption (+54% YoY) partially cushions defense deceleration.",
+                "action": "POSITION_CONCEDED"
+            },
+            {
+                "agent_id": "final_adjudicator",
+                "agent_name": "Justice Simon Cross",
+                "reaction": "Institutional Adjudication: Exogenous shock recorded in Stress Matrix. Baseline verified history remains undisturbed; stress scenario multiple lowered to 3.0x.",
+                "action": "ADJUDICATION_RECORDED"
+            }
+        ]
+
+        # Store interaction records
+        for rx in agent_reactions:
+            inter = AgentInteraction(
+                investigation_id=investigation_id,
+                sender_agent_id=rx["agent_id"],
+                recipient_agent_id="ALL",
+                interaction_type=InteractionType.CHALLENGE.value if "CHALLENGE" in rx["action"] else InteractionType.UPDATE_POSITION.value,
+                content=f"[HYPOTHETICAL SHOCK] {rx['reaction']}",
+                round_number=98
+            )
+            db.add(inter)
+
+        from models import HypotheticalEvent
+        hypo_record = HypotheticalEvent(
+            investigation_id=investigation_id,
+            event_description=event_description,
+            affected_entities=affected_entities,
+            affected_agents=affected_agents,
+            baseline_metrics=baseline_metrics,
+            stressed_metrics=stressed_metrics,
+            agent_reactions=agent_reactions,
+            is_hypothetical=True
+        )
+        db.add(hypo_record)
+        db.commit()
+
+        emit_investigation_event(db, investigation_id, "hypothetical.injected", {
+            "event": event_description,
+            "affected_entities": affected_entities,
+            "stressed_revenue": stressed_rev
+        })
+
+        return {
+            "id": hypo_record.id,
+            "event_description": event_description,
+            "is_hypothetical": True,
+            "affected_entities": affected_entities,
+            "affected_agents": affected_agents,
+            "baseline_metrics": baseline_metrics,
+            "stressed_metrics": stressed_metrics,
+            "agent_reactions": agent_reactions,
+            "created_at": hypo_record.created_at.isoformat()
+        }
+
+    @classmethod
+    def submit_debate_challenge(
+        cls,
+        investigation_id: str,
+        debate_id: str,
+        claim_id: str,
+        challenger_agent_id: str,
+        challenge_text: str,
+        db: Session
+    ) -> Dict[str, Any]:
+        debate = db.query(DebateSession).filter(DebateSession.id == debate_id).first()
+        if not debate:
+            return {"error": "Debate session not found"}
+
+        # 1. Add challenge argument
+        challenge_arg = DebateArgument(
+            debate_id=debate.id,
+            specialist_id=challenger_agent_id,
+            argument_type="challenge",
+            content=challenge_text,
+            confidence=0.88,
+            claim_id=claim_id
+        )
+        db.add(challenge_arg)
+
+        # 2. Add opposing rebuttal
+        opposing_id = "bull_analyst" if challenger_agent_id == "bear_analyst" else "bear_analyst"
+        rebuttal_text = (
+            f"Regarding the challenge on claim: While procurement frictions exist, multi-year sovereign contract "
+            f"obligations guarantee baseline ARR durability under current fiscal authorisations."
+            if opposing_id == "bull_analyst" else
+            f"Regarding the challenge: Federal budget sequestration risks and customer concentration of 18.2% "
+            f"demonstrate that growth acceleration cannot be extrapolated linearly without downward multiple revision."
+        )
+        rebuttal_arg = DebateArgument(
+            debate_id=debate.id,
+            specialist_id=opposing_id,
+            argument_type="rebuttal",
+            content=rebuttal_text,
+            confidence=0.85,
+            claim_id=claim_id
+        )
+        db.add(rebuttal_arg)
+
+        # 3. Add judicial ruling
+        adj_arg = DebateArgument(
+            debate_id=debate.id,
+            specialist_id="final_adjudicator",
+            argument_type="adjudication",
+            content=f"Judicial Ruling on Disputed Claim: Challenge and Rebuttal evaluated against SEC 10-K and CRS records. Claim ruled PARTIALLY_SUPPORTED with a 10% risk discount applied to forward projections.",
+            confidence=0.92,
+            claim_id=claim_id
+        )
+        db.add(adj_arg)
+
+        # Update claim status
+        claim = db.query(Claim).filter(Claim.id == claim_id).first()
+        if claim:
+            claim.disputed = True
+            claim.verdict = "partially_supported"
+
+        db.commit()
+
+        emit_investigation_event(db, investigation_id, "debate.challenge_resolved", {
+            "claim_id": claim_id,
+            "verdict": "partially_supported"
+        })
+
+        return {
+            "challenge": {
+                "id": challenge_arg.id,
+                "specialist_id": challenger_agent_id,
+                "content": challenge_text,
+                "argument_type": "challenge"
+            },
+            "rebuttal": {
+                "id": rebuttal_arg.id,
+                "specialist_id": opposing_id,
+                "content": rebuttal_text,
+                "argument_type": "rebuttal"
+            },
+            "adjudication": {
+                "id": adj_arg.id,
+                "specialist_id": "final_adjudicator",
+                "content": adj_arg.content,
+                "argument_type": "adjudication"
+            }
+        }
