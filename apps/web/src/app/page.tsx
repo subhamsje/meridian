@@ -37,6 +37,7 @@ import {
   X
 } from "lucide-react";
 import AnimatedRelationshipGraph from "@/components/AnimatedRelationshipGraph";
+import MeridianTopology from "@/components/MeridianTopology";
 
 export default function LandingPage() {
   const [activePreviewTab, setActivePreviewTab] = useState<"graph" | "debate" | "financials" | "provenance">("graph");
@@ -49,49 +50,60 @@ export default function LandingPage() {
       {/* =========================================================================
           TOP INSTITUTIONAL NAVIGATION (Deep Forest Executive Masthead)
          ========================================================================= */}
-      <header className="fixed top-0 inset-x-0 z-50 bg-[#172B27] text-[#F4F1E9] border-b border-[#233F3A]/80 shadow-md backdrop-blur-md bg-opacity-95">
+      <header className="fixed top-0 inset-x-0 z-50 bg-[#153B32]/95 text-[#F7F5EF] border-b border-[#233F3A] shadow-md backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
           {/* Masthead Logo & Institutional Indicator */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3.5">
             <Link href="/" className="flex items-center space-x-2.5 group">
-              <div className="w-6 h-6 rounded-[3px] bg-[#233F3A] border border-[#A47B48]/60 flex items-center justify-center font-serif font-bold text-[#F4F1E9] text-xs shadow-xs group-hover:border-[#A47B48] transition-colors">
+              <div className="w-7 h-7 rounded-[4px] bg-[#1D4D40] border border-[#B58A4F]/70 flex items-center justify-center font-serif font-bold text-[#F7F5EF] text-sm shadow-xs group-hover:border-[#B58A4F] transition-colors">
                 M
               </div>
-              <span className="font-serif font-bold text-sm tracking-wider uppercase text-[#F4F1E9]">
-                Meridian
+              <span className="font-serif font-bold text-sm tracking-widest uppercase text-[#F7F5EF]">
+                MERIDIAN
               </span>
             </Link>
-            <div className="hidden lg:flex items-center space-x-2 pl-2 border-l border-[#2F524C]/60 text-[11px] font-mono text-[#A7B8B1]">
-              <span>Institutional Intelligence</span>
+            <div className="hidden sm:flex items-center space-x-2 pl-3 border-l border-[#2F524C]/80 text-[10px] font-mono text-[#789487]">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="tracking-wider uppercase">Institutional Intelligence</span>
             </div>
           </div>
 
-          {/* Clean 4-Pillar Navigation */}
-          <nav className="hidden md:flex items-center space-x-7 text-xs font-medium text-[#D6D0C3]">
-            <Link href="#process" className="hover:text-white transition-colors">Process</Link>
-            <Link href="#graph" className="hover:text-white transition-colors">Knowledge Graph</Link>
-            <Link href="#provenance" className="hover:text-white transition-colors">Evidence Standard</Link>
-            <Link href="#financials" className="hover:text-white transition-colors">Valuation Engine</Link>
+          {/* Balanced 6-Pillar Navigation */}
+          <nav className="hidden lg:flex items-center space-x-6 text-xs font-mono text-[#D6D0C3]">
+            <Link href="#topology" className="hover:text-[#F7F5EF] transition-colors py-1">Topology</Link>
+            <Link href="#process" className="hover:text-[#F7F5EF] transition-colors py-1">Process</Link>
+            <Link href="#graph" className="hover:text-[#F7F5EF] transition-colors py-1">Knowledge Graph</Link>
+            <Link href="#society" className="hover:text-[#F7F5EF] transition-colors py-1">Specialists</Link>
+            <Link href="#provenance" className="hover:text-[#F7F5EF] transition-colors py-1">Evidence Standard</Link>
+            <Link href="#financials" className="hover:text-[#F7F5EF] transition-colors py-1">Valuation Engine</Link>
+          </nav>
+
+          {/* Medium Screen Navigation (4 pillars) */}
+          <nav className="hidden md:flex lg:hidden items-center space-x-4 text-xs font-mono text-[#D6D0C3]">
+            <Link href="#topology" className="hover:text-[#F7F5EF] transition-colors">Topology</Link>
+            <Link href="#graph" className="hover:text-[#F7F5EF] transition-colors">Graph</Link>
+            <Link href="#provenance" className="hover:text-[#F7F5EF] transition-colors">Evidence</Link>
+            <Link href="#financials" className="hover:text-[#F7F5EF] transition-colors">Valuation</Link>
           </nav>
 
           {/* Action CTAs */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2.5 sm:space-x-3">
             <Link 
               href="/demo"
-              className="text-xs px-3.5 py-1.5 rounded-[4px] bg-[#233F3A] hover:bg-[#2F524C] text-[#F4F1E9] border border-[#A47B48]/50 font-mono transition-colors flex items-center space-x-1.5 shadow-xs"
+              className="text-xs px-3.5 py-1.5 rounded-[4px] bg-[#1D4D40] hover:bg-[#256352] text-[#F7F5EF] border border-[#B58A4F]/60 font-mono transition-all flex items-center space-x-1.5 shadow-xs hover:border-[#B58A4F]"
             >
               <span>Live Demo</span>
-              <ArrowRight className="w-3.5 h-3.5 text-[#A47B48]" />
+              <ArrowRight className="w-3.5 h-3.5 text-[#B58A4F]" />
             </Link>
             <Link 
               href="/app"
-              className="text-xs px-4 py-1.5 rounded-[4px] bg-[#A47B48] hover:bg-[#8F6B3E] text-white font-medium transition-colors shadow-xs whitespace-nowrap"
+              className="text-xs px-4 py-1.5 rounded-[4px] bg-[#B58A4F] hover:bg-[#9E753D] text-white font-medium transition-all shadow-xs whitespace-nowrap"
             >
               Launch Workspace
             </Link>
             <button
               onClick={() => setMobileMenuOpen(prev => !prev)}
-              className="md:hidden p-1.5 rounded-[4px] text-[#D6D0C3] hover:text-white hover:bg-[#233F3A] transition-colors cursor-pointer"
+              className="md:hidden p-1.5 rounded-[4px] text-[#D6D0C3] hover:text-white hover:bg-[#1D4D40] transition-colors cursor-pointer"
               aria-label="Toggle mobile navigation menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -103,20 +115,25 @@ export default function LandingPage() {
       {/* Mobile Slide-Down Navigation Drawer */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 md:hidden animate-fadeIn">
-          <div className="fixed inset-0 bg-[#172B27]/80 backdrop-blur-xs" onClick={() => setMobileMenuOpen(false)} />
-          <nav className="fixed top-14 inset-x-0 bg-[#172B27] border-b border-[#233F3A] p-6 shadow-xl flex flex-col space-y-3 text-sm font-medium z-50 text-[#D6D0C3]">
+          <div className="fixed inset-0 bg-[#153B32]/85 backdrop-blur-xs" onClick={() => setMobileMenuOpen(false)} />
+          <nav className="fixed top-14 inset-x-0 bg-[#153B32] border-b border-[#233F3A] p-6 shadow-xl flex flex-col space-y-3 text-sm font-medium z-50 text-[#D6D0C3]">
+            <Link href="#topology" onClick={() => setMobileMenuOpen(false)} className="hover:text-white transition-colors py-2 border-b border-[#233F3A]">Topology</Link>
             <Link href="#process" onClick={() => setMobileMenuOpen(false)} className="hover:text-white transition-colors py-2 border-b border-[#233F3A]">Process</Link>
             <Link href="#graph" onClick={() => setMobileMenuOpen(false)} className="hover:text-white transition-colors py-2 border-b border-[#233F3A]">Knowledge Graph</Link>
+            <Link href="#society" onClick={() => setMobileMenuOpen(false)} className="hover:text-white transition-colors py-2 border-b border-[#233F3A]">Specialists</Link>
             <Link href="#provenance" onClick={() => setMobileMenuOpen(false)} className="hover:text-white transition-colors py-2 border-b border-[#233F3A]">Evidence Standard</Link>
             <Link href="#financials" onClick={() => setMobileMenuOpen(false)} className="hover:text-white transition-colors py-2">Valuation Engine</Link>
             <div className="pt-4 border-t border-[#233F3A] flex flex-col space-y-2.5">
-              <Link href="/demo" onClick={() => setMobileMenuOpen(false)} className="w-full text-center py-2.5 rounded-[4px] bg-[#233F3A] border border-[#A47B48]/50 text-[#F4F1E9] text-xs font-mono">
+              <Link href="/demo" onClick={() => setMobileMenuOpen(false)} className="w-full text-center py-2.5 rounded-[4px] bg-[#1D4D40] border border-[#B58A4F]/60 text-[#F7F5EF] text-xs font-mono">
                 Explore Live Demo
               </Link>
-              <Link href="/app" onClick={() => setMobileMenuOpen(false)} className="w-full text-center py-2.5 rounded-[4px] bg-[#A47B48] text-white text-xs font-medium">
+              <Link href="/app" onClick={() => setMobileMenuOpen(false)} className="w-full text-center py-2.5 rounded-[4px] bg-[#B58A4F] text-white text-xs font-medium">
                 Launch Workspace
               </Link>
             </div>
+          </nav>
+        </div>
+      )}
           </nav>
         </div>
       )}
@@ -157,13 +174,15 @@ export default function LandingPage() {
             Independent company intelligence, backed by evidence, specialist analysis, and adversarial debate.
           </motion.p>
 
-          {/* Animated Relationship-Graph Introduction (Mandated Section 9) */}
+          {/* World-Class Autonomous Intelligence Topology (Centerpiece) */}
           <motion.div
+            id="topology"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.22 }}
+            className="w-full my-6 scroll-mt-20"
           >
-            <AnimatedRelationshipGraph />
+            <MeridianTopology />
           </motion.div>
 
           {/* 30-Second Visual Architecture Flow Cards */}
@@ -761,7 +780,7 @@ export default function LandingPage() {
           </div>
 
           {/* Scenario Selector Buttons */}
-          <div className="flex flex-wrap items-center gap-2 mb-6 text-xs font-mono">
+          <div className="flex flex-wrap items-center gap-2.5 mb-6 text-xs font-mono" role="tablist">
             {[
               { key: "base", label: "Base Case", sub: "Consensus" },
               { key: "bull", label: "Bull Expansion", sub: "+38.9%" },
@@ -772,16 +791,22 @@ export default function LandingPage() {
               return (
                 <button
                   key={sc.key}
-                  onClick={() => setActiveScenario(sc.key as any)}
-                  className={`px-3.5 py-2 rounded-[4px] transition-all cursor-pointer flex items-center space-x-2 border ${
+                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setActiveScenario(sc.key as any);
+                  }}
+                  className={`px-4 py-2.5 rounded-[4px] transition-all cursor-pointer flex items-center space-x-2.5 border select-none active:scale-[0.98] ${
                     isSelected
-                      ? "bg-[#172B27] text-white border-[#172B27] shadow-sm ring-1 ring-[#A47B48]"
-                      : "bg-white text-[#79756C] border-[#D6D0C3] hover:text-[#172B27] hover:border-[#172B27]/40"
+                      ? "bg-[#153B32] text-white border-[#153B32] shadow-md ring-1 ring-[#B58A4F]"
+                      : "bg-white text-[#172B27] font-semibold border-[#C9C3B5] hover:border-[#153B32] hover:bg-[#FAF8F5] shadow-xs"
                   }`}
                 >
-                  <span className={`w-2 h-2 rounded-full ${isSelected ? "bg-[#A47B48] animate-pulse" : "bg-[#D6D0C3]"}`}></span>
+                  <span className={`w-2.5 h-2.5 rounded-full ${isSelected ? "bg-[#B58A4F] animate-pulse" : "bg-[#C9C3B5]"}`}></span>
                   <span className="font-semibold">{sc.label}</span>
-                  <span className={`text-[10px] ${isSelected ? "text-[#D6D0C3]" : "text-[#79756C]"}`}>({sc.sub})</span>
+                  <span className={`text-[10px] ${isSelected ? "text-[#D6D0C3] font-bold" : "text-[#5C5850]"}`}>({sc.sub})</span>
                 </button>
               );
             })}
@@ -847,7 +872,7 @@ export default function LandingPage() {
             };
             const current = profiles[activeScenario] || profiles.base;
             return (
-              <div className="mb-6 p-5 rounded-lg bg-white border border-[#D6D0C3] shadow-xs space-y-4 animate-fadeIn">
+              <div key={activeScenario} className="mb-6 p-5 rounded-lg bg-white border border-[#D6D0C3] shadow-xs space-y-4 animate-fadeIn">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D6D0C3] pb-3">
                   <div className="space-y-0.5">
                     <div className="text-[10px] font-mono uppercase text-[#A47B48] font-bold tracking-wider">
