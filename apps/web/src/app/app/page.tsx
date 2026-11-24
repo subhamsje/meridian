@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { 
   Building2, 
@@ -49,7 +49,8 @@ import {
   Award,
   Database,
   Eye,
-  Trash2
+  Trash2,
+  Loader2
 } from "lucide-react";
 import { API_BASE } from "@/lib/utils";
 import LivingKnowledgeGraph, { GraphNode, GraphEdge, INSTITUTIONAL_CATEGORIES } from "@/components/LivingKnowledgeGraph";
@@ -158,6 +159,14 @@ export default function WorkspaceApp() {
   // Simulation Running State
   const [isSimulating, setIsSimulating] = useState(false);
   const [viewMode, setViewMode] = useState<"tabs" | "split">("tabs");
+
+  // Durable Multi-Agent Autonomous Execution State
+  const [executionsList, setExecutionsList] = useState<any[]>([]);
+  const [activeExecution, setActiveExecution] = useState<any | null>(null);
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [executionError, setExecutionError] = useState<string | null>(null);
+  const [liveEvents, setLiveEvents] = useState<any[]>([]);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   // Mobile / Tablet Responsive States
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -385,6 +394,27 @@ export default function WorkspaceApp() {
       } else {
         setEvidenceItems([]);
       }
+
+      // Fetch Durable Executions
+      try {
+        const execsRes = await fetch(`${API_BASE}/investigations/${id}/executions`, {
+          headers: { Authorization: `Bearer ${t}` }
+        }).catch(() => null);
+        if (execsRes && execsRes.ok) {
+          const execsData = await execsRes.json();
+          setExecutionsList(execsData);
+          const running = execsData.find((x: any) => x.status === "running" || x.status === "in_progress" || x.status === "pending");
+          if (running) {
+            setActiveExecution(running);
+            setIsExecuting(true);
+            attachExecutionStream(id, t);
+          } else if (execsData.length > 0) {
+            setActiveExecution(execsData[0]);
+          }
+        }
+      } catch (e) {
+        console.warn("Failed fetching executions:", e);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -537,31 +567,110 @@ export default function WorkspaceApp() {
     }
   };
 
-  // Launch or Resume Multi-Round Simulation
-  const handleStartSimulation = async () => {
+  // Attach SSE stream for live multi-agent execution events
+  const attachExecutionStream = (invId: string, authToken: string) => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+    const sseUrl = `${API_BASE}/investigations/${invId}/events/stream?token=${encodeURIComponent(authToken)}`;
+    try {
+      const es = new EventSource(sseUrl);
+      eventSourceRef.current = es;
+
+      es.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          setLiveEvents((prev) => [payload, ...prev].slice(0, 50));
+          if (payload.stage || payload.progress_percentage !== undefined) {
+            setActiveExecution((prev: any) => ({
+              ...prev,
+              current_stage: payload.stage || prev?.current_stage,
+              progress_percentage: payload.progress_percentage !== undefined ? payload.progress_percentage : prev?.progress_percentage,
+              total_tokens: payload.total_tokens || prev?.total_tokens,
+              estimated_cost_usd: payload.estimated_cost_usd !== undefined ? payload.estimated_cost_usd : prev?.estimated_cost_usd,
+            }));
+          }
+          if (
+            payload.type === "stream.ended" || 
+            payload.type === "execution.completed" || 
+            payload.type === "execution.cancelled" ||
+            payload.status === "completed" ||
+            payload.status === "failed"
+          ) {
+            setIsExecuting(false);
+            es.close();
+            selectInvestigation(invId, authToken);
+          }
+        } catch {
+          // ignore keep-alive
+        }
+      };
+
+      es.onerror = () => {
+        es.close();
+      };
+    } catch (err) {
+      console.warn("SSE connection error", err);
+    }
+  };
+
+  // Launch Autonomous Multi-Agent Investigation Execution
+  const handleRunInvestigation = async (forceRestart: boolean = false) => {
     if (!selectedInvId || !token) return;
-    setIsSimulating(true);
+    setIsExecuting(true);
+    setExecutionError(null);
 
     try {
-      await fetch(`${API_BASE}/scenarios/${selectedInvId}/start`, {
+      const res = await fetch(`${API_BASE}/investigations/${selectedInvId}/executions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          model_name: "gpt-4o-mini",
+          run_async: true,
+          force_restart: forceRestart
+        })
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.detail || `Server returned ${res.status}`);
+      }
+
+      const execData = await res.json();
+      setActiveExecution(execData);
+      setExecutionsList((prev) => [execData, ...prev.filter((x) => x.id !== execData.id)]);
+      attachExecutionStream(selectedInvId, token);
+    } catch (err: any) {
+      console.error("Run investigation failed:", err);
+      setExecutionError(err.message || "Failed to trigger autonomous investigation.");
+      setIsExecuting(false);
+    }
+  };
+
+  // Cancel Active Execution
+  const handleCancelExecution = async () => {
+    if (!selectedInvId || !token || !activeExecution?.id) return;
+    try {
+      await fetch(`${API_BASE}/investigations/${selectedInvId}/executions/${activeExecution.id}/cancel`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
       });
-
-      // Poll updates periodically
-      const interval = setInterval(async () => {
-        selectInvestigation(selectedInvId, token);
-      }, 1000);
-
-      setTimeout(() => {
-        clearInterval(interval);
-        setIsSimulating(false);
-        selectInvestigation(selectedInvId, token);
-      }, 5000);
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+      setIsExecuting(false);
+      selectInvestigation(selectedInvId, token);
     } catch (err) {
-      console.error(err);
-      setIsSimulating(false);
+      console.error("Failed to cancel execution:", err);
     }
+  };
+
+  // Legacy Simulation Round Trigger (retained for compatibility)
+  const handleStartSimulation = async () => {
+    return handleRunInvestigation(false);
   };
 
   // God-View Intervention
@@ -1107,14 +1216,39 @@ export default function WorkspaceApp() {
                 </button>
 
                 <button
-                  onClick={handleStartSimulation}
-                  disabled={isSimulating}
-                  className="px-2.5 sm:px-3.5 py-1.5 rounded bg-[#172B27] hover:bg-[#233F3A] text-white text-xs font-medium flex items-center space-x-1 cursor-pointer shadow-sm disabled:opacity-50 transition-colors shrink-0"
-                  title="Launch Simulation Round"
+                  onClick={() => handleRunInvestigation(false)}
+                  disabled={isExecuting}
+                  className={`px-3 sm:px-4 py-1.5 rounded font-mono text-xs font-semibold flex items-center space-x-1.5 cursor-pointer shadow-sm transition-all shrink-0 ${
+                    isExecuting
+                      ? "bg-[#A47B48] text-white animate-pulse"
+                      : "bg-[#172B27] hover:bg-[#233F3A] text-white active:scale-95"
+                  }`}
+                  title="Launch End-to-End Autonomous Multi-Agent Investigation"
                 >
-                  <Play className="w-3.5 h-3.5 fill-current shrink-0" />
-                  <span className="hidden sm:inline">{isSimulating ? "Simulating..." : "Run Sim"}</span>
+                  {isExecuting ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                      <span className="hidden sm:inline">Investigating...</span>
+                      <span className="sm:hidden">Running</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-3.5 h-3.5 fill-current shrink-0 text-[#B58A4F]" />
+                      <span className="hidden sm:inline">Run Investigation</span>
+                      <span className="sm:hidden">Investigate</span>
+                    </>
+                  )}
                 </button>
+                {isExecuting && (
+                  <button
+                    onClick={handleCancelExecution}
+                    className="px-2.5 sm:px-3 py-1.5 rounded bg-red-800/90 hover:bg-red-900 text-white font-mono text-xs flex items-center space-x-1 transition-all cursor-pointer shadow-sm"
+                    title="Abort Active Investigation Execution"
+                  >
+                    <Pause className="w-3.5 h-3.5 shrink-0" />
+                    <span className="hidden sm:inline">Cancel</span>
+                  </button>
+                )}
               </div>
             </header>
 
@@ -1508,6 +1642,115 @@ export default function WorkspaceApp() {
                     </div>
                   </div>
 
+                  {/* Autonomous Intelligence Engine Control Room Card */}
+                  <div className="p-5 rounded-xl bg-[#0E231C] text-[#F7F5EF] border border-[#1E4337] shadow-sm space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#1E4337] pb-3">
+                      <div className="flex items-center space-x-2">
+                        <span className={`w-2.5 h-2.5 rounded-full ${isExecuting ? "bg-amber-400 animate-ping" : "bg-emerald-400"}`}></span>
+                        <span className="font-mono text-xs uppercase tracking-wider text-[#A47B48] font-bold">
+                          Autonomous Investigation Control Room
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-[#16382E] border border-[#275344] text-[10px] font-mono text-[#8BB7A7]">
+                          {isExecuting ? "PIPELINE EXECUTING" : (activeExecution?.status?.toUpperCase() || "READY")}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center space-x-3 text-xs font-mono text-[#D6D0C3]">
+                        {activeExecution && (
+                          <>
+                            <span>Run: <strong className="text-white">{activeExecution.execution_number ? `#${activeExecution.execution_number}` : activeExecution.id?.slice(0, 8)}</strong></span>
+                            <span>•</span>
+                            <span>Tokens: <strong className="text-white">{activeExecution.total_tokens || 0}</strong></span>
+                            <span>•</span>
+                            <span>Cost: <strong className="text-white">${(activeExecution.estimated_cost_usd || 0).toFixed(4)}</strong></span>
+                          </>
+                        )}
+                        {executionsList.length > 1 && (
+                          <select
+                            value={activeExecution?.id || ""}
+                            onChange={(e) => {
+                              const found = executionsList.find(x => x.id === e.target.value);
+                              if (found) setActiveExecution(found);
+                            }}
+                            className="bg-[#14392E] text-white border border-[#235748] rounded px-2 py-1 text-[11px] font-mono"
+                          >
+                            {executionsList.map((ex: any) => (
+                              <option key={ex.id} value={ex.id}>
+                                Run #{ex.execution_number || 1} • {ex.status} ({ex.progress_percentage || 0}%)
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 7-Stage Visual Pipeline Stepper */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 text-center text-[10px] font-mono">
+                      {[
+                        { step: 1, id: "01_identity_mandate", label: "01. Identity" },
+                        { step: 2, id: "02_research_planning", label: "02. Decompose" },
+                        { step: 3, id: "03_primary_research", label: "03. Evidence" },
+                        { step: 4, id: "04_specialist_execution", label: "04. Hypotheses" },
+                        { step: 5, id: "05_adversarial_debate", label: "05. Debate" },
+                        { step: 6, id: "06_adjudication", label: "06. Adjudicate" },
+                        { step: 7, id: "07_manifest_finalization", label: "07. Dossier" },
+                      ].map((st) => {
+                        const curStage = activeExecution?.current_stage || "07_manifest_finalization";
+                        const isCurrent = curStage.includes(st.id) || curStage.startsWith(`0${st.step}`);
+                        const isCompleted = activeExecution?.status === "completed" || parseInt(curStage.slice(0, 2) || "7") > st.step;
+                        return (
+                          <div
+                            key={st.step}
+                            className={`p-2 rounded border transition-colors ${
+                              isCurrent && isExecuting
+                                ? "bg-[#B58A4F]/20 border-[#B58A4F] text-[#F7F5EF] ring-1 ring-[#B58A4F]"
+                                : isCompleted
+                                ? "bg-[#14392E] border-[#224A3D] text-[#8BB8A8]"
+                                : "bg-[#0B1E18] border-[#1C4135] text-[#789487]"
+                            }`}
+                          >
+                            <div className="font-bold truncate">{st.label}</div>
+                            <div className="text-[9px] opacity-80 mt-0.5">
+                              {isCurrent && isExecuting ? "Processing..." : isCompleted ? "Verified" : "Pending"}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Progress Bar & Real-Time Event Feed */}
+                    <div className="space-y-2 pt-1">
+                      <div className="flex items-center justify-between text-[11px] font-mono">
+                        <span className="text-[#8BB8A8]">
+                          {isExecuting ? "Executing multi-agent autonomous workflow..." : "Pipeline execution state"}
+                        </span>
+                        <span className="text-amber-400 font-bold">
+                          {activeExecution?.progress_percentage ?? 100}%
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 rounded-full bg-[#14392E] overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-[#B58A4F] to-emerald-400 transition-all duration-300"
+                          style={{ width: `${activeExecution?.progress_percentage ?? 100}%` }}
+                        />
+                      </div>
+
+                      {/* Live Event Stream Ticker */}
+                      {liveEvents.length > 0 && (
+                        <div className="mt-3 p-2.5 rounded bg-[#071510] border border-[#16382E] text-[11px] font-mono text-[#D6D0C3] space-y-1 max-h-24 overflow-y-auto">
+                          <div className="text-[9px] uppercase tracking-wider text-[#A47B48] font-bold">
+                            Live Stream Events ({liveEvents.length})
+                          </div>
+                          {liveEvents.slice(0, 3).map((ev: any, idx: number) => (
+                            <div key={idx} className="truncate text-[#8BB8A8]">
+                              <span className="text-amber-400">[{ev.type || "event"}]</span> {ev.message || ev.detail || JSON.stringify(ev).slice(0, 80)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   {/* 4 Primary KPI Highlight Tiles */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="p-4 rounded-xl bg-white border border-[#D6D0C3] space-y-1 shadow-xs">
@@ -1552,13 +1795,26 @@ export default function WorkspaceApp() {
                     <span className="text-xs font-mono text-[#172B27] font-semibold">Investigation Quick Actions:</span>
                     <div className="flex flex-wrap items-center gap-2 text-xs">
                       <button
-                        onClick={handleStartSimulation}
-                        disabled={isSimulating}
-                        className="px-3 py-1.5 rounded bg-[#172B27] hover:bg-[#233F3A] text-white font-medium flex items-center space-x-1.5 shadow-sm transition-colors cursor-pointer"
+                        onClick={() => handleRunInvestigation(false)}
+                        disabled={isExecuting}
+                        className="px-3.5 py-1.5 rounded bg-[#172B27] hover:bg-[#233F3A] text-white font-mono font-medium flex items-center space-x-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-60"
                       >
-                        <Play className="w-3.5 h-3.5 fill-current" />
-                        <span>{isSimulating ? "Simulating..." : "Run Sim Round"}</span>
+                        {isExecuting ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Play className="w-3.5 h-3.5 fill-current text-[#B58A4F]" />
+                        )}
+                        <span>{isExecuting ? "Investigating..." : "Run Investigation"}</span>
                       </button>
+                      {isExecuting && (
+                        <button
+                          onClick={handleCancelExecution}
+                          className="px-3 py-1.5 rounded bg-red-800 hover:bg-red-900 text-white font-mono text-xs flex items-center space-x-1 transition-all cursor-pointer shadow-xs"
+                        >
+                          <Pause className="w-3.5 h-3.5" />
+                          <span>Cancel Execution</span>
+                        </button>
+                      )}
                       <button
                         onClick={() => { setActiveTab("research"); setResearchSubTab("documents"); }}
                         className="px-3 py-1.5 rounded bg-white hover:bg-[#F4F1E9] border border-[#D6D0C3] text-[#172B27] font-medium flex items-center space-x-1.5 transition-colors cursor-pointer"
@@ -2665,7 +2921,7 @@ export default function WorkspaceApp() {
                         {dossierData?.title || primaryReport?.title || "Executive Investment Dossier"}
                       </h2>
                       <div className="text-xs text-[#79756C] font-mono mt-1">
-                        9-Section Exhaustive Analytical Audit • Grounded in Audited Primary Evidence
+                        {dossierData?.sections?.length || 19}-Section Exhaustive Institutional Memorandum • Grounded in Audited Primary Evidence
                       </div>
                     </div>
 
