@@ -1930,12 +1930,12 @@ export default function FlagshipDemoPage() {
                   </span>
                 </div>
                 <div className="text-xs text-[#79756C]">
-                  Synthesized institutional memorandum containing all 12 analytical sections, verified SEC 10-K primary disclosures, committee conviction rating, and audit provenance.
+                  Synthesized institutional memorandum containing all 19 analytical sections, verified SEC 10-K primary disclosures, committee conviction rating, and audit provenance.
                 </div>
               </div>
               <div className="flex items-center space-x-2 shrink-0">
                 <span className="px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-800 text-[10px] font-mono font-semibold border border-emerald-500/20">
-                  ALL 12 SECTIONS AUDITED
+                  ALL 19 SECTIONS AUDITED
                 </span>
               </div>
             </div>
@@ -1946,7 +1946,7 @@ export default function FlagshipDemoPage() {
                 <div className="border-b border-[#D6D0C3] pb-6 flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <div className="text-[10px] font-mono uppercase tracking-wider text-[#A47B48] font-bold mb-1">
-                      Institutional Intelligence Dossier • {dossierData.sections?.length || 9}-Section Audit
+                      Institutional Intelligence Dossier • {dossierData.sections?.length || 19}-Section Institutional Audit
                     </div>
                     <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#172B27]">
                       {dossierData.title || `Institutional Investment Memorandum: ${demoData?.company?.name || "NVIDIA Corporation"}`}
