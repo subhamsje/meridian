@@ -140,7 +140,10 @@ class ClaimDrivenDebateEngine:
                 f"growth projections are adjusted to reflect enterprise procurement lead times. "
                 f"Confidence calibrated from {orig_confidence} down to {adjusted_conf}."
             )
-            revised_statement = f"{orig_statement} (Qualified: Subject to enterprise contract renewal timing and customer concentration)."
+            if "(Qualified:" not in orig_statement:
+                revised_statement = f"{orig_statement} (Qualified: Subject to enterprise contract renewal timing and customer concentration)."
+            else:
+                revised_statement = orig_statement
             claim.status = "narrowed"
         elif challenge.challenge_type == "biased_assumption":
             rebuttal_type = "partial_concession"
@@ -149,7 +152,10 @@ class ClaimDrivenDebateEngine:
                 f"Conceding that seat saturation poses a moderate ceiling on NRR expansion. "
                 f"However, multi-year sovereign agreements provide guaranteed minimum revenue floors."
             )
-            revised_statement = f"{orig_statement} (Note: Near-term seat expansion bounded by customer budget caps)."
+            if "(Note:" not in orig_statement:
+                revised_statement = f"{orig_statement} (Note: Near-term seat expansion bounded by customer budget caps)."
+            else:
+                revised_statement = orig_statement
             claim.status = "revised"
         else:
             rebuttal_type = "defend_with_evidence"
