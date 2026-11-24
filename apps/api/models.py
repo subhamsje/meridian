@@ -136,6 +136,8 @@ class Investigation(Base):
     interactions = relationship("AgentInteraction", back_populates="investigation", cascade="all, delete-orphan")
     simulation_runs = relationship("SimulationRun", back_populates="investigation", cascade="all, delete-orphan")
     hypothetical_events = relationship("HypotheticalEvent", back_populates="investigation", cascade="all, delete-orphan")
+    executions = relationship("InvestigationExecution", back_populates="investigation", cascade="all, delete-orphan")
+    documents = relationship("InvestigationDocument", back_populates="investigation", cascade="all, delete-orphan")
 
 class SpecialistRun(Base):
     __tablename__ = "specialist_runs"
@@ -299,18 +301,32 @@ class Claim(Base):
     __tablename__ = "claims"
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     investigation_id = Column(String(36), ForeignKey("investigations.id", ondelete="CASCADE"), nullable=False, index=True)
+    execution_id = Column(String(36), ForeignKey("investigation_executions.id", ondelete="CASCADE"), nullable=True, index=True)
+    specialist_task_id = Column(String(100), nullable=True)
     proposing_specialist_id = Column(String(100), nullable=False)
     category = Column(String(100), nullable=False)
     statement = Column(Text, nullable=False)
     confidence = Column(Float, default=0.7)
+    materiality = Column(String(50), default="high") # critical, high, medium, low
+    status = Column(String(50), default="proposed") # proposed, debating, defended, revised, conceded, retracted, adjudicated
+    assumptions = Column(JSON, default=list)
+    calculations = Column(JSON, default=dict)
+    time_period = Column(String(100), nullable=True)
+    contradictory_evidence_ids = Column(JSON, default=list)
+    revision_count = Column(Integer, default=0)
     verdict = Column(String(50), default=AdjudicationVerdict.UNVERIFIED.value)
     disputed = Column(Boolean, default=False)
     adjudication_rationale = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     investigation = relationship("Investigation", back_populates="claims")
+    execution = relationship("InvestigationExecution", back_populates="claims")
     evidence_relationships = relationship("EvidenceClaimRelationship", back_populates="claim")
     arguments = relationship("DebateArgument", back_populates="claim")
+    challenges = relationship("ClaimChallenge", back_populates="target_claim", cascade="all, delete-orphan")
+    revisions = relationship("ClaimRevision", back_populates="claim", cascade="all, delete-orphan")
+    rebuttals = relationship("Rebuttal", back_populates="claim", cascade="all, delete-orphan")
+    adjudications = relationship("Adjudication", back_populates="claim", cascade="all, delete-orphan")
 
 class EvidenceClaimRelationship(Base):
     __tablename__ = "evidence_claim_relationships"
@@ -375,3 +391,293 @@ class InvestigationEvent(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     investigation = relationship("Investigation", back_populates="events")
+
+# =========================================================================
+# GENUINE INDEPENDENT RESEARCH & CLAIM-DRIVEN DEBATE ENGINE ENTITIES
+# =========================================================================
+
+class InvestigationExecution(Base):
+    __tablename__ = "investigation_executions"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    investigation_id = Column(String(36), ForeignKey("investigations.id", ondelete="CASCADE"), nullable=False, index=True)
+    execution_type = Column(String(50), default="fresh_run") # fresh_run, replay, rerun
+    parent_execution_id = Column(String(36), nullable=True) # for rerun provenance
+    status = Column(String(50), default="queued") # queued, decomposing, independent_research, claim_extraction, debate_challenges, rebuttals, escalation, adjudicating, completed, failed
+    current_stage = Column(String(100), default="queued")
+    progress_percentage = Column(Integer, default=0)
+    model_provider = Column(String(50), default="litellm")
+    model_name = Column(String(100), default="gpt-4o-mini")
+    total_tokens = Column(Integer, default=0)
+    total_cost_usd = Column(Float, default=0.0)
+    error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+
+    investigation = relationship("Investigation", back_populates="executions")
+    manifest = relationship("ExecutionManifest", back_populates="execution", uselist=False, cascade="all, delete-orphan")
+    research_plan = relationship("ResearchPlan", back_populates="execution", uselist=False, cascade="all, delete-orphan")
+    tasks = relationship("SpecialistTask", back_populates="execution", cascade="all, delete-orphan")
+    model_executions = relationship("ModelExecution", back_populates="execution", cascade="all, delete-orphan")
+    source_snapshots = relationship("SourceSnapshot", back_populates="execution", cascade="all, delete-orphan")
+    evidence_retrievals = relationship("EvidenceRetrieval", back_populates="execution", cascade="all, delete-orphan")
+    claims = relationship("Claim", back_populates="execution", cascade="all, delete-orphan")
+    challenges = relationship("ClaimChallenge", back_populates="execution", cascade="all, delete-orphan")
+    escalations = relationship("ResearchEscalation", back_populates="execution", cascade="all, delete-orphan")
+    adjudications = relationship("Adjudication", back_populates="execution", cascade="all, delete-orphan")
+    events = relationship("ExecutionEvent", back_populates="execution", cascade="all, delete-orphan")
+
+class ExecutionManifest(Base):
+    __tablename__ = "execution_manifests"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    execution_id = Column(String(36), ForeignKey("investigation_executions.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    manifest_version = Column(Integer, default=1)
+    company_context_snapshot = Column(JSON, default=dict)
+    user_objective = Column(Text, nullable=True)
+    source_snapshot_version = Column(String(50), default="v1.0")
+    document_checksums = Column(JSON, default=list)
+    research_plan_snapshot = Column(JSON, default=dict)
+    specialist_tasks_snapshot = Column(JSON, default=list)
+    model_executions_summary = Column(JSON, default=dict)
+    claims_tree = Column(JSON, default=list)
+    adjudications_summary = Column(JSON, default=dict)
+    financial_formulas = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    execution = relationship("InvestigationExecution", back_populates="manifest")
+
+class ResearchPlan(Base):
+    __tablename__ = "research_plans"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    execution_id = Column(String(36), ForeignKey("investigation_executions.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    investigation_id = Column(String(36), ForeignKey("investigations.id", ondelete="CASCADE"), nullable=False, index=True)
+    rationale = Column(Text, nullable=False)
+    company_archetype = Column(String(100), nullable=False)
+    primary_uncertainties = Column(JSON, default=list)
+    information_gaps = Column(JSON, default=list)
+    total_tasks_count = Column(Integer, default=6)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    execution = relationship("InvestigationExecution", back_populates="research_plan")
+    tasks = relationship("SpecialistTask", back_populates="research_plan", cascade="all, delete-orphan")
+
+class SpecialistTask(Base):
+    __tablename__ = "specialist_tasks"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    execution_id = Column(String(36), ForeignKey("investigation_executions.id", ondelete="CASCADE"), nullable=False, index=True)
+    research_plan_id = Column(String(36), ForeignKey("research_plans.id", ondelete="CASCADE"), nullable=False, index=True)
+    task_id = Column(String(100), nullable=False) # e.g. "task_saas_economics"
+    specialist_role = Column(String(100), nullable=False)
+    research_objective = Column(Text, nullable=False)
+    specific_questions = Column(JSON, default=list)
+    scope_boundaries = Column(Text, nullable=False)
+    required_evidence = Column(JSON, default=list)
+    excluded_areas = Column(JSON, default=list)
+    relevant_document_refs = Column(JSON, default=list)
+    permitted_tools = Column(JSON, default=list)
+    dependencies = Column(JSON, default=list)
+    expected_deliverables = Column(JSON, default=list)
+    completion_criteria = Column(Text, nullable=False)
+    token_budget = Column(Integer, default=2000)
+    time_budget_sec = Column(Integer, default=60)
+    tool_call_budget = Column(Integer, default=5)
+    status = Column(String(50), default="pending") # pending, in_progress, completed, failed
+    created_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+
+    execution = relationship("InvestigationExecution", back_populates="tasks")
+    research_plan = relationship("ResearchPlan", back_populates="tasks")
+    model_executions = relationship("ModelExecution", back_populates="specialist_task")
+
+class SourceSnapshot(Base):
+    __tablename__ = "source_snapshots"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    execution_id = Column(String(36), ForeignKey("investigation_executions.id", ondelete="CASCADE"), nullable=False, index=True)
+    source_id = Column(String(36), nullable=True)
+    title = Column(String(255), nullable=False)
+    snapshot_version = Column(String(50), default="v1.0")
+    content_checksum = Column(String(64), nullable=False)
+    url_or_path = Column(String(1024), nullable=True)
+    raw_content = Column(Text, nullable=False)
+    retrieval_timestamp = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    execution = relationship("InvestigationExecution", back_populates="source_snapshots")
+
+class EvidenceRetrieval(Base):
+    __tablename__ = "evidence_retrievals"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    execution_id = Column(String(36), ForeignKey("investigation_executions.id", ondelete="CASCADE"), nullable=False, index=True)
+    specialist_task_id = Column(String(36), nullable=True)
+    specialist_role = Column(String(100), nullable=False)
+    query_string = Column(String(500), nullable=False)
+    domain_filter = Column(String(100), nullable=False)
+    retrieved_evidence_ids = Column(JSON, default=list)
+    relevance_score = Column(Float, default=0.85)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    execution = relationship("InvestigationExecution", back_populates="evidence_retrievals")
+
+class AgentEvidenceAccess(Base):
+    __tablename__ = "agent_evidence_access"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    execution_id = Column(String(36), ForeignKey("investigation_executions.id", ondelete="CASCADE"), nullable=False, index=True)
+    specialist_role = Column(String(100), nullable=False)
+    evidence_item_id = Column(String(36), ForeignKey("evidence_items.id", ondelete="CASCADE"), nullable=False)
+    access_mode = Column(String(50), default="domain_isolated") # domain_isolated, escalation, cross_examination
+    accessed_at = Column(DateTime, default=datetime.utcnow)
+
+class ModelExecution(Base):
+    __tablename__ = "model_executions"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    execution_id = Column(String(36), ForeignKey("investigation_executions.id", ondelete="CASCADE"), nullable=False, index=True)
+    specialist_task_id = Column(String(36), ForeignKey("specialist_tasks.id", ondelete="SET NULL"), nullable=True)
+    phase = Column(String(50), nullable=False) # task_decomposition, independent_research, claim_challenge, rebuttal, adjudication
+    specialist_role = Column(String(100), nullable=False)
+    provider = Column(String(50), default="litellm")
+    model_identifier = Column(String(100), default="gpt-4o-mini")
+    prompt_tokens = Column(Integer, default=0)
+    completion_tokens = Column(Integer, default=0)
+    total_tokens = Column(Integer, default=0)
+    cost_usd = Column(Float, default=0.0)
+    execution_latency_ms = Column(Integer, default=0)
+    request_messages = Column(JSON, default=list)
+    response_content = Column(Text, nullable=False)
+    parsed_output = Column(JSON, default=dict)
+    status = Column(String(50), default="success") # success, fallback, error
+    error_detail = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    execution = relationship("InvestigationExecution", back_populates="model_executions")
+    specialist_task = relationship("SpecialistTask", back_populates="model_executions")
+
+class ClaimRevision(Base):
+    __tablename__ = "claim_revisions"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    claim_id = Column(String(36), ForeignKey("claims.id", ondelete="CASCADE"), nullable=False, index=True)
+    execution_id = Column(String(36), ForeignKey("investigation_executions.id", ondelete="CASCADE"), nullable=False, index=True)
+    revision_number = Column(Integer, default=1)
+    previous_statement = Column(Text, nullable=False)
+    revised_statement = Column(Text, nullable=False)
+    previous_confidence = Column(Float, default=0.7)
+    revised_confidence = Column(Float, default=0.7)
+    reason_for_change = Column(Text, nullable=False)
+    triggering_challenge_id = Column(String(36), nullable=True)
+    new_evidence_ids = Column(JSON, default=list)
+    model_execution_id = Column(String(36), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    claim = relationship("Claim", back_populates="revisions")
+
+class ClaimChallenge(Base):
+    __tablename__ = "claim_challenges"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    execution_id = Column(String(36), ForeignKey("investigation_executions.id", ondelete="CASCADE"), nullable=False, index=True)
+    target_claim_id = Column(String(36), ForeignKey("claims.id", ondelete="CASCADE"), nullable=False, index=True)
+    challenging_agent_id = Column(String(100), nullable=False)
+    challenging_agent_role = Column(String(100), nullable=False)
+    challenge_type = Column(String(100), nullable=False) # contradictory_evidence, unsupported_assertion, incorrect_calculation, etc.
+    exact_issue = Column(Text, nullable=False)
+    reasoning = Column(Text, nullable=False)
+    missing_information = Column(Text, nullable=True)
+    required_response = Column(Text, nullable=False)
+    materiality = Column(String(50), default="high") # critical, high, medium, low
+    status = Column(String(50), default="open") # open, rebutted, escalated, adjudicated
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    execution = relationship("InvestigationExecution", back_populates="challenges")
+    target_claim = relationship("Claim", back_populates="challenges")
+    evidence_links = relationship("ChallengeEvidence", back_populates="challenge", cascade="all, delete-orphan")
+    rebuttals = relationship("Rebuttal", back_populates="challenge", cascade="all, delete-orphan")
+
+class ChallengeEvidence(Base):
+    __tablename__ = "challenge_evidences"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    challenge_id = Column(String(36), ForeignKey("claim_challenges.id", ondelete="CASCADE"), nullable=False)
+    evidence_item_id = Column(String(36), ForeignKey("evidence_items.id", ondelete="CASCADE"), nullable=False)
+    relationship_type = Column(String(50), default="contradictory")
+
+    challenge = relationship("ClaimChallenge", back_populates="evidence_links")
+    evidence_item = relationship("EvidenceItem")
+
+class Rebuttal(Base):
+    __tablename__ = "rebuttals"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    challenge_id = Column(String(36), ForeignKey("claim_challenges.id", ondelete="CASCADE"), nullable=False, index=True)
+    claim_id = Column(String(36), ForeignKey("claims.id", ondelete="CASCADE"), nullable=False, index=True)
+    responding_agent_id = Column(String(100), nullable=False)
+    responding_agent_role = Column(String(100), nullable=False)
+    rebuttal_type = Column(String(50), nullable=False) # defend_with_evidence, correct_interpretation, correct_calculation, narrow_claim, reduce_confidence, increase_confidence, partial_concession, full_retraction, mark_unresolved
+    argument_text = Column(Text, nullable=False)
+    new_evidence_ids = Column(JSON, default=list)
+    confidence_adjustment = Column(Float, default=0.0)
+    model_execution_id = Column(String(36), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    challenge = relationship("ClaimChallenge", back_populates="rebuttals")
+    claim = relationship("Claim", back_populates="rebuttals")
+
+class ResearchEscalation(Base):
+    __tablename__ = "research_escalations"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    execution_id = Column(String(36), ForeignKey("investigation_executions.id", ondelete="CASCADE"), nullable=False, index=True)
+    disputed_claim_id = Column(String(36), ForeignKey("claims.id", ondelete="CASCADE"), nullable=False, index=True)
+    challenge_id = Column(String(36), ForeignKey("claim_challenges.id", ondelete="CASCADE"), nullable=False)
+    missing_information = Column(Text, nullable=False)
+    assigned_specialist_role = Column(String(100), nullable=False)
+    escalation_task_id = Column(String(100), nullable=False)
+    new_evidence_discovered_ids = Column(JSON, default=list)
+    resolution_status = Column(String(50), default="resolved") # resolved, partially_resolved, unresolvable_uncertainty
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    execution = relationship("InvestigationExecution", back_populates="escalations")
+
+class Adjudication(Base):
+    __tablename__ = "adjudications"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    execution_id = Column(String(36), ForeignKey("investigation_executions.id", ondelete="CASCADE"), nullable=False, index=True)
+    claim_id = Column(String(36), ForeignKey("claims.id", ondelete="CASCADE"), nullable=False, index=True)
+    verdict = Column(String(50), nullable=False) # supported, partially_supported, rejected, unresolved, insufficient_evidence
+    evidence_quality_score = Column(Float, default=0.85)
+    source_independence_score = Column(Float, default=0.90)
+    source_recency_score = Column(Float, default=0.95)
+    adjudication_rationale = Column(Text, nullable=False)
+    cited_evidence_ids = Column(JSON, default=list)
+    remaining_uncertainty = Column(Text, nullable=True)
+    model_execution_id = Column(String(36), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    execution = relationship("InvestigationExecution", back_populates="adjudications")
+    claim = relationship("Claim", back_populates="adjudications")
+
+class ExecutionEvent(Base):
+    __tablename__ = "execution_events"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    execution_id = Column(String(36), ForeignKey("investigation_executions.id", ondelete="CASCADE"), nullable=False, index=True)
+    sequence = Column(Integer, default=1)
+    stage = Column(String(100), nullable=False)
+    event_type = Column(String(100), nullable=False)
+    payload = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    execution = relationship("InvestigationExecution", back_populates="events")
+
+class InvestigationDocument(Base):
+    __tablename__ = "investigation_documents"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    investigation_id = Column(String(36), ForeignKey("investigations.id", ondelete="CASCADE"), nullable=False, index=True)
+    company_id = Column(String(36), ForeignKey("companies.id", ondelete="CASCADE"), nullable=True, index=True)
+    filename = Column(String(255), nullable=False)
+    file_type = Column(String(50), nullable=False) # pdf, docx, xlsx, csv, pptx, txt, md, html, json
+    file_size_bytes = Column(Integer, default=0)
+    page_or_sheet_count = Column(Integer, default=1)
+    checksum_sha256 = Column(String(64), nullable=True)
+    extraction_status = Column(String(50), default="processed") # pending, processing, processed, failed
+    extracted_text = Column(Text, nullable=True)
+    extracted_metadata = Column(JSON, default=dict)
+    source_id = Column(String(36), ForeignKey("sources.id", ondelete="SET NULL"), nullable=True)
+    error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    investigation = relationship("Investigation", back_populates="documents")
+    source = relationship("Source")
+
