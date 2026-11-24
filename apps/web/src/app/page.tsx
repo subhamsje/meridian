@@ -36,6 +36,7 @@ import {
   Menu,
   X
 } from "lucide-react";
+import AnimatedRelationshipGraph from "@/components/AnimatedRelationshipGraph";
 
 export default function LandingPage() {
   const [activePreviewTab, setActivePreviewTab] = useState<"graph" | "debate" | "financials" | "provenance">("graph");
@@ -155,6 +156,15 @@ export default function LandingPage() {
           >
             Independent company intelligence, backed by evidence, specialist analysis, and adversarial debate.
           </motion.p>
+
+          {/* Animated Relationship-Graph Introduction (Mandated Section 9) */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.22 }}
+          >
+            <AnimatedRelationshipGraph />
+          </motion.div>
 
           {/* 30-Second Visual Architecture Flow Cards */}
           <motion.div
