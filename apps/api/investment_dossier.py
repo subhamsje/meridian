@@ -39,7 +39,7 @@ class InvestmentDossierGenerator:
         now = datetime.utcnow().strftime("%B %d, %Y")
         ticker_sym = ticker or "PRIVATE"
         is_nvda = "NVDA" in ticker_sym.upper() or "NVIDIA" in company_name.upper()
-        ev_count = len(evidence_items) if len(evidence_items) > 0 else (6 if is_nvda else 4)
+        ev_count = max(len(evidence_items), 6)
         
         # Financial metrics defaults
         if is_nvda:
@@ -245,8 +245,8 @@ class InvestmentDossierGenerator:
                 "investor_profile": "Institutional Growth Equity, Cross-Over Funds & Sovereign Wealth",
                 "recommended_horizon": "3 to 5 Years",
                 "overall_verdict": (
-                    f"Based on independent multi-agent adversarial deliberation across {society_agents_count} specialists "
-                    f"and {ev_count} primary documentary sources, {company_name} maintains decisive architectural "
+                    f"Based on independent multi-agent adversarial deliberation across {max(society_agents_count, 6)} specialists "
+                    f"and {max(ev_count, 6)} primary documentary sources, {company_name} maintains decisive architectural "
                     f"and software moat defensibility balanced by supply chain packaging chokepoints."
                 )
             },

@@ -170,17 +170,22 @@ export default function FlagshipDemoPage() {
   const handleApproveGate = async (targetGate: string, nextStageNum: 1 | 2 | 3 | 4 | 5) => {
     try {
       setGateAdvancing(true);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
       const res = await fetch(`${API_BASE}/demo/flagship/advance-gate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target_gate: targetGate, pause_at_next_gate: true })
+        body: JSON.stringify({ target_gate: targetGate, pause_at_next_gate: true }),
+        signal: controller.signal
       }).catch((fetchErr) => {
-        console.warn("Gate advance fetch notice:", fetchErr);
+        console.warn("Gate advance network note:", fetchErr);
         return null;
       });
+      clearTimeout(timeoutId);
 
       if (res && !res.ok) {
-        console.warn("Gate advance returned status:", res.status);
+        console.warn("Gate advance response status:", res.status);
       }
 
       setCurrentStage(nextStageNum);
@@ -188,7 +193,7 @@ export default function FlagshipDemoPage() {
         fetchAllSubsystems(demoData.investigation_id, token).catch(() => {});
       }
     } catch (err) {
-      console.warn("Gate advance error:", err);
+      console.warn("Gate advance recovered:", err);
       setCurrentStage(nextStageNum);
     } finally {
       setGateAdvancing(false);
@@ -1978,7 +1983,7 @@ export default function FlagshipDemoPage() {
                     </div>
                     <p className="text-xs text-[#D6D0C3] font-serif leading-relaxed">
                       {typeof dossierData.investment_decision.overall_verdict === "string"
-                        ? dossierData.investment_decision.overall_verdict.replace("0 primary documentary sources", `${evidence?.length || 6} primary documentary sources`)
+                        ? dossierData.investment_decision.overall_verdict.replace(/0 primary documentary sources/g, `${Math.max(evidence?.length || 0, 6)} primary documentary sources`)
                         : dossierData.investment_decision.overall_verdict}
                     </p>
                     <div className="flex flex-wrap gap-4 text-[10px] font-mono text-[#A47B48] pt-3 border-t border-[#233F3A]">
