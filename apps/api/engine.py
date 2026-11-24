@@ -17,5 +17,13 @@ def emit_event(db: Session, investigation_id: str, event_type: str, payload: Dic
     db.commit()
 
 async def run_investigation_pipeline(investigation_id: str, db: Session):
-    # Delegate to the comprehensive Multi-Agent Society & Deliberation Engine
-    await MultiAgentSocietyEngine.run_full_society_pipeline(investigation_id, db)
+    # Delegate to the Durable Multi-Agent Investigation Orchestrator
+    from durable_investigation_orchestrator import DurableInvestigationOrchestrator
+    try:
+        DurableInvestigationOrchestrator.execute_fresh_investigation(
+            investigation_id=investigation_id,
+            db=db
+        )
+    except Exception as e:
+        # Fallback to multi-agent society engine if needed
+        await MultiAgentSocietyEngine.run_full_society_pipeline(investigation_id, db)
