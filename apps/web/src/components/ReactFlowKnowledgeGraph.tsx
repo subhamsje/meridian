@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useCallback } from "react";
 import {
   ReactFlow,
+  ReactFlowProvider,
+  useReactFlow,
   Background,
   Controls,
   MiniMap,
@@ -16,6 +18,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { GraphNode, GraphEdge, INSTITUTIONAL_CATEGORIES } from "./LivingKnowledgeGraph";
+import { Maximize2 } from "lucide-react";
 
 // Custom Node Component for Institutional Entity
 function InstitutionalNodeComponent({ data, selected }: NodeProps) {
@@ -126,7 +129,26 @@ interface ReactFlowKnowledgeGraphProps {
   typeFilter?: string;
 }
 
-export function ReactFlowKnowledgeGraph({
+function ReactFlowViewWatcher({ dependency }: { dependency: any }) {
+  const { fitView } = useReactFlow();
+
+  useEffect(() => {
+    const t1 = setTimeout(() => {
+      fitView({ padding: 0.25, duration: 400 });
+    }, 50);
+    const t2 = setTimeout(() => {
+      fitView({ padding: 0.25, duration: 300 });
+    }, 250);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [fitView, dependency]);
+
+  return null;
+}
+
+function ReactFlowKnowledgeGraphInner({
   nodes,
   edges,
   selectedNode,
@@ -136,13 +158,15 @@ export function ReactFlowKnowledgeGraph({
   searchQuery = "",
   typeFilter = "ALL"
 }: ReactFlowKnowledgeGraphProps) {
+  const { fitView } = useReactFlow();
+
   // Filter nodes according to search and type filter
   const filteredNodes = useMemo(() => {
     return nodes.filter(n => {
       if (typeFilter !== "ALL" && n.type !== typeFilter) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        return n.label.toLowerCase().includes(q) || (n.sector && n.sector.toLowerCase().includes(q));
+        return (n.label && n.label.toLowerCase().includes(q)) || (n.sector && n.sector.toLowerCase().includes(q));
       }
       return true;
     });
@@ -150,35 +174,42 @@ export function ReactFlowKnowledgeGraph({
 
   const filteredNodeIds = useMemo(() => new Set(filteredNodes.map(n => n.id)), [filteredNodes]);
 
-  // Convert to React Flow Nodes with concentric / force layout positioning
+  // Convert to React Flow Nodes with concentric symmetrical layout centered at (0, 0)
   const flowNodes = useMemo(() => {
     const centerNode = filteredNodes.find(n => n.id === "palantir_core" || n.type === "target_entity") || filteredNodes[0];
-    const centerX = 400;
-    const centerY = 350;
-    const count = filteredNodes.length;
+    const nonCenterNodes = filteredNodes.filter(n => n.id !== centerNode?.id);
+    const count = nonCenterNodes.length;
 
-    return filteredNodes.map((n, idx) => {
-      let x = centerX;
-      let y = centerY;
+    const result = [];
 
-      if (n.id === centerNode?.id) {
-        x = centerX;
-        y = centerY;
-      } else {
-        const angle = (idx / Math.max(1, count - 1)) * 2 * Math.PI;
-        const radius = 220 + ((idx % 3) * 70);
-        x = centerX + Math.cos(angle) * radius;
-        y = centerY + Math.sin(angle) * radius;
-      }
+    if (centerNode) {
+      result.push({
+        id: centerNode.id,
+        type: "institutional",
+        position: { x: -90, y: -40 },
+        data: { node: centerNode },
+        selected: selectedNode?.id === centerNode.id,
+      });
+    }
 
-      return {
+    nonCenterNodes.forEach((n, idx) => {
+      const angle = (idx / Math.max(1, count)) * 2 * Math.PI;
+      // Stagger concentric orbital rings for clean visibility
+      const ring = idx % 3;
+      const radius = 260 + ring * 100;
+      const x = Math.cos(angle) * radius - 80;
+      const y = Math.sin(angle) * radius - 30;
+
+      result.push({
         id: n.id,
         type: "institutional",
         position: { x, y },
         data: { node: n },
         selected: selectedNode?.id === n.id,
-      };
+      });
     });
+
+    return result;
   }, [filteredNodes, selectedNode]);
 
   // Convert to React Flow Edges
@@ -207,6 +238,20 @@ export function ReactFlowKnowledgeGraph({
 
   return (
     <div className="w-full h-full bg-[#111315] relative select-none">
+      <ReactFlowViewWatcher dependency={filteredNodes.length} />
+      
+      {/* Top Floating Action Pill for React Flow Engine */}
+      <div className="absolute top-3 right-3 z-20 flex items-center space-x-1 glass-clear p-1 rounded-md">
+        <button
+          onClick={() => fitView({ padding: 0.25, duration: 400 })}
+          className="p-1.5 rounded hover:bg-white/10 text-[#a0a7b1] hover:text-white transition-colors cursor-pointer flex items-center space-x-1 text-xs"
+          title="Fit Graph to Viewport"
+        >
+          <Maximize2 className="w-3.5 h-3.5 text-[#3b82f6]" />
+          <span className="font-mono text-[10px] hidden sm:inline">Fit View</span>
+        </button>
+      </div>
+
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}
@@ -227,10 +272,11 @@ export function ReactFlowKnowledgeGraph({
           onSelectEdge(null);
         }}
         fitView
+        fitViewOptions={{ padding: 0.25 }}
         minZoom={0.2}
         maxZoom={2.5}
       >
-        <Background color="#20242a" gap={20} size={1} />
+        <Background color="#20242a" gap={24} size={1} />
         <Controls className="!bg-[#181b1f] !border-[#30353c] !text-[#a0a7b1] [&>button]:!border-[#30353c] [&>button]:!bg-[#181b1f] [&>button:hover]:!bg-[#20242a]" />
         <MiniMap
           nodeColor={(n) => {
@@ -243,5 +289,13 @@ export function ReactFlowKnowledgeGraph({
         />
       </ReactFlow>
     </div>
+  );
+}
+
+export function ReactFlowKnowledgeGraph(props: ReactFlowKnowledgeGraphProps) {
+  return (
+    <ReactFlowProvider>
+      <ReactFlowKnowledgeGraphInner {...props} />
+    </ReactFlowProvider>
   );
 }

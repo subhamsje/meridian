@@ -421,10 +421,12 @@ export default function FlagshipDemoPage() {
 
   // Filtered agents list
   const filteredAgents = useMemo(() => {
+    if (!agentSearch.trim()) return societyAgents;
+    const s = agentSearch.toLowerCase();
     return societyAgents.filter(ag => {
-      const s = agentSearch.toLowerCase();
-      return ag.name.toLowerCase().includes(s) || 
-             ag.role.toLowerCase().includes(s) || 
+      if (!ag) return false;
+      return (ag.name && ag.name.toLowerCase().includes(s)) || 
+             (ag.role && ag.role.toLowerCase().includes(s)) || 
              (ag.specialization && ag.specialization.toLowerCase().includes(s));
     });
   }, [societyAgents, agentSearch]);
@@ -828,7 +830,7 @@ export default function FlagshipDemoPage() {
               </div>
 
               {/* Dual-Engine Toolbar Pill */}
-              <div className="absolute top-3 left-48 z-20 hidden md:flex items-center space-x-1.5 glass-clear px-2.5 py-1.5 rounded border border-[#30353c] text-xs">
+              <div className="absolute top-3 left-3 z-30 hidden md:flex items-center space-x-1.5 glass-clear px-2.5 py-1.5 rounded border border-[#30353c] text-xs">
                 <span className="text-[10px] font-mono uppercase text-[#737c88]">Engine:</span>
                 <button
                   onClick={() => setGraphEngine("canvas")}
@@ -1443,9 +1445,9 @@ export default function FlagshipDemoPage() {
                   <div className="p-4 border-b border-[#30353c] bg-[#141619] flex items-center justify-between">
                     <div>
                       <div className="flex items-center space-x-2">
-                        <span className="text-sm font-semibold text-[#f8fafc]">05 Подготовка завершена</span>
+                        <span className="text-sm font-semibold text-[#f8fafc]">Society Simulation Ready</span>
                         <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-[#d97706]/20 text-[#f59e0b] border border-[#f59e0b]/30">
-                          {simRunning ? "В ХОДЕ ВЫПОЛНЕНИЯ" : "ГОТОВО К ЗАПУСКУ"}
+                          {simRunning ? "IN PROGRESS" : "READY TO LAUNCH"}
                         </span>
                       </div>
                       <div className="text-[10px] font-mono text-[#737c88] mt-1">
@@ -1458,19 +1460,19 @@ export default function FlagshipDemoPage() {
                     {/* Simulation Round Configuration */}
                     <div className="p-4 rounded bg-[#141619] border border-[#30353c] space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-[#e5e7eb]">Настройка раунда симуляции</span>
+                        <span className="text-xs font-semibold text-[#e5e7eb]">Simulation Round Parameters</span>
                         <span className="text-[10px] font-mono text-[#3b82f6] bg-[#15202e] px-2 py-0.5 rounded border border-[#3b82f6]/30">
-                          Обычный режим
+                          Standard Mode
                         </span>
                       </div>
                       <p className="text-[11px] text-[#a0a7b1] leading-relaxed">
-                        MERIDIAN автоматически планирует и моделирует <strong>{simHorizonHours} часа</strong> реального времени, где каждый раунд соответствует <strong>{simStepMinutes} минутам</strong> времени исследования.
+                        MERIDIAN orchestrates and simulates <strong>{simHorizonHours} hours</strong> of analytical deliberation time, where each round corresponds to <strong>{simStepMinutes} minutes</strong> of collaborative investigation.
                       </p>
 
                       <div className="p-3 rounded bg-[#111315] border border-[#30353c] space-y-2">
                         <div className="flex items-center justify-between text-xs font-mono">
-                          <span className="text-[#737c88]">Раунды моделирования:</span>
-                          <span className="text-base font-bold text-[#f8fafc]">{simRounds} колесо</span>
+                          <span className="text-[#737c88]">Simulation Rounds:</span>
+                          <span className="text-base font-bold text-[#f8fafc]">{simRounds} Rounds</span>
                         </div>
                         <input
                           type="range"
@@ -1486,7 +1488,7 @@ export default function FlagshipDemoPage() {
                       <div className="p-2.5 rounded bg-[#181b1f] border border-[#30353c] text-[10.5px] text-[#a0a7b1] leading-snug flex items-start space-x-2">
                         <Info className="w-4 h-4 text-[#3b82f6] shrink-0 mt-0.5" />
                         <span>
-                          Если количество агентов равно <strong>16</strong>: расчетное время полной сходимости составляет ~3.2 секунды при аппаратном DuckDB ускорении.
+                          With <strong>16 active analytical specialists</strong>: estimated convergence latency is ~3.2 seconds with hardware DuckDB acceleration.
                         </span>
                       </div>
 
@@ -1496,7 +1498,7 @@ export default function FlagshipDemoPage() {
                         className="w-full py-2.5 rounded bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-medium text-xs flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50 shadow-md transition-colors"
                       >
                         <Play className="w-3.5 h-3.5 fill-current" />
-                        <span>{simRunning ? `Выполняется симуляция (${simProgress}%)` : "Запуск двухплатформенной симуляции"}</span>
+                        <span>{simRunning ? `Executing Society Simulation (${simProgress}%)` : "Launch Multi-Agent Society Simulation"}</span>
                       </button>
 
                       {simRunning && (
@@ -1514,7 +1516,7 @@ export default function FlagshipDemoPage() {
                       <div className="p-2.5 bg-[#141619] border-b border-[#30353c] flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-[#a0a7b1]">
                         <span className="flex items-center space-x-1.5 text-[#e5e7eb] font-semibold">
                           <Terminal className="w-3 h-3 text-[#10b981]" />
-                          <span>СИСТЕМНАЯ ПАНЕЛЬ УПРАВЛЕНИЯ</span>
+                          <span>SYSTEM KERNEL TELEMETRY CONSOLE</span>
                         </span>
                         <span className="text-[9px] text-[#737c88]">sim_3a1c8efb5680</span>
                       </div>
@@ -1647,7 +1649,7 @@ export default function FlagshipDemoPage() {
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#111315] text-[#a0a7b1]">
-                          {(c.proposing_specialist_id || c.specialist_id || c.agent_id || "investigator").replace(/_/g, " ")}
+                          {String(c.proposing_specialist_id || c.specialist_id || c.agent_id || "investigator").replace(/_/g, " ")}
                         </span>
                         <div className="flex items-center space-x-2">
                           <span className={`text-[10px] font-mono uppercase font-semibold ${
@@ -1692,7 +1694,7 @@ export default function FlagshipDemoPage() {
                           }`}
                         >
                           <div className="flex items-center justify-between text-[10px] font-mono uppercase mb-1">
-                            <span className="font-semibold text-[#e5e7eb]">{(arg.specialist_id || arg.agent_id || "specialist").replace(/_/g, " ")}</span>
+                            <span className="font-semibold text-[#e5e7eb]">{String(arg.specialist_id || arg.agent_id || "specialist").replace(/_/g, " ")}</span>
                             <span className="text-[#737c88] font-mono">[{arg.argument_type || "statement"}]</span>
                           </div>
                           <p className="leading-relaxed font-serif text-xs">{arg.content || arg.text || ""}</p>

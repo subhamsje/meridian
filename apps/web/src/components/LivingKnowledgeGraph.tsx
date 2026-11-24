@@ -209,7 +209,7 @@ export default function LivingKnowledgeGraph({
     return Array.from(types).sort();
   }, [rawEdges]);
 
-  // Fit to View Calculation
+  // Fit to View Calculation — Perfectly centers the subject entity and accommodates all orbital nodes
   const fitToView = useCallback((customNodes?: GraphNode[]) => {
     const nodes = customNodes || simNodesRef.current;
     if (!nodes || nodes.length === 0) return;
@@ -231,20 +231,24 @@ export default function LivingKnowledgeGraph({
 
     if (!isFinite(minX) || !isFinite(maxX)) return;
 
-    const spanX = Math.max(260, maxX - minX);
-    const spanY = Math.max(260, maxY - minY);
-    const padding = 65;
+    const spanX = Math.max(300, maxX - minX);
+    const spanY = Math.max(300, maxY - minY);
+    const paddingX = Math.min(100, width * 0.12);
+    const paddingY = Math.min(100, height * 0.14);
 
-    const zoomX = (width - padding * 2) / spanX;
-    const zoomY = (height - padding * 2) / spanY;
-    const optimalZoom = Math.max(0.65, Math.min(1.05, Math.min(zoomX, zoomY)));
+    const zoomX = (width - paddingX * 2) / spanX;
+    const zoomY = (height - paddingY * 2) / spanY;
+    // Allow responsive zoom range so nodes never get clipped or lost
+    const optimalZoom = Math.max(0.35, Math.min(1.1, Math.min(zoomX, zoomY)));
 
-    const midX = (minX + maxX) / 2;
-    const midY = (minY + maxY) / 2;
+    // Anchor camera on target entity (Palantir) or mid-point of cluster
+    const targetNode = nodes.find(n => n.type === "target_entity" || n.label?.toLowerCase().includes("palantir"));
+    const anchorX = targetNode && targetNode.x !== undefined ? targetNode.x : (minX + maxX) / 2;
+    const anchorY = targetNode && targetNode.y !== undefined ? targetNode.y : (minY + maxY) / 2;
 
     setCamera({
-      x: -midX * optimalZoom,
-      y: -midY * optimalZoom,
+      x: -anchorX * optimalZoom,
+      y: -anchorY * optimalZoom,
       zoom: optimalZoom
     });
   }, []);
@@ -263,6 +267,11 @@ export default function LivingKnowledgeGraph({
     onSelectNode(node);
     onSelectEdge(null);
   }, [onSelectNode, onSelectEdge]);
+
+  // Reset view to optimal framing
+  const resetView = useCallback(() => {
+    fitToView(simNodesRef.current);
+  }, [fitToView]);
 
   // Initialize and lay out nodes
   useEffect(() => {
@@ -424,12 +433,13 @@ export default function LivingKnowledgeGraph({
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width: newWidth, height: newHeight } = entry.contentRect;
-        if (newWidth > 0 && newHeight > 0) {
+        if (newWidth > 50 && newHeight > 50) {
+          const sizeChanged = Math.abs(canvas.width - newWidth) > 20 || Math.abs(canvas.height - newHeight) > 20;
           canvas.width = newWidth;
           canvas.height = newHeight;
           width = newWidth;
           height = newHeight;
-          if (!hasAutoFramed && simNodesRef.current.length > 0) {
+          if ((!hasAutoFramed || sizeChanged) && simNodesRef.current.length > 0) {
             fitToView(simNodesRef.current);
             setHasAutoFramed(true);
           }
@@ -754,7 +764,7 @@ export default function LivingKnowledgeGraph({
         const isHovered = hoveredNode?.id === n.id;
         const isNeighbor = activeNeighborhood?.neighborIds.has(n.id);
         const isDimmed = activeNeighborhood && !isNeighbor;
-        const isAffectedByShock = affectedEntityNames.some(name => n.label.toLowerCase().includes(name.toLowerCase()));
+        const isAffectedByShock = Boolean(n.label && affectedEntityNames.some(name => name && n.label.toLowerCase().includes(name.toLowerCase())));
 
         const cat = INSTITUTIONAL_CATEGORIES[n.type || "default"] || INSTITUTIONAL_CATEGORIES.default;
         const radius = n.radius || 14;
@@ -1108,18 +1118,14 @@ export default function LivingKnowledgeGraph({
     setIsPanning(false);
   };
 
-  const resetView = () => {
-    fitToView();
-  };
-
   return (
     <div ref={containerRef} className="relative w-full h-full flex flex-col bg-[#0d0f12] select-none overflow-hidden viewport-fixed">
       {/* =========================================================================
           FLOATING TOP CONTROLS (Material A — Apple Clear Glass)
          ========================================================================= */}
       
-      {/* Top-Left: Mode & Stats Indicator */}
-      <div className="absolute top-3 left-3 z-20 flex items-center space-x-2 glass-clear px-3 py-1.5 rounded-md text-xs">
+      {/* Top-Left: Mode & Stats Indicator (Offset to avoid engine selector) */}
+      <div className="absolute top-3 left-3 md:left-[244px] z-20 flex items-center space-x-2 glass-clear px-3 py-1.5 rounded-md text-xs">
         <div className="flex items-center space-x-1.5 text-[#a0a7b1]">
           <Network className="w-3.5 h-3.5 text-[#3b82f6]" />
           <span className="font-medium text-[#e5e7eb] hidden sm:inline">Living Graph</span>
