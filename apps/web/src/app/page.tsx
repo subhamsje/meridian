@@ -51,53 +51,53 @@ export default function LandingPage() {
           TOP INSTITUTIONAL NAVIGATION (Deep Forest Executive Masthead)
          ========================================================================= */}
       <header className="fixed top-0 inset-x-0 z-50 bg-[#153B32]/95 text-[#F7F5EF] border-b border-[#233F3A] shadow-md backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           {/* Masthead Logo & Institutional Indicator */}
-          <div className="flex items-center space-x-3.5">
-            <Link href="/" className="flex items-center space-x-2.5 group">
+          <div className="flex items-center space-x-3 shrink-0">
+            <Link href="/" className="flex items-center space-x-2.5 group whitespace-nowrap">
               <div className="w-7 h-7 rounded-[4px] bg-[#1D4D40] border border-[#B58A4F]/70 flex items-center justify-center font-serif font-bold text-[#F7F5EF] text-sm shadow-xs group-hover:border-[#B58A4F] transition-colors">
                 M
               </div>
-              <span className="font-serif font-bold text-sm tracking-widest uppercase text-[#F7F5EF]">
+              <span className="font-serif font-bold text-base tracking-widest uppercase text-[#F7F5EF]">
                 MERIDIAN
               </span>
             </Link>
-            <div className="hidden sm:flex items-center space-x-2 pl-3 border-l border-[#2F524C]/80 text-[10px] font-mono text-[#789487]">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="tracking-wider uppercase">Institutional Intelligence</span>
+            <div className="hidden sm:flex items-center space-x-2 pl-3 border-l border-[#2F524C]/80 text-[10px] font-mono text-[#789487] whitespace-nowrap">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+              <span className="tracking-wider uppercase whitespace-nowrap">Institutional Intelligence</span>
             </div>
           </div>
 
-          {/* Balanced 6-Pillar Navigation */}
-          <nav className="hidden lg:flex items-center space-x-6 text-xs font-mono text-[#D6D0C3]">
-            <Link href="#topology" className="hover:text-[#F7F5EF] transition-colors py-1">Topology</Link>
-            <Link href="#process" className="hover:text-[#F7F5EF] transition-colors py-1">Process</Link>
-            <Link href="#graph" className="hover:text-[#F7F5EF] transition-colors py-1">Knowledge Graph</Link>
-            <Link href="#society" className="hover:text-[#F7F5EF] transition-colors py-1">Specialists</Link>
-            <Link href="#provenance" className="hover:text-[#F7F5EF] transition-colors py-1">Evidence Standard</Link>
-            <Link href="#financials" className="hover:text-[#F7F5EF] transition-colors py-1">Valuation Engine</Link>
+          {/* Balanced 6-Pillar Navigation — Guaranteed Single-Line on Desktop */}
+          <nav className="hidden xl:flex items-center space-x-5 2xl:space-x-6 text-xs font-mono text-[#D6D0C3] shrink-0">
+            <Link href="#topology" className="whitespace-nowrap hover:text-[#F7F5EF] transition-colors py-1">Topology</Link>
+            <Link href="#process" className="whitespace-nowrap hover:text-[#F7F5EF] transition-colors py-1">Process</Link>
+            <Link href="#graph" className="whitespace-nowrap hover:text-[#F7F5EF] transition-colors py-1">Knowledge Graph</Link>
+            <Link href="#society" className="whitespace-nowrap hover:text-[#F7F5EF] transition-colors py-1">Specialists</Link>
+            <Link href="#provenance" className="whitespace-nowrap hover:text-[#F7F5EF] transition-colors py-1">Evidence Standard</Link>
+            <Link href="#financials" className="whitespace-nowrap hover:text-[#F7F5EF] transition-colors py-1">Valuation Engine</Link>
           </nav>
 
-          {/* Medium Screen Navigation (4 pillars) */}
-          <nav className="hidden md:flex lg:hidden items-center space-x-4 text-xs font-mono text-[#D6D0C3]">
-            <Link href="#topology" className="hover:text-[#F7F5EF] transition-colors">Topology</Link>
-            <Link href="#graph" className="hover:text-[#F7F5EF] transition-colors">Graph</Link>
-            <Link href="#provenance" className="hover:text-[#F7F5EF] transition-colors">Evidence</Link>
-            <Link href="#financials" className="hover:text-[#F7F5EF] transition-colors">Valuation</Link>
+          {/* Compact 4-Pillar Navigation for Mid-Screen Viewports */}
+          <nav className="hidden md:flex xl:hidden items-center space-x-3.5 text-xs font-mono text-[#D6D0C3] shrink-0">
+            <Link href="#topology" className="whitespace-nowrap hover:text-[#F7F5EF] transition-colors">Topology</Link>
+            <Link href="#graph" className="whitespace-nowrap hover:text-[#F7F5EF] transition-colors">Graph</Link>
+            <Link href="#provenance" className="whitespace-nowrap hover:text-[#F7F5EF] transition-colors">Evidence</Link>
+            <Link href="#financials" className="whitespace-nowrap hover:text-[#F7F5EF] transition-colors">Valuation</Link>
           </nav>
 
           {/* Action CTAs */}
-          <div className="flex items-center space-x-2.5 sm:space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
             <Link 
               href="/demo"
-              className="text-xs px-3.5 py-1.5 rounded-[4px] bg-[#1D4D40] hover:bg-[#256352] text-[#F7F5EF] border border-[#B58A4F]/60 font-mono transition-all flex items-center space-x-1.5 shadow-xs hover:border-[#B58A4F]"
+              className="whitespace-nowrap text-xs px-3.5 py-1.5 rounded-[4px] bg-[#1D4D40] hover:bg-[#256352] text-[#F7F5EF] border border-[#B58A4F]/60 font-mono transition-all flex items-center space-x-1.5 shadow-xs hover:border-[#B58A4F]"
             >
               <span>Live Demo</span>
               <ArrowRight className="w-3.5 h-3.5 text-[#B58A4F]" />
             </Link>
             <Link 
               href="/app"
-              className="text-xs px-4 py-1.5 rounded-[4px] bg-[#B58A4F] hover:bg-[#9E753D] text-white font-medium transition-all shadow-xs whitespace-nowrap"
+              className="whitespace-nowrap text-xs px-4 py-1.5 rounded-[4px] bg-[#B58A4F] hover:bg-[#9E753D] text-white font-medium transition-all shadow-xs"
             >
               Launch Workspace
             </Link>
