@@ -77,82 +77,82 @@ export const INSTITUTIONAL_CATEGORIES: Record<string, {
 }> = {
   target_entity: {
     label: "Subject Entity (PLTR)",
-    fill: "#1e2430",
-    border: "#3b82f6",
-    text: "#ffffff",
-    accent: "#60a5fa",
+    fill: "#172B27",
+    border: "#A47B48",
+    text: "#FFFFFF",
+    accent: "#A47B48",
     description: "Primary corporate target under forensic research investigation"
   },
   government_customer: {
     label: "Sovereign / Defense Customer",
-    fill: "#15202b",
-    border: "#2563eb",
-    text: "#93c5fd",
-    accent: "#3b82f6",
+    fill: "#303633",
+    border: "#172B27",
+    text: "#F4F1E9",
+    accent: "#172B27",
     description: "National security, intelligence, and defense procurement authorities"
   },
   defense_contract: {
     label: "Defense Program / Contract",
-    fill: "#1a1c2e",
-    border: "#4f46e5",
-    text: "#c7d2fe",
-    accent: "#6366f1",
+    fill: "#3D4642",
+    border: "#526C60",
+    text: "#F4F1E9",
+    accent: "#526C60",
     description: "Government military and modernization programs (TITAN, Maven, Army Vantage)"
   },
   cloud_infrastructure: {
     label: "Cloud & Sovereign Infra",
-    fill: "#112624",
-    border: "#0d9488",
-    text: "#99f6e4",
-    accent: "#14b8a6",
+    fill: "#2D443B",
+    border: "#526C60",
+    text: "#F4F1E9",
+    accent: "#526C60",
     description: "Hyperscale cloud partners hosting classified sovereign compute"
   },
   commercial_customer: {
     label: "Commercial Enterprise Client",
-    fill: "#14231b",
-    border: "#059669",
-    text: "#a7f3d0",
-    accent: "#10b981",
+    fill: "#526C60",
+    border: "#172B27",
+    text: "#FFFFFF",
+    accent: "#172B27",
     description: "Fortune 500 enterprise customers deploying Foundry/AIP platforms"
   },
   core_platform: {
     label: "Core Software Platform",
-    fill: "#291f16",
-    border: "#d97706",
-    text: "#fde68a",
-    accent: "#f59e0b",
+    fill: "#876233",
+    border: "#A47B48",
+    text: "#FFFFFF",
+    accent: "#A47B48",
     description: "Proprietary software architectures (Foundry, Gotham, Apollo, AIP)"
   },
   competitor: {
     label: "Market Competitor",
-    fill: "#28171a",
-    border: "#dc2626",
-    text: "#fecaca",
-    accent: "#ef4444",
+    fill: "#8B2834",
+    border: "#8B2834",
+    text: "#FFFFFF",
+    accent: "#8B2834",
     description: "Enterprise software, defense analytics, or hyperscaler cloud competition"
   },
   leadership: {
     label: "Executive Leadership",
-    fill: "#281726",
-    border: "#db2777",
-    text: "#fbcfe8",
-    accent: "#ec4899",
+    fill: "#4A524D",
+    border: "#79756C",
+    text: "#F4F1E9",
+    accent: "#79756C",
     description: "Named executive officers, founders, and governance directors"
   },
   regulatory_body: {
     label: "Regulatory Oversight Body",
-    fill: "#221c2b",
-    border: "#7c3aed",
-    text: "#ddd6fe",
-    accent: "#8b5cf6",
+    fill: "#79756C",
+    border: "#303633",
+    text: "#FFFFFF",
+    accent: "#303633",
     description: "Securities, audit, defense procurement, or antitrust regulatory agencies"
   },
   default: {
     label: "Corporate Connection",
-    fill: "#1a1e24",
-    border: "#475569",
-    text: "#cbd5e1",
-    accent: "#64748b",
+    fill: "#E8E3D7",
+    border: "#D6D0C3",
+    text: "#303633",
+    accent: "#A47B48",
     description: "Associated institutional entity or transaction counterpart"
   }
 };
@@ -535,13 +535,13 @@ export default function LivingKnowledgeGraph({
 
       ctx.clearRect(0, 0, width, height);
 
-      // Deep Dark Workstation Canvas Background
-      ctx.fillStyle = "#0d0f12";
+      // Institutional Warm Ivory Canvas Background
+      ctx.fillStyle = "#F4F1E9";
       ctx.fillRect(0, 0, width, height);
 
-      // Subtle Precision Coordinate Grid
+      // Subtle Precision Coordinate Grid (Stone Tone)
       ctx.save();
-      ctx.strokeStyle = "#16191e";
+      ctx.strokeStyle = "rgba(214, 208, 195, 0.45)";
       ctx.lineWidth = 1;
       const gridSize = 40 * camera.zoom;
       const offsetX = (width / 2 + camera.x) % gridSize;
@@ -673,16 +673,16 @@ export default function LivingKnowledgeGraph({
         ctx.lineTo(tx, ty);
 
         if (isEdgeSelected) {
-          ctx.strokeStyle = "#3b82f6";
+          ctx.strokeStyle = "#A47B48";
           ctx.lineWidth = 2.4;
         } else if (isEdgeHovered) {
-          ctx.strokeStyle = "#60a5fa";
+          ctx.strokeStyle = "#526C60";
           ctx.lineWidth = 2.0;
         } else if (isIncident) {
-          ctx.strokeStyle = "#475569";
+          ctx.strokeStyle = "#526C60";
           ctx.lineWidth = 1.6;
         } else {
-          ctx.strokeStyle = "#272e38";
+          ctx.strokeStyle = "#D6D0C3";
           ctx.lineWidth = 1.0;
         }
         ctx.stroke();
@@ -711,7 +711,7 @@ export default function LivingKnowledgeGraph({
             ay - arrowLen * Math.sin(angle + Math.PI / 6)
           );
           ctx.closePath();
-          ctx.fillStyle = isEdgeSelected ? "#3b82f6" : (isIncident ? "#64748b" : "#374151");
+          ctx.fillStyle = isEdgeSelected ? "#A47B48" : (isIncident ? "#526C60" : "#79756C");
           ctx.fill();
         }
 
@@ -733,7 +733,7 @@ export default function LivingKnowledgeGraph({
           const padX = 4;
           const padY = 2;
 
-          ctx.fillStyle = isEdgeSelected ? "#1e293b" : "#14171b";
+          ctx.fillStyle = "#FFFFFF";
           ctx.fillRect(
             midX - textMetrics.width / 2 - padX,
             midY - 5 - padY,
@@ -741,7 +741,7 @@ export default function LivingKnowledgeGraph({
             10 + padY * 2
           );
 
-          ctx.strokeStyle = isEdgeSelected ? "#3b82f6" : "#2b323c";
+          ctx.strokeStyle = isEdgeSelected ? "#A47B48" : "#D6D0C3";
           ctx.lineWidth = 1;
           ctx.strokeRect(
             midX - textMetrics.width / 2 - padX,
@@ -750,7 +750,7 @@ export default function LivingKnowledgeGraph({
             10 + padY * 2
           );
 
-          ctx.fillStyle = isEdgeSelected ? "#93c5fd" : "#94a3b8";
+          ctx.fillStyle = isEdgeSelected ? "#A47B48" : "#303633";
           ctx.fillText(relText, midX, midY);
         }
 
@@ -783,7 +783,7 @@ export default function LivingKnowledgeGraph({
         if (isAffectedByShock) {
           ctx.beginPath();
           ctx.arc(nx, ny, radius + 4, 0, Math.PI * 2);
-          ctx.strokeStyle = "#f59e0b";
+          ctx.strokeStyle = "#94671A";
           ctx.lineWidth = 1.5;
           ctx.setLineDash([3, 3]);
           ctx.stroke();
@@ -794,13 +794,13 @@ export default function LivingKnowledgeGraph({
         if (isSelected) {
           ctx.beginPath();
           ctx.arc(nx, ny, radius + 4, 0, Math.PI * 2);
-          ctx.strokeStyle = "#3b82f6";
+          ctx.strokeStyle = "#A47B48";
           ctx.lineWidth = 2.0;
           ctx.stroke();
         } else if (isHovered) {
           ctx.beginPath();
           ctx.arc(nx, ny, radius + 3, 0, Math.PI * 2);
-          ctx.strokeStyle = "#64748b";
+          ctx.strokeStyle = "#526C60";
           ctx.lineWidth = 1.5;
           ctx.stroke();
         }
@@ -811,7 +811,7 @@ export default function LivingKnowledgeGraph({
         ctx.fillStyle = cat.fill;
         ctx.fill();
 
-        ctx.strokeStyle = isSelected ? "#3b82f6" : cat.border;
+        ctx.strokeStyle = isSelected ? "#A47B48" : cat.border;
         ctx.lineWidth = isSelected ? 2.0 : (n.type === "target_entity" ? 2.2 : 1.4);
         ctx.stroke();
 
@@ -820,7 +820,7 @@ export default function LivingKnowledgeGraph({
           ctx.font = "bold 9.5px monospace";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillStyle = "#f8fafc";
+          ctx.fillStyle = "#FFFFFF";
           ctx.fillText("PLTR", nx, ny);
         } else if (radius >= 16) {
           const initials = n.label
@@ -832,12 +832,12 @@ export default function LivingKnowledgeGraph({
           ctx.font = "600 8.5px monospace";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillStyle = cat.accent;
+          ctx.fillStyle = cat.text;
           ctx.fillText(initials, nx, ny);
         } else {
           ctx.beginPath();
           ctx.arc(nx, ny, 2.5, 0, Math.PI * 2);
-          ctx.fillStyle = cat.accent;
+          ctx.fillStyle = cat.text;
           ctx.fill();
         }
 
@@ -847,8 +847,8 @@ export default function LivingKnowledgeGraph({
 
         if (shouldShowLabel && passesFilter) {
           ctx.font = isSelected || n.type === "target_entity" 
-            ? "600 10.5px Inter, -apple-system, sans-serif" 
-            : "500 9px Inter, -apple-system, sans-serif";
+            ? "600 10.5px var(--font-sans, sans-serif)" 
+            : "500 9px var(--font-sans, sans-serif)";
           ctx.textAlign = "center";
           ctx.textBaseline = "top";
 
@@ -857,8 +857,16 @@ export default function LivingKnowledgeGraph({
           const bgPadX = 3.5;
           const bgPadY = 1.5;
 
-          ctx.fillStyle = "rgba(13, 15, 18, 0.90)";
+          ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
           ctx.fillRect(
+            nx - textMetrics.width / 2 - bgPadX,
+            labelY - bgPadY,
+            textMetrics.width + bgPadX * 2,
+            11 + bgPadY * 2
+          );
+          ctx.strokeStyle = "#D6D0C3";
+          ctx.lineWidth = 0.8;
+          ctx.strokeRect(
             nx - textMetrics.width / 2 - bgPadX,
             labelY - bgPadY,
             textMetrics.width + bgPadX * 2,
@@ -866,11 +874,11 @@ export default function LivingKnowledgeGraph({
           );
 
           if (isSelected) {
-            ctx.fillStyle = "#ffffff";
+            ctx.fillStyle = "#172B27";
           } else if (isNeighbor) {
-            ctx.fillStyle = "#e2e8f0";
+            ctx.fillStyle = "#172B27";
           } else {
-            ctx.fillStyle = "#cbd5e1";
+            ctx.fillStyle = "#303633";
           }
           ctx.fillText(n.label, nx, labelY);
         }
@@ -1119,76 +1127,76 @@ export default function LivingKnowledgeGraph({
   };
 
   return (
-    <div ref={containerRef} className="relative w-full h-full flex flex-col bg-[#0d0f12] select-none overflow-hidden viewport-fixed">
+    <div ref={containerRef} className="relative w-full h-full flex flex-col bg-[#F4F1E9] select-none overflow-hidden viewport-fixed">
       {/* =========================================================================
-          FLOATING TOP CONTROLS (Material A — Apple Clear Glass)
+          FLOATING TOP CONTROLS (Institutional Editorial Paper Style)
          ========================================================================= */}
       
-      {/* Top-Left: Mode & Stats Indicator (Offset to avoid engine selector) */}
-      <div className="absolute top-3 left-3 md:left-[244px] z-20 flex items-center space-x-2 glass-clear px-3 py-1.5 rounded-md text-xs">
-        <div className="flex items-center space-x-1.5 text-[#a0a7b1]">
-          <Network className="w-3.5 h-3.5 text-[#3b82f6]" />
-          <span className="font-medium text-[#e5e7eb] hidden sm:inline">Living Graph</span>
+      {/* Top-Left: Mode & Stats Indicator */}
+      <div className="absolute top-3 left-3 md:left-[244px] z-20 flex items-center space-x-2 bg-white border border-[#D6D0C3] shadow-xs px-3 py-1.5 rounded-[4px] text-xs">
+        <div className="flex items-center space-x-1.5 text-[#303633]">
+          <Network className="w-3.5 h-3.5 text-[#172B27]" />
+          <span className="font-serif font-bold text-[#172B27] hidden sm:inline">Living Knowledge Graph</span>
         </div>
 
-        <div className="h-3 w-px bg-white/10"></div>
+        <div className="h-3 w-px bg-[#D6D0C3]"></div>
 
         {/* Layout Switcher */}
-        <div className="flex items-center space-x-1 bg-[#111315]/80 p-0.5 rounded border border-[#30353c] text-[10.5px]">
+        <div className="flex items-center space-x-1 bg-[#F4F1E9] p-0.5 rounded-[3px] border border-[#D6D0C3] text-[10.5px]">
           <button
             onClick={() => setLayoutMode("force")}
-            className={`px-2 py-0.5 rounded transition-colors ${
+            className={`px-2 py-0.5 rounded-[3px] transition-colors cursor-pointer ${
               layoutMode === "force"
-                ? "bg-[#2563eb] text-white font-medium"
-                : "text-[#a0a7b1] hover:text-[#e5e7eb]"
+                ? "bg-[#172B27] text-white font-medium"
+                : "text-[#79756C] hover:text-[#172B27]"
             }`}
           >
             Force
           </button>
           <button
             onClick={() => setLayoutMode("radial")}
-            className={`px-2 py-0.5 rounded transition-colors ${
+            className={`px-2 py-0.5 rounded-[3px] transition-colors cursor-pointer ${
               layoutMode === "radial"
-                ? "bg-[#2563eb] text-white font-medium"
-                : "text-[#a0a7b1] hover:text-[#e5e7eb]"
+                ? "bg-[#172B27] text-white font-medium"
+                : "text-[#79756C] hover:text-[#172B27]"
             }`}
           >
             Radial
           </button>
           <button
             onClick={() => setLayoutMode("clustered")}
-            className={`px-2 py-0.5 rounded transition-colors ${
+            className={`px-2 py-0.5 rounded-[3px] transition-colors cursor-pointer ${
               layoutMode === "clustered"
-                ? "bg-[#2563eb] text-white font-medium"
-                : "text-[#a0a7b1] hover:text-[#e5e7eb]"
+                ? "bg-[#172B27] text-white font-medium"
+                : "text-[#79756C] hover:text-[#172B27]"
             }`}
           >
             Clusters
           </button>
         </div>
 
-        <div className="h-3 w-px bg-white/10 hidden md:block"></div>
+        <div className="h-3 w-px bg-[#D6D0C3] hidden md:block"></div>
 
-        <div className="text-[10px] font-mono text-[#737c88] hidden md:flex items-center space-x-2">
-          <span>NODES: <strong className="text-[#e5e7eb] font-sans">{rawNodes.length}</strong></span>
-          <span>LINKS: <strong className="text-[#e5e7eb] font-sans">{rawEdges.length}</strong></span>
-          <span>ZOOM: <strong className="text-[#3b82f6] font-sans">{(camera.zoom * 100).toFixed(0)}%</strong></span>
+        <div className="text-[10px] font-mono text-[#79756C] hidden md:flex items-center space-x-2">
+          <span>NODES: <strong className="text-[#172B27] font-sans">{rawNodes.length}</strong></span>
+          <span>LINKS: <strong className="text-[#172B27] font-sans">{rawEdges.length}</strong></span>
+          <span>ZOOM: <strong className="text-[#A47B48] font-sans">{(camera.zoom * 100).toFixed(0)}%</strong></span>
         </div>
       </div>
 
       {/* Top-Right: Quick Action Controls */}
-      <div className="absolute top-3 right-3 z-20 flex items-center space-x-1 glass-clear p-1 rounded-md">
+      <div className="absolute top-3 right-3 z-20 flex items-center space-x-1 bg-white border border-[#D6D0C3] shadow-xs p-1 rounded-[4px]">
         <button
           onClick={() => fitToView()}
-          className="p-1.5 rounded hover:bg-white/10 text-[#a0a7b1] hover:text-white transition-colors cursor-pointer"
+          className="p-1.5 rounded hover:bg-[#F4F1E9] text-[#79756C] hover:text-[#172B27] transition-colors cursor-pointer"
           title="Fit Graph to View"
         >
-          <Maximize2 className="w-3.5 h-3.5 text-[#3b82f6]" />
+          <Maximize2 className="w-3.5 h-3.5 text-[#172B27]" />
         </button>
 
         <button
           onClick={() => setCamera(prev => ({ ...prev, zoom: Math.min(2.4, prev.zoom * 1.15) }))}
-          className="p-1.5 rounded hover:bg-white/10 text-[#a0a7b1] hover:text-white transition-colors cursor-pointer"
+          className="p-1.5 rounded hover:bg-[#F4F1E9] text-[#79756C] hover:text-[#172B27] transition-colors cursor-pointer"
           title="Zoom In"
         >
           <ZoomIn className="w-3.5 h-3.5" />
@@ -1196,7 +1204,7 @@ export default function LivingKnowledgeGraph({
 
         <button
           onClick={() => setCamera(prev => ({ ...prev, zoom: Math.max(0.35, prev.zoom * 0.85) }))}
-          className="p-1.5 rounded hover:bg-white/10 text-[#a0a7b1] hover:text-white transition-colors cursor-pointer"
+          className="p-1.5 rounded hover:bg-[#F4F1E9] text-[#79756C] hover:text-[#172B27] transition-colors cursor-pointer"
           title="Zoom Out"
         >
           <ZoomOut className="w-3.5 h-3.5" />
@@ -1204,18 +1212,18 @@ export default function LivingKnowledgeGraph({
 
         <button
           onClick={resetView}
-          className="p-1.5 rounded hover:bg-white/10 text-[#a0a7b1] hover:text-white transition-colors cursor-pointer"
+          className="p-1.5 rounded hover:bg-[#F4F1E9] text-[#79756C] hover:text-[#172B27] transition-colors cursor-pointer"
           title="Center Camera View"
         >
           <Crosshair className="w-3.5 h-3.5" />
         </button>
 
-        <div className="h-3.5 w-px bg-white/10 mx-0.5"></div>
+        <div className="h-3.5 w-px bg-[#D6D0C3] mx-0.5"></div>
 
         <button
           onClick={() => setIsSimulating(prev => !prev)}
           className={`p-1.5 rounded transition-colors cursor-pointer ${
-            isSimulating ? "text-[#10b981] hover:bg-white/10" : "text-[#737c88] hover:bg-white/10"
+            isSimulating ? "text-[#526C60] hover:bg-[#F4F1E9]" : "text-[#79756C] hover:bg-[#F4F1E9]"
           }`}
           title={isSimulating ? "Pause Physics Simulation" : "Resume Physics Simulation"}
         >
@@ -1225,7 +1233,7 @@ export default function LivingKnowledgeGraph({
         <button
           onClick={() => setShowEdgeLabels(prev => !prev)}
           className={`p-1.5 rounded transition-colors cursor-pointer ${
-            showEdgeLabels ? "text-[#3b82f6] hover:bg-white/10" : "text-[#737c88] hover:bg-white/10"
+            showEdgeLabels ? "text-[#A47B48] hover:bg-[#F4F1E9]" : "text-[#79756C] hover:bg-[#F4F1E9]"
           }`}
           title={showEdgeLabels ? "Hide Edge Labels" : "Show Edge Labels"}
         >
@@ -1252,18 +1260,18 @@ export default function LivingKnowledgeGraph({
 
         {/* Selected Node Notification Chip (Non-intrusive) */}
         {selectedNode && (
-          <div className="absolute top-12 left-3 z-20 flex items-center space-x-2 glass-clear px-2.5 py-1 rounded text-[11px] animate-fadeIn pointer-events-none">
-            <span className="w-2 h-2 rounded-full bg-[#3b82f6]"></span>
-            <span className="text-[#a0a7b1]">Focused:</span>
-            <span className="text-[#f8fafc] font-medium">{selectedNode.label}</span>
+          <div className="absolute top-12 left-3 z-20 flex items-center space-x-2 bg-white border border-[#D6D0C3] shadow-xs px-2.5 py-1 rounded-[4px] text-[11px] pointer-events-none">
+            <span className="w-2 h-2 rounded-full bg-[#A47B48]"></span>
+            <span className="text-[#79756C]">Focused:</span>
+            <span className="text-[#172B27] font-medium font-serif">{selectedNode.label}</span>
           </div>
         )}
 
         {/* Bottom-Left: Refined Entity Types Legend */}
-        <div className="absolute bottom-3 left-3 z-20 glass-clear rounded p-2.5 max-w-xs shadow-xl hidden md:block select-none">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-[#e5e7eb] font-semibold mb-1.5 flex items-center justify-between">
+        <div className="absolute bottom-3 left-3 z-20 bg-white border border-[#D6D0C3] shadow-sm rounded-[4px] p-2.5 max-w-xs hidden md:block select-none">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-[#172B27] font-semibold mb-1.5 flex items-center justify-between border-b border-[#D6D0C3] pb-1">
             <span>Entity Ontology</span>
-            <span className="text-[#737c88] text-[9px] font-mono">{rawNodes.length} Nodes</span>
+            <span className="text-[#79756C] text-[9px] font-mono">{rawNodes.length} Nodes</span>
           </div>
           <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
             {Object.entries(INSTITUTIONAL_CATEGORIES).map(([key, cat]) => {
@@ -1274,7 +1282,7 @@ export default function LivingKnowledgeGraph({
                     className="w-2 h-2 rounded-full shrink-0"
                     style={{ backgroundColor: cat.fill, border: `1px solid ${cat.border}` }}
                   />
-                  <span className="text-[#a0a7b1] truncate text-[9.5px]">{cat.label.split("(")[0].trim()}</span>
+                  <span className="text-[#303633] truncate text-[9.5px]">{cat.label.split("(")[0].trim()}</span>
                 </div>
               );
             })}
@@ -1282,12 +1290,12 @@ export default function LivingKnowledgeGraph({
         </div>
 
         {/* Bottom-Right: Tactical Radar Minimap */}
-        <div className="absolute bottom-3 right-3 z-20 glass-clear rounded p-2 hidden sm:block select-none">
-          <div className="flex items-center justify-between text-[9px] font-mono uppercase text-[#737c88] mb-1">
+        <div className="absolute bottom-3 right-3 z-20 bg-white border border-[#D6D0C3] shadow-sm rounded-[4px] p-2 hidden sm:block select-none">
+          <div className="flex items-center justify-between text-[9px] font-mono uppercase text-[#79756C] mb-1">
             <span>Spatial Radar</span>
             <span>{(camera.zoom * 100).toFixed(0)}%</span>
           </div>
-          <div className="w-28 h-20 bg-[#111315]/90 border border-[#30353c] rounded relative overflow-hidden">
+          <div className="w-28 h-20 bg-[#F4F1E9] border border-[#D6D0C3] rounded-[3px] relative overflow-hidden">
             {/* Draw miniature nodes in minimap */}
             {simNodesRef.current.map(n => {
               const mmScale = 0.08;
@@ -1299,7 +1307,7 @@ export default function LivingKnowledgeGraph({
                 <div
                   key={n.id}
                   className={`absolute rounded-full pointer-events-none ${
-                    isSel ? "w-2 h-2 bg-[#3b82f6] -ml-1 -mt-1 ring-1 ring-white" : "w-1 h-1 bg-[#64748b] -ml-0.5 -mt-0.5"
+                    isSel ? "w-2 h-2 bg-[#A47B48] -ml-1 -mt-1 ring-1 ring-[#172B27]" : "w-1 h-1 bg-[#526C60] -ml-0.5 -mt-0.5"
                   }`}
                   style={{ left: `${mx}px`, top: `${my}px` }}
                 />

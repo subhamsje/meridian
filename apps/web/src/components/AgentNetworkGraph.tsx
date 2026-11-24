@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Users, MessageSquare, Shield, ArrowRight, Zap } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 
 interface AgentNode {
   agent_id: string;
@@ -11,12 +11,6 @@ interface AgentNode {
   confidence: number;
   current_position?: string;
   interaction_count: number;
-}
-
-interface AgentEdge {
-  source: string;
-  target: string;
-  type: string;
 }
 
 interface AgentNetworkProps {
@@ -76,19 +70,20 @@ export function AgentNetworkGraph({
     return posMap;
   }, [agents]);
 
+  // Institutional Palette for Roles
   const roleColors: Record<string, string> = {
-    "Principal Systems Architect": "#3b82f6",
-    "Chief Sovereign Risk Officer": "#8b5cf6",
-    "Quantitative Financial Strategist": "#10b981",
-    "Counter-Thesis Strategist (Devil's Advocate)": "#ef4444",
-    "Strategic Growth Lead": "#06b6d4",
-    "Independent Adjudication Moderator": "#f59e0b"
+    "Principal Systems Architect": "#172B27",
+    "Chief Sovereign Risk Officer": "#303633",
+    "Quantitative Financial Strategist": "#526C60",
+    "Counter-Thesis Strategist (Devil's Advocate)": "#8B2834",
+    "Strategic Growth Lead": "#A47B48",
+    "Independent Adjudication Moderator": "#94671A"
   };
 
   return (
-    <div className="flex h-full bg-[#111315] divide-x divide-[#30353c]">
+    <div className="flex h-full bg-[#F4F1E9] divide-x divide-[#D6D0C3]">
       {/* Left Center: SVG Network Visualizer */}
-      <div className="flex-1 relative flex items-center justify-center p-4 overflow-hidden select-none">
+      <div className="flex-1 relative flex items-center justify-center p-4 overflow-hidden select-none bg-[#F4F1E9]">
         <svg viewBox="0 0 520 480" className="w-full h-full max-w-xl max-h-[480px]">
           <defs>
             <marker
@@ -100,7 +95,7 @@ export function AgentNetworkGraph({
               markerHeight="6"
               orient="auto-start-reverse"
             >
-              <path d="M 0 1 L 9 5 L 0 9 z" fill="#474d57" />
+              <path d="M 0 1 L 9 5 L 0 9 z" fill="#B8B0A0" />
             </marker>
             <marker
               id="network-arrow-active"
@@ -111,13 +106,13 @@ export function AgentNetworkGraph({
               markerHeight="6"
               orient="auto-start-reverse"
             >
-              <path d="M 0 1 L 9 5 L 0 9 z" fill="#3b82f6" />
+              <path d="M 0 1 L 9 5 L 0 9 z" fill="#A47B48" />
             </marker>
           </defs>
 
           {/* Concentric Grid Rings */}
-          <circle cx={centerX} cy={centerY} r={radius} fill="none" stroke="#20242a" strokeDasharray="3 3" />
-          <circle cx={centerX} cy={centerY} r={radius * 0.5} fill="none" stroke="#181b1f" strokeDasharray="2 2" />
+          <circle cx={centerX} cy={centerY} r={radius} fill="none" stroke="#D6D0C3" strokeDasharray="3 3" />
+          <circle cx={centerX} cy={centerY} r={radius * 0.5} fill="none" stroke="#E8E3D7" strokeDasharray="2 2" />
 
           {/* Links between Agents */}
           {links.map((link, idx) => {
@@ -132,23 +127,24 @@ export function AgentNetworkGraph({
                 y1={src.y}
                 x2={tgt.x}
                 y2={tgt.y}
-                stroke={isConnected ? "#3b82f6" : "#2a2f38"}
+                stroke={isConnected ? "#A47B48" : "#D6D0C3"}
                 strokeWidth={isConnected ? 2 : 1}
-                strokeOpacity={isConnected ? 0.9 : 0.4}
+                strokeOpacity={isConnected ? 0.95 : 0.6}
                 markerEnd={isConnected ? "url(#network-arrow-active)" : "url(#network-arrow)"}
               />
             );
           })}
 
           {/* Center Hub Label */}
-          <circle cx={centerX} cy={centerY} r="28" fill="#181b1f" stroke="#30353c" strokeWidth="1.5" />
+          <circle cx={centerX} cy={centerY} r="28" fill="#FFFFFF" stroke="#D6D0C3" strokeWidth="1.5" />
           <text
             x={centerX}
             y={centerY + 4}
             textAnchor="middle"
-            fill="#a0a7b1"
+            fill="#172B27"
             fontSize="9"
-            fontFamily="monospace"
+            fontFamily="var(--font-mono, monospace)"
+            fontWeight="bold"
           >
             DEBATE
           </text>
@@ -158,7 +154,7 @@ export function AgentNetworkGraph({
             const pos = nodePositions.get(ag.agent_id);
             if (!pos) return null;
             const isSelected = selectedId === ag.agent_id;
-            const nodeColor = roleColors[ag.role] || "#3b82f6";
+            const nodeColor = roleColors[ag.role] || "#172B27";
 
             return (
               <g
@@ -173,19 +169,19 @@ export function AgentNetworkGraph({
                 {/* Node Ring */}
                 <circle
                   r={isSelected ? 20 : 16}
-                  fill="#181b1f"
-                  stroke={isSelected ? "#f8fafc" : nodeColor}
+                  fill="#FFFFFF"
+                  stroke={isSelected ? "#A47B48" : nodeColor}
                   strokeWidth={isSelected ? 2.5 : 1.5}
                 />
-                <circle r={isSelected ? 14 : 10} fill={nodeColor} fillOpacity={0.25} />
+                <circle r={isSelected ? 14 : 10} fill={nodeColor} fillOpacity={0.2} />
                 
                 {/* Initial */}
                 <text
                   textAnchor="middle"
                   y="4"
-                  fill="#f8fafc"
+                  fill="#172B27"
                   fontSize="10"
-                  fontFamily="sans-serif"
+                  fontFamily="var(--font-serif, serif)"
                   fontWeight="bold"
                 >
                   {ag.name.charAt(0)}
@@ -195,9 +191,9 @@ export function AgentNetworkGraph({
                 <text
                   y={isSelected ? 32 : 28}
                   textAnchor="middle"
-                  fill={isSelected ? "#f8fafc" : "#a0a7b1"}
+                  fill={isSelected ? "#172B27" : "#79756C"}
                   fontSize="10"
-                  fontFamily="monospace"
+                  fontFamily="var(--font-mono, monospace)"
                   fontWeight={isSelected ? "bold" : "normal"}
                 >
                   {ag.name.split(" ")[0]}
@@ -208,66 +204,66 @@ export function AgentNetworkGraph({
         </svg>
 
         {/* Legend Overlay */}
-        <div className="absolute bottom-3 left-3 bg-[#181b1f]/90 border border-[#30353c] rounded p-2 text-[10px] font-mono backdrop-blur-sm space-y-1">
-          <div className="text-[#737c88] uppercase">Agent Network Topography</div>
-          <div className="flex items-center space-x-2 text-[#a0a7b1]">
-            <span className="w-2 h-2 rounded-full bg-[#3b82f6]" />
-            <span>Technical</span>
-            <span className="w-2 h-2 rounded-full bg-[#8b5cf6]" />
-            <span>Risk / Legal</span>
-            <span className="w-2 h-2 rounded-full bg-[#ef4444]" />
+        <div className="absolute bottom-3 left-3 bg-white border border-[#D6D0C3] rounded-[4px] p-2 text-[10px] font-mono shadow-xs space-y-1">
+          <div className="text-[#79756C] uppercase tracking-wider font-semibold">Specialist Roster</div>
+          <div className="flex items-center space-x-2 text-[#303633]">
+            <span className="w-2 h-2 rounded-full bg-[#172B27]" />
+            <span>Systems</span>
+            <span className="w-2 h-2 rounded-full bg-[#526C60]" />
+            <span>Financial</span>
+            <span className="w-2 h-2 rounded-full bg-[#8B2834]" />
             <span>Adversary</span>
           </div>
         </div>
       </div>
 
       {/* Right Column: Detailed Agent Profile & 1-on-1 Interview Drawer */}
-      <div className="w-80 flex flex-col bg-[#181b1f] overflow-hidden">
+      <div className="w-80 flex flex-col bg-white overflow-hidden">
         {selectedAgent ? (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="p-4 border-b border-[#30353c] bg-[#141619]">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#20242a] text-[#3b82f6] border border-[#30353c]">
+            <div className="p-4 border-b border-[#D6D0C3] bg-[#F4F1E9]">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-white text-[#172B27] border border-[#D6D0C3]">
                   {selectedAgent.role}
                 </span>
-                <span className="text-xs font-mono font-bold text-[#10b981]">
+                <span className="text-xs font-mono font-bold text-[#264D3B]">
                   {Math.round(selectedAgent.confidence * 100)}% Conf
                 </span>
               </div>
-              <h3 className="text-base font-serif font-bold text-[#f8fafc]">{selectedAgent.name}</h3>
-              <p className="text-[11px] text-[#737c88] mt-0.5 font-mono">{selectedAgent.specialization || selectedAgent.role}</p>
+              <h3 className="text-base font-serif font-bold text-[#172B27]">{selectedAgent.name}</h3>
+              <p className="text-[11px] text-[#79756C] mt-0.5 font-mono">{selectedAgent.specialization || selectedAgent.role}</p>
             </div>
 
             {/* Content Body */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3 text-xs">
               <div>
-                <div className="text-[10px] font-mono text-[#737c88] uppercase mb-1">Current Stance</div>
-                <p className="text-[#cbd5e1] font-serif leading-relaxed p-2.5 rounded bg-[#111315] border border-[#30353c]">
+                <div className="text-[10px] font-mono text-[#79756C] uppercase tracking-wider mb-1">Current Position</div>
+                <p className="text-[#303633] font-serif leading-relaxed p-3 rounded-[4px] bg-[#F4F1E9] border border-[#D6D0C3]">
                   "{selectedAgent.current_position || 'Active in peer debate rounds.'}"
                 </p>
               </div>
 
               <div>
-                <div className="text-[10px] font-mono text-[#737c88] uppercase mb-1">Debate Engagement</div>
+                <div className="text-[10px] font-mono text-[#79756C] uppercase tracking-wider mb-1">Debate Engagement</div>
                 <div className="grid grid-cols-2 gap-2 text-center">
-                  <div className="p-2 rounded bg-[#111315] border border-[#30353c]">
-                    <div className="text-sm font-bold font-mono text-[#e5e7eb]">{selectedAgent.interaction_count || 12}</div>
-                    <div className="text-[9px] text-[#737c88]">Exchanges</div>
+                  <div className="p-2.5 rounded-[4px] bg-[#F4F1E9] border border-[#D6D0C3]">
+                    <div className="text-sm font-bold font-mono text-[#172B27]">{selectedAgent.interaction_count || 12}</div>
+                    <div className="text-[9px] text-[#79756C] uppercase tracking-wider">Exchanges</div>
                   </div>
-                  <div className="p-2 rounded bg-[#111315] border border-[#30353c]">
-                    <div className="text-sm font-bold font-mono text-[#10b981]">Active</div>
-                    <div className="text-[9px] text-[#737c88]">Epistemic State</div>
+                  <div className="p-2.5 rounded-[4px] bg-[#F4F1E9] border border-[#D6D0C3]">
+                    <div className="text-sm font-bold font-mono text-[#264D3B]">Active</div>
+                    <div className="text-[9px] text-[#79756C] uppercase tracking-wider">Epistemic State</div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Action Footer */}
-            <div className="p-3 border-t border-[#30353c] bg-[#141619]">
+            <div className="p-3 border-t border-[#D6D0C3] bg-[#F4F1E9]">
               <button
                 onClick={() => onInterviewAgent(selectedAgent)}
-                className="w-full py-2 rounded bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-medium text-xs flex items-center justify-center space-x-1.5 cursor-pointer shadow-sm transition-colors"
+                className="w-full py-2 rounded-[4px] bg-[#172B27] hover:bg-[#233F3A] text-white font-medium text-xs flex items-center justify-center space-x-1.5 cursor-pointer shadow-xs transition-colors"
               >
                 <MessageSquare className="w-3.5 h-3.5" />
                 <span>Interview {selectedAgent.name.split(" ")[0]} 1-on-1</span>
@@ -275,7 +271,7 @@ export function AgentNetworkGraph({
             </div>
           </div>
         ) : (
-          <div className="p-8 text-center text-xs font-mono text-[#737c88]">
+          <div className="p-8 text-center text-xs font-mono text-[#79756C]">
             Select an agent node to inspect relationships and interview them.
           </div>
         )}

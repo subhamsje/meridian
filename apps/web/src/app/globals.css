@@ -1,218 +1,204 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg-base: #111315;
-  --color-bg-surface: #181b1f;
-  --color-bg-elevated: #20242a;
-  --color-border-subtle: #262a30;
-  --color-border-base: #30353c;
-  --color-border-strong: #404752;
-  --color-text-primary: #e5e7eb;
-  --color-text-secondary: #a0a7b1;
-  --color-text-muted: #737c88;
+  --color-forest: #172B27;
+  --color-ivory: #F4F1E9;
+  --color-stone: #D6D0C3;
+  --color-stone-light: #E8E3D7;
+  --color-stone-dark: #B8B0A0;
+  --color-brass: #A47B48;
+  --color-brass-light: #C29B68;
+  --color-brass-dark: #876233;
+  --color-sage: #526C60;
+  --color-sage-light: #728E81;
+  --color-sage-dark: #3A4F45;
+  --color-graphite: #303633;
+  --color-graphite-light: #4A524D;
+  --color-graphite-dark: #1E2220;
+  --color-paper: #FFFFFF;
+
+  --color-success: #264D3B;
+  --color-warning: #94671A;
+  --color-error: #8B2834;
+  --color-neutral: #79756C;
+
+  --font-serif: "Newsreader", "Source Serif 4", Georgia, serif;
+  --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", Menlo, Monaco, Consolas, monospace;
 }
 
 :root {
-  --background: #111315;
-  --foreground: #e5e7eb;
+  --background: #F4F1E9;
+  --foreground: #303633;
+  --surface: #FFFFFF;
+  --surface-stone: #E8E3D7;
+  --border-stone: #D6D0C3;
+  --forest: #172B27;
+  --brass: #A47B48;
+  --sage: #526C60;
+  --graphite: #303633;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background-color: #111315;
-  color: #e5e7eb;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", Roboto, sans-serif;
+  background-color: #F4F1E9;
+  color: #303633;
+  font-family: var(--font-sans);
   font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
 
 /* =========================================================================
-   APPLE-INSPIRED REFINED GLASS MATERIAL SYSTEM
+   INSTITUTIONAL EDITORIAL NAVIGATION & SURFACES
    ========================================================================= */
 
-/* Material A — Ultra-Transparent Liquid Glass Navigation (macOS / visionOS caliber) */
-.glass-liquid-nav,
-.nav-liquid-glass {
-  position: relative;
-  background: rgba(255, 255, 255, 0.04);
-  background-image: 
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.14) 0%,
-      rgba(255, 255, 255, 0.035) 25%,
-      rgba(255, 255, 255, 0.008) 75%,
-      rgba(255, 255, 255, 0.025) 100%
-    );
-  backdrop-filter: blur(28px) saturate(190%);
-  -webkit-backdrop-filter: blur(28px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 9999px;
-  box-shadow: 
-    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.28),
-    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.3),
-    0 20px 42px -8px rgba(0, 0, 0, 0.55),
-    0 4px 16px -2px rgba(0, 0, 0, 0.35);
-  transition: border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+/* Institutional Top Navigation Bar (Deep Forest executive finish) */
+.editorial-nav-bar {
+  background: #172B27;
+  color: #F4F1E9;
+  border-bottom: 1px solid #233F3A;
+  box-shadow: 0 1px 3px rgba(23, 43, 39, 0.08);
 }
 
-.glass-liquid-nav::before,
-.nav-liquid-glass::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 32px;
-  right: 32px;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.55) 25%,
-    rgba(255, 255, 255, 0.8) 50%,
-    rgba(255, 255, 255, 0.55) 75%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  border-radius: 9999px;
-  pointer-events: none;
+/* Institutional Ivory Navigation Bar (Alternative warm finish) */
+.editorial-nav-ivory {
+  background: rgba(244, 241, 233, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #172B27;
+  border-bottom: 1px solid #D6D0C3;
 }
 
-/* Stepper group wrapper — Sleek recessed capsule */
-.glass-stepper-group {
+/* Stepper group wrapper — Crisp institutional tab group */
+.editorial-stepper-group {
   display: flex;
   align-items: center;
   background: rgba(0, 0, 0, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 9999px;
-  padding: 3px;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(214, 208, 195, 0.25);
+  border-radius: 4px;
+  padding: 2px;
 }
 
-/* Active navigation tab: Apple-style glowing sapphire blue liquid glass */
-.glass-tab-active {
-  background: rgba(37, 99, 235, 0.32);
-  background-image: linear-gradient(
-    180deg,
-    rgba(96, 165, 250, 0.45) 0%,
-    rgba(37, 99, 235, 0.24) 100%
-  );
-  border: 1px solid rgba(147, 197, 253, 0.55);
-  box-shadow: 
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.5),
-    0 0 20px -2px rgba(59, 130, 246, 0.55),
-    0 4px 14px rgba(30, 58, 138, 0.4);
-  color: #ffffff;
-  border-radius: 9999px;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+/* Active navigation tab: Editorial Brass / Forest accent */
+.editorial-tab-active {
+  background: #A47B48;
+  color: #FFFFFF;
+  border-radius: 3px;
+  font-weight: 500;
+  transition: all 0.15s ease;
 }
 
 /* Inactive navigation tab */
-.glass-tab-inactive {
+.editorial-tab-inactive {
   background: transparent;
-  border: 1px solid transparent;
-  color: #94a3b8;
-  border-radius: 9999px;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  color: #D6D0C3;
+  border-radius: 3px;
+  font-weight: 400;
+  transition: all 0.15s ease;
 }
-.glass-tab-inactive:hover {
+.editorial-tab-inactive:hover {
   background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.16);
-  color: #f8fafc;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
-}
-.glass-tab-inactive:active {
-  transform: scale(0.98);
+  color: #FFFFFF;
 }
 
-/* Liquid Action Pill (Event Telemetry, Custom Workspace) */
-.glass-action-pill {
-  background: rgba(255, 255, 255, 0.045);
-  background-image: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.09) 0%,
-    rgba(255, 255, 255, 0.015) 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.18),
-    0 2px 8px rgba(0, 0, 0, 0.25);
-  color: #e2e8f0;
-  border-radius: 9999px;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+/* Institutional Action Button (Muted stone / Deep forest outline) */
+.editorial-action-btn {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(214, 208, 195, 0.25);
+  color: #F4F1E9;
+  border-radius: 4px;
+  transition: all 0.15s ease;
 }
-.glass-action-pill:hover {
-  background: rgba(255, 255, 255, 0.09);
-  border-color: rgba(255, 255, 255, 0.24);
-  color: #ffffff;
-  box-shadow: 
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.28),
-    0 4px 14px rgba(0, 0, 0, 0.35);
-}
-.glass-action-pill:active {
-  transform: scale(0.98);
+.editorial-action-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #FFFFFF;
+  border-color: rgba(214, 208, 195, 0.45);
 }
 
-/* Active action pill state */
-.glass-action-pill-active {
-  background: rgba(59, 130, 246, 0.22);
-  background-image: linear-gradient(
-    180deg,
-    rgba(96, 165, 250, 0.28) 0%,
-    rgba(37, 99, 235, 0.16) 100%
-  );
-  border: 1px solid rgba(147, 197, 253, 0.5);
-  box-shadow: 
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.35),
-    0 0 16px -2px rgba(59, 130, 246, 0.45);
-  color: #93c5fd;
-  border-radius: 9999px;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+.editorial-action-btn-active {
+  background: #A47B48;
+  border: 1px solid #A47B48;
+  color: #FFFFFF;
+  border-radius: 4px;
 }
 
-/* Material A — Clear Glass: General overlays and floating controls */
-.glass-clear {
-  background: rgba(24, 27, 31, 0.65);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+/* =========================================================================
+   EDITORIAL SURFACE HIERARCHY
+   ========================================================================= */
+
+/* Paper Sheet (Primary analytical folio) */
+.surface-paper {
+  background: #FFFFFF;
+  border: 1px solid #D6D0C3;
+  box-shadow: 0 1px 3px rgba(48, 54, 51, 0.04);
 }
 
-/* Material B — Frosted Glass: Sidebars, contextual panels, inspectors, and floating toolbars */
-.glass-frosted {
-  background: rgba(20, 22, 25, 0.82);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+/* Stone Sheet (Secondary contextual panels, sidebars) */
+.surface-stone {
+  background: #E8E3D7;
+  border: 1px solid #D6D0C3;
 }
 
-/* Material C — Elevated Glass: Modals, command palettes, contextual menus */
-.glass-elevated {
-  background: rgba(26, 29, 34, 0.90);
-  backdrop-filter: blur(28px) saturate(190%);
-  -webkit-backdrop-filter: blur(28px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06);
+/* Warm Ivory Canvas (Background canvas) */
+.surface-ivory {
+  background: #F4F1E9;
+  border: 1px solid #D6D0C3;
 }
 
-/* Material D — Solid Enterprise Surface: Dense tables, financial statements, evidence records */
-.surface-enterprise {
-  background: #181b1f;
-  border: 1px solid #30353c;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+/* Deep Forest Surface (Executive cards, high-contrast summaries) */
+.surface-forest {
+  background: #172B27;
+  color: #F4F1E9;
+  border: 1px solid #233F3A;
 }
 
-.surface-subtle {
-  background: #111315;
-  border: 1px solid #262a30;
+/* Editorial Button - Primary */
+.btn-editorial-primary {
+  background: #172B27;
+  color: #FFFFFF;
+  border: 1px solid #172B27;
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+.btn-editorial-primary:hover {
+  background: #233F3A;
+  border-color: #233F3A;
 }
 
-/* Fallbacks when backdrop-filter is unsupported */
-@supports not (backdrop-filter: blur(10px)) {
-  .glass-clear { background: #181b1f; }
-  .glass-frosted { background: #141619; }
-  .glass-elevated { background: #20242a; }
+/* Editorial Button - Secondary */
+.btn-editorial-secondary {
+  background: #FFFFFF;
+  color: #172B27;
+  border: 1px solid #D6D0C3;
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+.btn-editorial-secondary:hover {
+  background: #E8E3D7;
+  border-color: #B8B0A0;
+}
+
+/* Editorial Button - Brass Accent */
+.btn-editorial-brass {
+  background: #A47B48;
+  color: #FFFFFF;
+  border: 1px solid #A47B48;
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+.btn-editorial-brass:hover {
+  background: #876233;
+  border-color: #876233;
 }
 
 /* Accessibility: Respect prefers-reduced-motion */
@@ -229,7 +215,6 @@ body {
    CONTROLLED APPLICATION SHELL & SCROLL CONTAINMENT
    ========================================================================= */
 
-/* Controlled Full-Height Application Shell */
 .app-shell {
   height: 100vh;
   height: 100dvh;
@@ -239,9 +224,10 @@ body {
   display: flex;
   flex-direction: column;
   position: relative;
+  background-color: #F4F1E9;
+  color: #303633;
 }
 
-/* Independent Panel Scroll Container */
 .panel-scroll {
   overflow-y: auto;
   overflow-x: hidden;
@@ -249,7 +235,6 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Fixed Non-Scrolling Viewport */
 .viewport-fixed {
   overflow: hidden;
   position: relative;
@@ -258,24 +243,66 @@ body {
   min-width: 0;
 }
 
-/* Prevent text selection during panning/dragging */
 .no-select {
   user-select: none;
   -webkit-user-select: none;
 }
 
-/* Custom Minimalist Scrollbar */
+/* Institutional Minimalist Scrollbar */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #111315;
+  background: #F4F1E9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #30353c;
+  background: #D6D0C3;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #404752;
+  background: #B8B0A0;
 }
+
+/* =========================================================================
+   LIQUID GLASS NAVIGATION BAR (Apple visionOS / macOS inspired)
+   ========================================================================= */
+
+.liquid-glass-nav {
+  background: rgba(23, 43, 39, 0.65);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.24), 0 12px 36px 0 rgba(0, 0, 0, 0.35);
+  border-radius: 9999px;
+}
+
+.liquid-glass-pill {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+
+.liquid-glass-tab-active {
+  background: rgba(59, 130, 246, 0.25);
+  border: 1px solid rgba(147, 197, 253, 0.6);
+  color: #FFFFFF;
+  box-shadow: 0 0 18px rgba(59, 130, 246, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+  border-radius: 9999px;
+}
+
+.liquid-glass-tab-inactive {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  border: 1px solid transparent;
+  border-radius: 9999px;
+}
+.liquid-glass-tab-inactive:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
