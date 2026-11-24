@@ -1,5 +1,6 @@
 import asyncio
 import json
+from datetime import datetime
 from typing import List, Optional, Dict, Any, Union
 from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, Header, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
@@ -520,6 +521,8 @@ class CreateExecutionRequest(BaseModel):
     user_objective: Optional[str] = None
     parent_execution_id: Optional[str] = None
     pause_at_gates: Optional[bool] = False
+    run_async: Optional[bool] = False
+    force_restart: Optional[bool] = False
 
 class ChallengeClaimRequest(BaseModel):
     challenging_role: Optional[str] = "Adversarial Forensic Auditor"
@@ -530,11 +533,69 @@ class ChallengeClaimRequest(BaseModel):
 @app.post("/api/v1/investigations/{id}/executions")
 def trigger_investigation_execution(
     id: str,
+    background_tasks: BackgroundTasks,
     req: CreateExecutionRequest = CreateExecutionRequest(),
     org: Organization = Depends(get_current_organization),
     db: Session = Depends(get_db)
 ):
     inv = get_authorized_investigation(id, org, db)
+
+    # Idempotency: check if an execution is already running
+    active_exec = db.query(InvestigationExecution).filter(
+        InvestigationExecution.investigation_id == inv.id,
+        InvestigationExecution.status.in_(["in_progress", "awaiting_approval"])
+    ).order_by(desc(InvestigationExecution.created_at)).first()
+
+    if active_exec and not req.force_restart:
+        return {
+            "execution_id": active_exec.id,
+            "investigation_id": inv.id,
+            "execution_type": active_exec.execution_type,
+            "status": active_exec.status,
+            "stage": active_exec.current_stage,
+            "progress_percentage": active_exec.progress_percentage,
+            "model_name": active_exec.model_name,
+            "tokens_consumed": active_exec.total_tokens,
+            "cost_usd": active_exec.total_cost_usd,
+            "notice": "Active execution in progress"
+        }
+
+    if req.run_async:
+        # Launch asynchronously in background task
+        def run_async_execution(inv_id: str, model: str, obj: Optional[str], p_id: Optional[str], pause_g: bool):
+            from database import SessionLocal
+            bg_db = SessionLocal()
+            try:
+                DurableInvestigationOrchestrator.execute_fresh_investigation(
+                    investigation_id=inv_id,
+                    db=bg_db,
+                    model_name=model,
+                    user_objective=obj,
+                    parent_execution_id=p_id,
+                    pause_at_gates=pause_g
+                )
+            finally:
+                bg_db.close()
+
+        background_tasks.add_task(
+            run_async_execution,
+            inv.id,
+            req.model_name or "gpt-4o-mini",
+            req.user_objective,
+            req.parent_execution_id,
+            bool(req.pause_at_gates)
+        )
+
+        return {
+            "status": "in_progress",
+            "investigation_id": inv.id,
+            "stage": "01_initialization",
+            "progress_percentage": 5,
+            "model_name": req.model_name or "gpt-4o-mini",
+            "notice": "Autonomous investigation launched in background"
+        }
+
+    # Synchronous execution
     execution = DurableInvestigationOrchestrator.execute_fresh_investigation(
         investigation_id=inv.id,
         db=db,
@@ -553,6 +614,38 @@ def trigger_investigation_execution(
         "model_name": execution.model_name,
         "tokens_consumed": execution.total_tokens,
         "cost_usd": execution.total_cost_usd
+    }
+
+@app.post("/api/v1/investigations/{id}/executions/{exec_id}/cancel")
+def cancel_investigation_execution(
+    id: str,
+    exec_id: str,
+    org: Organization = Depends(get_current_organization),
+    db: Session = Depends(get_db)
+):
+    inv = get_authorized_investigation(id, org, db)
+    execution = db.query(InvestigationExecution).filter(
+        InvestigationExecution.id == exec_id,
+        InvestigationExecution.investigation_id == inv.id
+    ).first()
+    if not execution:
+        raise HTTPException(status_code=404, detail="Execution not found")
+
+    execution.status = "cancelled"
+    execution.current_stage = "cancelled"
+    inv.status = "cancelled"
+    db.commit()
+
+    from durable_investigation_orchestrator import emit_execution_event
+    emit_execution_event(execution.id, "cancellation", "execution.cancelled", {
+        "reason": "Cancelled by user via Workspace Operational Control Room",
+        "cancelled_at": datetime.utcnow().isoformat()
+    }, db, inv.id)
+
+    return {
+        "status": "cancelled",
+        "execution_id": execution.id,
+        "investigation_id": inv.id
     }
 
 @app.post("/api/v1/investigations/{id}/executions/{exec_id}/approve-gate")
@@ -1785,8 +1878,10 @@ def get_investigation_events(id: str, db: Session = Depends(get_db)):
 
 # ---- SSE Realtime Stream with Last-Event-ID Resume ----
 @app.get("/api/v1/investigations/{id}/stream")
+@app.get("/api/v1/investigations/{id}/events/stream")
 async def stream_investigation_events(
     id: str,
+    token: Optional[str] = None,
     last_event_id: Optional[str] = Header(None, alias="Last-Event-ID"),
     db: Session = Depends(get_db)
 ):
