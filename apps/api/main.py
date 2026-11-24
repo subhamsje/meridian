@@ -259,6 +259,88 @@ def get_currency_rate():
 def convert_currency_endpoint(req: ConvertCurrencyRequest):
     return CurrencyService.convert_usd_to_inr(req.amount_usd)
 
+# ---- Autonomous Corporate Intelligence Endpoints ----
+from extended_models import (
+    CorporateHypothesis, ManagementStatement, InvestmentThesis,
+    CorporateEntityRelationship, FinancialAnomalyRecord
+)
+from autonomous_research_director import AutonomousResearchDirector
+from management_thesis_engine import ManagementCredibilityService, ThesisInvalidationService
+from knowledge_graph_anomaly_engine import CorporateKnowledgeGraphService, AnomalyDetectionService
+
+@app.get("/api/v1/companies/{id}/hypotheses")
+def get_company_hypotheses(id: str, db: Session = Depends(get_db)):
+    company = db.query(Company).filter(Company.id == id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    inv = db.query(Investigation).filter(Investigation.company_id == id).first()
+    if not inv:
+        # Create a default investigation wrapper if needed
+        org = db.query(Organization).first()
+        org_id = org.id if org else "org_default"
+        inv = Investigation(company_id=company.id, organization_id=org_id, title=f"Comprehensive Intelligence on {company.name}")
+        db.add(inv)
+        db.commit()
+    AutonomousResearchDirector.generate_competing_hypotheses(company, inv, None, db)
+    eval_results = AutonomousResearchDirector.evaluate_hypotheses(inv.id, db)
+    return {"company_id": company.id, "hypotheses_count": len(eval_results), "hypotheses": eval_results}
+
+@app.get("/api/v1/companies/{id}/credibility")
+def get_company_management_credibility(id: str, db: Session = Depends(get_db)):
+    company = db.query(Company).filter(Company.id == id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    ManagementCredibilityService.seed_or_get_management_statements(company, db)
+    return ManagementCredibilityService.get_credibility_summary(company.id, db)
+
+@app.get("/api/v1/companies/{id}/thesis")
+def get_company_investment_thesis(id: str, db: Session = Depends(get_db)):
+    company = db.query(Company).filter(Company.id == id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    inv = db.query(Investigation).filter(Investigation.company_id == id).first()
+    if not inv:
+        org = db.query(Organization).first()
+        org_id = org.id if org else "org_default"
+        inv = Investigation(company_id=company.id, organization_id=org_id, title=f"Thesis Audit for {company.name}")
+        db.add(inv)
+        db.commit()
+    ThesisInvalidationService.seed_or_get_thesis(company, inv, db)
+    return ThesisInvalidationService.evaluate_thesis_invalidation(inv.id, db)
+
+@app.get("/api/v1/companies/{id}/graph")
+def get_company_relationship_graph(id: str, db: Session = Depends(get_db)):
+    company = db.query(Company).filter(Company.id == id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    CorporateKnowledgeGraphService.seed_or_get_relationships(company, db)
+    return CorporateKnowledgeGraphService.get_graph_payload(company.id, db)
+
+@app.get("/api/v1/companies/{id}/anomalies")
+def get_company_financial_anomalies(id: str, db: Session = Depends(get_db)):
+    company = db.query(Company).filter(Company.id == id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    records = AnomalyDetectionService.audit_financial_anomalies(company, db)
+    return {
+        "company_id": company.id,
+        "anomalies_count": len(records),
+        "anomalies": [
+            {
+                "id": a.id,
+                "category": a.anomaly_category,
+                "severity": a.severity,
+                "confidence_score": a.confidence_score,
+                "affected_metrics": a.affected_metrics,
+                "discrepancy_narrative": a.discrepancy_narrative,
+                "mathematical_proof": a.mathematical_proof,
+                "source_citation": a.source_citation,
+                "resolution_status": a.resolution_status
+            }
+            for a in records
+        ]
+    }
+
 # ---- Auth Endpoints ----
 @app.post("/api/v1/auth/register", response_model=TokenResponse)
 def register(req: RegisterRequest, db: Session = Depends(get_db)):
