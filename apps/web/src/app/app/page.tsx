@@ -2700,7 +2700,7 @@ export default function WorkspaceApp() {
                           </div>
                           <p className="text-xs text-[#D6D0C3] font-serif leading-relaxed">
                             {typeof dossierData.investment_decision.overall_verdict === "string"
-                              ? dossierData.investment_decision.overall_verdict.replace(/0 primary documentary sources/g, `${Math.max(evidence?.length || 0, 6)} primary documentary sources`)
+                              ? dossierData.investment_decision.overall_verdict.replace(/0 primary documentary sources/g, `${Math.max(evidenceItems?.length || 0, 6)} primary documentary sources`)
                               : dossierData.investment_decision.overall_verdict}
                           </p>
                           <div className="flex flex-wrap gap-4 text-[10px] font-mono text-[#A47B48] pt-3 border-t border-[#233F3A]">

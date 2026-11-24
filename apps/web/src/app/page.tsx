@@ -134,9 +134,6 @@ export default function LandingPage() {
           </nav>
         </div>
       )}
-          </nav>
-        </div>
-      )}
 
       {/* =========================================================================
           HERO SECTION: Institutional Editorial Typography & Warm Ivory Canvas
