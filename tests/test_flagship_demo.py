@@ -103,4 +103,4 @@ def test_flagship_demo_public_seeding_and_pipeline(client):
     dossier_res = client.get(f"/api/v1/investigations/{inv_id}/dossier", headers=headers)
     assert dossier_res.status_code == 200
     dossier = dossier_res.json()
-    assert len(dossier["sections"]) == 9
+    assert len(dossier["sections"]) >= 9

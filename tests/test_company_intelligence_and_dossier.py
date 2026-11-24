@@ -146,24 +146,23 @@ def test_investment_dossier_and_pdf_generation(db_session, client):
     # Run multi-agent society pipeline to generate claims and reports
     asyncio.run(MultiAgentSocietyEngine.run_full_society_pipeline(inv_id, db_session))
 
-    # Test JSON Dossier endpoint (9 sections)
+    # Test JSON Dossier endpoint (19-section institutional memorandum)
     dossier_res = client.get(f"/api/v1/investigations/{inv_id}/dossier", headers=headers)
     assert dossier_res.status_code == 200
     dossier = dossier_res.json()
-    assert len(dossier["sections"]) == 9
+    assert len(dossier["sections"]) == 19
     assert "investment_decision" in dossier
     assert dossier["investment_decision"]["recommendation"] is not None
     assert dossier["investment_decision"]["confidence_pct"] > 50
 
     # Verify section titles
     section_titles = [s["title"] for s in dossier["sections"]]
-    assert any("Executive Summary" in t for t in section_titles)
-    assert any("Company Profile" in t for t in section_titles)
-    assert any("Technology Architecture" in t for t in section_titles)
-    assert any("Market Position" in t for t in section_titles)
-    assert any("Financial Performance" in t for t in section_titles)
+    assert any("Executive" in t for t in section_titles)
+    assert any("Company Identity" in t or "Business Model" in t for t in section_titles)
+    assert any("Financial" in t for t in section_titles)
     assert any("Supply Chain" in t for t in section_titles)
-    assert any("Recommendation" in t for t in section_titles)
+    assert any("Adjudication" in t for t in section_titles)
+    assert any("Valuation" in t for t in section_titles)
 
     # Test PDF Generation endpoint
     pdf_res = client.get(f"/api/v1/investigations/{inv_id}/dossier/pdf", headers=headers)
