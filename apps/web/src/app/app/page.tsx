@@ -86,10 +86,17 @@ export default function WorkspaceApp() {
   const [selectedEdge, setSelectedEdge] = useState<any>(null);
   const [graphEngine, setGraphEngine] = useState<"canvas" | "reactflow">("canvas");
   
-  // Progressive Disclosure Workstation Tabs: overview, research, debate, financials, report
-  const [activeTab, setActiveTab] = useState<"overview" | "research" | "debate" | "financials" | "report">("overview");
+  // Progressive Disclosure Workstation Tabs: overview, research, debate, financials, intelligence, report
+  const [activeTab, setActiveTab] = useState<"overview" | "research" | "debate" | "financials" | "intelligence" | "report">("overview");
   const [researchSubTab, setResearchSubTab] = useState<"documents" | "specialists" | "evidence" | "graph">("documents");
   const [financialsSubTab, setFinancialsSubTab] = useState<"fundamentals" | "stock" | "scenarios">("fundamentals");
+  const [intelligenceSubTab, setIntelligenceSubTab] = useState<"hypotheses" | "thesis" | "credibility" | "anomalies">("hypotheses");
+
+  // Extended Autonomous Corporate Intelligence State
+  const [hypothesesData, setHypothesesData] = useState<any[]>([]);
+  const [thesisData, setThesisData] = useState<any>(null);
+  const [credibilityData, setCredibilityData] = useState<any>(null);
+  const [anomaliesData, setAnomaliesData] = useState<any[]>([]);
 
   // Multi-File Documents & Ingestion State
   const [investigationDocs, setInvestigationDocs] = useState<any[]>([]);
@@ -334,7 +341,25 @@ export default function WorkspaceApp() {
         fetch(`${API_BASE}/investigations/${id}/evidence`, { headers: { Authorization: `Bearer ${t}` } }).catch(() => null)
       ]);
 
-      if (detailRes.ok) setInvDetail(await detailRes.json());
+      if (detailRes.ok) {
+        const d = await detailRes.json();
+        setInvDetail(d);
+        const compId = d?.company?.id || d?.company_id;
+        if (compId) {
+          fetch(`${API_BASE}/companies/${compId}/hypotheses`).then(r => r.ok ? r.json() : null).then(data => {
+            if (data?.hypotheses) setHypothesesData(data.hypotheses);
+          }).catch(() => null);
+          fetch(`${API_BASE}/companies/${compId}/thesis`).then(r => r.ok ? r.json() : null).then(data => {
+            if (data) setThesisData(data);
+          }).catch(() => null);
+          fetch(`${API_BASE}/companies/${compId}/credibility`).then(r => r.ok ? r.json() : null).then(data => {
+            if (data) setCredibilityData(data);
+          }).catch(() => null);
+          fetch(`${API_BASE}/companies/${compId}/anomalies`).then(r => r.ok ? r.json() : null).then(data => {
+            if (data?.anomalies) setAnomaliesData(data.anomalies);
+          }).catch(() => null);
+        }
+      }
       if (agentsRes.ok) {
         const ags = await agentsRes.json();
         setSocietyAgents(ags);
@@ -1099,6 +1124,7 @@ export default function WorkspaceApp() {
                 {[
                   { key: "overview", label: "Overview", icon: LayoutDashboard, badge: invDetail?.status },
                   { key: "research", label: "Research", icon: FileText, badge: (investigationDocs.length + evidenceItems.length) || undefined },
+                  { key: "intelligence", label: "Hypotheses & Thesis", icon: Compass, badge: hypothesesData.length ? `${hypothesesData.length} Hypo` : "Active" },
                   { key: "debate", label: "Live Debate", icon: MessageSquare, badge: interactions.length },
                   { key: "financials", label: "Financials", icon: TrendingUp, badge: stockData?.ticker || (invDetail?.company?.ticker) },
                   { key: "report", label: "Final Report", icon: Award, badge: "PDF" }
@@ -1144,6 +1170,26 @@ export default function WorkspaceApp() {
                         onClick={() => setResearchSubTab(sub.key as any)}
                         className={`px-2 py-0.5 rounded cursor-pointer transition-colors ${
                           researchSubTab === sub.key ? "bg-[#172B27] text-white" : "text-[#79756C] hover:text-[#303633]"
+                        }`}
+                      >
+                        {sub.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {activeTab === "intelligence" && (
+                  <div className="flex items-center space-x-1 bg-white p-0.5 rounded border border-[#D6D0C3] text-[10px] font-mono">
+                    {[
+                      { key: "hypotheses", label: `Hypotheses (${hypothesesData.length})` },
+                      { key: "thesis", label: "Thesis & Invalidation" },
+                      { key: "credibility", label: "Management Credibility" },
+                      { key: "anomalies", label: `Anomalies (${anomaliesData.length})` }
+                    ].map(sub => (
+                      <button
+                        key={sub.key}
+                        onClick={() => setIntelligenceSubTab(sub.key as any)}
+                        className={`px-2 py-0.5 rounded cursor-pointer transition-colors ${
+                          intelligenceSubTab === sub.key ? "bg-[#172B27] text-white" : "text-[#79756C] hover:text-[#303633]"
                         }`}
                       >
                         {sub.label}
@@ -1819,6 +1865,220 @@ export default function WorkspaceApp() {
                           onSelectEdge={(e) => { setSelectedEdge(e); setSelectedNode(null); }}
                         />
                       )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB: AUTONOMOUS HYPOTHESES & THESIS INTELLIGENCE */}
+              {activeTab === "intelligence" && (
+                <div className="h-full overflow-y-auto p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
+                  {intelligenceSubTab === "hypotheses" && (
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-xl bg-white border border-[#D6D0C3] flex items-center justify-between">
+                        <div>
+                          <div className="text-[10px] font-mono uppercase text-[#A47B48] font-bold">
+                            Autonomous Research Director · Falsifiable Hypotheses
+                          </div>
+                          <h3 className="font-serif font-bold text-[#172B27] text-lg mt-0.5">
+                            Competing Explanations & Evidence Coverage
+                          </h3>
+                        </div>
+                        <span className="text-xs font-mono px-2.5 py-1 rounded bg-[#F4F1E9] border border-[#D6D0C3] text-[#264D3B]">
+                          {hypothesesData.length} Tracked Hypotheses
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {hypothesesData.map((h, i) => (
+                          <div key={i} className="p-4 rounded-xl bg-white border border-[#D6D0C3] space-y-3 shadow-xs">
+                            <div className="flex items-center justify-between text-[11px] font-mono">
+                              <span className="px-2 py-0.5 rounded bg-[#172B27] text-white">
+                                {h.category?.replace(/_/g, " ").toUpperCase()}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded font-bold ${
+                                h.status === "supported" ? "bg-emerald-100 text-emerald-800" :
+                                h.status === "contradicted" ? "bg-red-100 text-red-800" :
+                                "bg-amber-100 text-amber-800"
+                              }`}>
+                                {h.status?.toUpperCase()} · {(h.confidence_score * 100).toFixed(0)}% Conf
+                              </span>
+                            </div>
+                            <div className="font-serif text-[#172B27] font-semibold text-sm leading-relaxed">
+                              "{h.statement}"
+                            </div>
+                            <div className="p-2.5 rounded bg-[#F4F1E9] border border-[#D6D0C3]/60 text-xs text-[#5C5850]">
+                              <span className="font-mono font-bold text-[#172B27]">Adjudication Rationale: </span>
+                              {h.adjudication_rationale}
+                            </div>
+                            {h.research_questions && h.research_questions.length > 0 && (
+                              <div className="space-y-1 pt-2 border-t border-[#D6D0C3]/60 text-[11px] text-[#79756C] font-mono">
+                                <div className="font-semibold text-[#172B27]">Specific Research Inquiries:</div>
+                                {h.research_questions.map((q: string, qIdx: number) => (
+                                  <div key={qIdx} className="flex items-start space-x-1.5">
+                                    <span className="text-[#A47B48]">↳</span>
+                                    <span>{q}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {intelligenceSubTab === "thesis" && thesisData && (
+                    <div className="p-6 rounded-xl bg-white border border-[#D6D0C3] space-y-6 shadow-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D6D0C3] pb-4">
+                        <div>
+                          <span className="text-[10px] font-mono uppercase text-[#A47B48] font-bold">
+                            Strategic Investment Thesis & Invalidation Protocol
+                          </span>
+                          <h2 className="text-xl font-serif font-bold text-[#172B27] mt-0.5">
+                            {thesisData.title || "Core Institutional Investment Thesis"}
+                          </h2>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="px-2.5 py-1 rounded bg-[#172B27] text-white text-xs font-mono font-bold">
+                            {thesisData.conviction_status?.toUpperCase() || "HIGH CONVICTION"}
+                          </span>
+                          <span className="px-2.5 py-1 rounded bg-amber-50 text-amber-800 border border-amber-300 text-xs font-mono font-bold">
+                            Invalidation Risk: {(thesisData.invalidation_risk_score * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded bg-[#F4F1E9] border border-[#D6D0C3] font-serif text-sm leading-relaxed text-[#172B27]">
+                        {thesisData.core_thesis}
+                      </div>
+
+                      <div>
+                        <h4 className="font-mono text-xs uppercase text-[#172B27] font-bold mb-2">
+                          Foundational Assumptions Required for Thesis Durability
+                        </h4>
+                        <div className="space-y-2 text-xs text-[#5C5850]">
+                          {thesisData.key_assumptions?.map((ass: string, idx: number) => (
+                            <div key={idx} className="p-3 rounded bg-white border border-[#D6D0C3] flex items-start space-x-2">
+                              <span className="w-5 h-5 rounded-full bg-[#172B27] text-white flex items-center justify-center font-mono text-[10px] shrink-0">
+                                0{idx + 1}
+                              </span>
+                              <span>{ass}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-mono text-xs uppercase text-[#8B2834] font-bold mb-2">
+                          Observable Invalidation Triggers & Monitoring Thresholds
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          {thesisData.invalidation_triggers?.map((trig: any, idx: number) => (
+                            <div key={idx} className="p-3.5 rounded bg-red-50/40 border border-red-200 text-xs space-y-2">
+                              <div className="flex items-center justify-between text-[10px] font-mono">
+                                <span className="font-bold text-[#8B2834]">{trig.trigger_id}</span>
+                                <span className="px-1.5 py-0.5 rounded bg-white text-emerald-800 border border-emerald-300 font-bold">
+                                  {trig.status?.toUpperCase()}
+                                </span>
+                              </div>
+                              <p className="font-serif text-[#303633] text-[11px] leading-relaxed">
+                                {trig.indicator}
+                              </p>
+                              <div className="pt-2 border-t border-red-200/60 text-[10px] font-mono text-[#79756C]">
+                                Level: {trig.current_level}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {intelligenceSubTab === "credibility" && credibilityData && (
+                    <div className="p-6 rounded-xl bg-white border border-[#D6D0C3] space-y-6 shadow-xs">
+                      <div className="flex items-center justify-between border-b border-[#D6D0C3] pb-4">
+                        <div>
+                          <span className="text-[10px] font-mono uppercase text-[#A47B48] font-bold">
+                            Management Guidance & Empirical Delivery Audit
+                          </span>
+                          <h2 className="text-xl font-serif font-bold text-[#172B27] mt-0.5">
+                            Executive Credibility Tracker
+                          </h2>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-serif font-bold text-[#172B27]">
+                            {(credibilityData.guidance_accuracy_rate * 100).toFixed(1)}%
+                          </div>
+                          <span className="text-[10px] font-mono text-emerald-700 font-bold">
+                            {credibilityData.overall_credibility_assessment}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        {credibilityData.statements?.map((s: any, idx: number) => (
+                          <div key={idx} className="p-4 rounded bg-[#F4F1E9] border border-[#D6D0C3] space-y-2">
+                            <div className="flex items-center justify-between text-[10px] font-mono">
+                              <span className="font-bold text-[#172B27]">{s.speaker}</span>
+                              <span className={`px-2 py-0.5 rounded font-bold ${
+                                s.outcome_status === "achieved" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+                              }`}>
+                                {s.outcome_status?.toUpperCase()}
+                              </span>
+                            </div>
+                            <blockquote className="italic font-serif text-xs text-[#303633] border-l-2 border-[#A47B48] pl-3 py-0.5">
+                              "{s.quote}"
+                            </blockquote>
+                            <div className="text-[11px] text-[#5C5850] pt-1">
+                              <strong>Reported Regulatory Outcome:</strong> {s.actual_outcome}
+                            </div>
+                            {s.notes && (
+                              <div className="text-[10px] font-mono text-[#79756C]">
+                                Auditor Verification: {s.notes}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {intelligenceSubTab === "anomalies" && (
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-xl bg-white border border-[#D6D0C3]">
+                        <span className="text-[10px] font-mono uppercase text-[#8B2834] font-bold">
+                          Deterministic Decoupling & Footnote Audit
+                        </span>
+                        <h3 className="font-serif font-bold text-[#172B27] text-lg mt-0.5">
+                          Financial Anomalies & Concentration Chokepoints
+                        </h3>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {anomaliesData.map((an, i) => (
+                          <div key={i} className="p-4 rounded-xl bg-white border border-[#D6D0C3] space-y-3 shadow-xs">
+                            <div className="flex items-center justify-between text-[10px] font-mono">
+                              <span className="px-2 py-0.5 rounded bg-[#172B27] text-white">
+                                {an.category?.replace(/_/g, " ").toUpperCase()}
+                              </span>
+                              <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">
+                                {an.severity?.toUpperCase()} · {(an.confidence_score * 100).toFixed(0)}% Conf
+                              </span>
+                            </div>
+                            <p className="text-xs text-[#303633] font-serif leading-relaxed">
+                              {an.discrepancy_narrative}
+                            </p>
+                            <div className="p-2.5 rounded bg-[#F4F1E9] border border-[#D6D0C3]/60 text-xs font-mono text-[#172B27]">
+                              <strong>Mathematical Proof: </strong>{an.mathematical_proof}
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] font-mono text-[#79756C] pt-2 border-t border-[#D6D0C3]/60">
+                              <span>Source: {an.source_citation}</span>
+                              <span className="text-[#A47B48] font-bold">{an.resolution_status?.replace(/_/g, " ")}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
