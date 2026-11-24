@@ -552,7 +552,7 @@ export default function FlagshipDemoPage() {
 
               {/* Multi-Model Intelligence Engine Status Badge */}
               <div 
-                className="hidden xl:flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-black/35 border border-white/15 text-[10px] font-mono text-white/90 shadow-xs"
+                className="hidden 2xl:flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-black/35 border border-white/15 text-[10px] font-mono text-white/90 shadow-xs"
                 title={`LiteLLM Multi-Model Engine: ${providersData?.execution_mode || "Active"} • Default: ${providersData?.active_default_model || "gpt-4o-mini"}`}
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
@@ -599,7 +599,7 @@ export default function FlagshipDemoPage() {
           <div className="flex items-center space-x-2 shrink-0">
             <button
               onClick={() => setShowEventDrawer(prev => !prev)}
-              className={`text-xs px-2.5 py-1 font-mono flex items-center space-x-1.5 transition-all cursor-pointer rounded-full border ${
+              className={`text-xs px-2.5 py-1 font-mono flex items-center space-x-1.5 transition-all cursor-pointer rounded-full border whitespace-nowrap shrink-0 ${
                 showEventDrawer 
                   ? "bg-blue-500/25 border-blue-400/40 text-white font-medium shadow-[0_0_12px_rgba(59,130,246,0.3)]" 
                   : "bg-white/5 border-white/15 text-white/80 hover:bg-white/10 hover:text-white"
@@ -613,7 +613,7 @@ export default function FlagshipDemoPage() {
 
             <Link
               href="/app?demo=nvda"
-              className="text-xs px-3 py-1 font-medium transition-all flex items-center space-x-1.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-full shadow-xs backdrop-blur-md"
+              className="text-xs px-3 py-1 font-medium transition-all flex items-center space-x-1.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-full shadow-xs backdrop-blur-md whitespace-nowrap shrink-0"
             >
               <span className="hidden sm:inline">Custom Workspace</span>
               <ArrowRight className="w-3 h-3 text-white/90" />
@@ -863,7 +863,7 @@ export default function FlagshipDemoPage() {
                       type="text"
                       value={graphSearch}
                       onChange={(e) => setGraphSearch(e.target.value)}
-                      placeholder="Search entities (DoD, AWS, TITAN)..."
+                      placeholder={`Search entities (${(demoData?.company?.ticker || "").toUpperCase() === "NVDA" ? "TSMC, Microsoft, Supermicro" : "DoD, AWS, TITAN"})...`}
                       className="w-full bg-transparent text-xs text-[#172B27] focus:outline-none placeholder-[#79756C]"
                     />
                   </div>
@@ -873,7 +873,7 @@ export default function FlagshipDemoPage() {
                 <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2 space-y-1">
                   {[
                     { key: "ALL", label: "All Entities" },
-                    { key: "target_entity", label: "Subject Entity (PLTR)" },
+                    { key: "target_entity", label: `Subject Entity (${demoData?.company?.ticker || "NVDA"})` },
                     { key: "government_customer", label: "Sovereign / Defense Customer" },
                     { key: "defense_contract", label: "Defense Program / Contract" },
                     { key: "cloud_infrastructure", label: "Cloud & Sovereign Infra" },
@@ -1042,7 +1042,7 @@ export default function FlagshipDemoPage() {
                 </div>
               </div>
             ) : (
-              <div className="fixed inset-0 z-50 lg:relative lg:inset-auto lg:z-auto bg-black/40 lg:bg-transparent flex justify-end">
+              <div className="fixed inset-x-0 bottom-0 top-16 z-30 lg:relative lg:inset-auto lg:z-auto bg-black/40 lg:bg-transparent flex justify-end">
                 <div className="w-80 sm:w-96 max-w-[90vw] shrink-0 h-full flex flex-col overflow-hidden bg-white shadow-xl lg:shadow-none border-l border-[#D6D0C3]">
                 <div className="h-11 shrink-0 px-3.5 border-b border-[#D6D0C3] bg-[#F4F1E9] text-xs font-mono uppercase tracking-wider text-[#172B27] flex items-center justify-between">
                   <span className="font-semibold flex items-center space-x-1.5">
@@ -1946,7 +1946,7 @@ export default function FlagshipDemoPage() {
                 <div className="border-b border-[#D6D0C3] pb-6 flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <div className="text-[10px] font-mono uppercase tracking-wider text-[#A47B48] font-bold mb-1">
-                      Institutional Intelligence Dossier • 9-Section Audit
+                      Institutional Intelligence Dossier • {dossierData.sections?.length || 9}-Section Audit
                     </div>
                     <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#172B27]">
                       {dossierData.title || `Institutional Investment Memorandum: ${demoData?.company?.name || "NVIDIA Corporation"}`}
@@ -2225,7 +2225,7 @@ export default function FlagshipDemoPage() {
             <span className="text-[#F4F1E9] font-medium">MERIDIAN INTELLIGENCE WORKSTATION</span>
           </span>
           <span className="text-[#233F3A]">|</span>
-          <span className="text-[#D6D0C3]">PLTR-2026-INV</span>
+          <span className="text-[#D6D0C3]">{demoData?.company?.ticker || "NVDA"}-2026-INV</span>
           <span className="text-[#233F3A] hidden sm:inline">|</span>
           <span className="hidden sm:inline">{graphData.nodes.length} Entities · {graphData.edges.length} Links</span>
           <span className="text-[#233F3A] hidden md:inline">|</span>
