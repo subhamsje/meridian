@@ -291,10 +291,13 @@ class DynamicScenarioEngine:
 
         opening_statements = []
         for ag in agents:
+            pos = ag.initial_position or ag.current_position or (
+                f"Analytical metrics confirm operational resilience under {ag.analytical_style} standards."
+            )
+            assump = (ag.assumptions[0] if (ag.assumptions and len(ag.assumptions) > 0) else "primary statutory disclosures remain consistent")
             statement = (
                 f"[{ag.role}] Under my mandate as {ag.name}, my independent assessment of this scenario concludes: "
-                f"{ag.initial_position} This position is grounded in the foundational assumption that "
-                f"{ag.assumptions[0] if ag.assumptions else 'system constraints apply'}."
+                f"{pos} This position is grounded in the foundational assumption that {assump}."
             )
             inter = AgentInteraction(
                 investigation_id=investigation_id,

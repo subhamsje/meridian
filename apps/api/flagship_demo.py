@@ -323,7 +323,9 @@ def ensure_flagship_demo_seeded(db: Session) -> Dict[str, Any]:
                 current_task=f"Completed semiconductor investigation under {spec['role']} mandate.",
                 status="completed",
                 confidence=0.92,
+                initial_position=f"Grounded in verified SEC 10-K and TSMC filings: {spec['mandate'][:80]}...",
                 current_position=f"Grounded in verified SEC 10-K and TSMC filings: {spec['mandate'][:80]}...",
+                assumptions=[f"Primary evidence disclosures under {spec['role']} standard remain valid and audited."],
                 tokens_consumed=3200,
                 cost_usd=0.064
             )

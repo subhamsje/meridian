@@ -19,6 +19,19 @@ class InvestmentDossierGenerator:
     Generates formal 9-section institutional company research reports and downloadable PDFs.
     """
 
+    @staticmethod
+    def sanitize_claim_statement(stmt: str) -> str:
+        """
+        Strips consecutive duplicate (Qualified: ...) substrings that may have accumulated
+        during multiple rounds of adjudication revisions.
+        """
+        import re
+        if not stmt:
+            return ""
+        pattern = r"(\(Qualified:[^)]+\))(?:\s*\1)+"
+        sanitized = re.sub(pattern, r"\1", stmt)
+        return sanitized.strip()
+
     @classmethod
     def generate_dossier_json(
         cls,
