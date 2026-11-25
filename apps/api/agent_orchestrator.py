@@ -9,6 +9,7 @@ import typing_extensions
 if not hasattr(typing, "NotRequired"):
     setattr(typing, "NotRequired", typing_extensions.NotRequired)
 
+import os
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 import litellm
@@ -43,6 +44,21 @@ class ModelOrchestrationService:
     FALLBACK_MODEL = "claude-3-haiku-20240307"
 
     @classmethod
+    def get_active_model(cls) -> str:
+        """
+        Dynamically selects the best operational model based on active environment credentials.
+        """
+        if os.getenv("OPENAI_API_KEY"):
+            return "gpt-4o-mini"
+        if os.getenv("ANTHROPIC_API_KEY"):
+            return "claude-3-5-sonnet-20241022"
+        if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
+            return "gemini/gemini-3.8-flash"
+        if os.getenv("OLLAMA_BASE_URL"):
+            return "ollama/llama3.2"
+        return cls.DEFAULT_MODEL
+
+    @classmethod
     def execute_specialist_prompt(
         cls,
         agent_mandate: AgentMandateSchema,
@@ -52,9 +68,9 @@ class ModelOrchestrationService:
     ) -> Dict[str, Any]:
         """
         Executes a specialist agent prompt using LiteLLM with structured fallbacks.
-        If an API key is not present in the environment, returns a grounded empirical synthesis.
+        If an API key is not present in the environment or fails, returns a grounded empirical synthesis.
         """
-        chosen_model = model or cls.DEFAULT_MODEL
+        chosen_model = model or cls.get_active_model()
         messages = [
             {
                 "role": "system",

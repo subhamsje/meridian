@@ -249,6 +249,13 @@ def get_providers_status():
     """
     return ProviderManager.get_provider_statuses()
 
+@app.get("/api/v1/providers/diagnostics")
+def get_providers_diagnostics():
+    """
+    Runs multi-provider live connectivity ping and returns full system diagnostic health matrix.
+    """
+    return ProviderManager.get_system_diagnostics()
+
 @app.post("/api/v1/providers/test")
 def test_provider_endpoint(req: TestProviderRequest):
     """
