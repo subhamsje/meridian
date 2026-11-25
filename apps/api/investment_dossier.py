@@ -397,6 +397,14 @@ class InvestmentDossierGenerator:
             "company_name": company_name,
             "ticker": ticker_sym,
             "sector": sector,
+            "financial_summary": {
+                "revenue_ltm_m": rev_m,
+                "gross_margin_pct": gm,
+                "cash_reserves_m": cash_m,
+                "capex_m": capex_m,
+                "free_cash_flow_m": fcf_m,
+                "currency": financial_stats.get("currency", "USD")
+            },
             "investment_decision": {
                 "recommendation": decision,
                 "confidence_pct": confidence,

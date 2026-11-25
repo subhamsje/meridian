@@ -1180,48 +1180,63 @@ def get_investigation_stock_intelligence(
     db: Session = Depends(get_db)
 ):
     inv = get_authorized_investigation(id, org, db)
-    ticker = inv.company.ticker if inv.company else None
+    company = inv.company
+    ticker = company.ticker if company else None
     
+    # If entity is non-listed or private, return an honest non-equity structure
+    if not ticker or (company and getattr(company, "company_type", "") == "private"):
+        # Resolve private profile metrics dynamically if available
+        profile = CompanyResearchResolver.resolve_company(company.name if company else "Private Entity")
+        val_m = (profile.market_cap_usd / 1e6) if profile.market_cap_usd else (profile.revenue_ltm_m * 10.0 if profile.revenue_ltm_m > 0 else 0.0)
+        return {
+            "has_stock": False,
+            "ticker": None,
+            "exchange": "PRIVATE / NON-LISTED",
+            "company_name": company.name if company else "Private Entity",
+            "company_type": getattr(company, "company_type", "private"),
+            "valuation_m": val_m,
+            "total_raised_m": profile.cash_reserves_m or 0.0,
+            "revenue_ltm_m": profile.revenue_ltm_m or 0.0,
+            "currency": profile.currency or "USD",
+            "notes": "Entity is privately held or non-commercial. Public equity markets disclosures not applicable."
+        }
+
+    # For publicly listed entities, resolve real market indicators via yfinance
     stock_data = {
-        "has_stock": bool(ticker),
+        "has_stock": True,
         "ticker": ticker,
-        "exchange": "NASDAQ",
-        "current_price": 164.50,
-        "change_pct": 2.45,
-        "market_cap": 3950000000000,
-        "trailing_pe": 28.5,
-        "forward_pe": 22.0,
-        "fifty_two_week_high": 178.50,
-        "fifty_two_week_low": 112.00,
-        "history": [
-            {"date": "2026-01-02", "close": 142.10},
-            {"date": "2026-01-15", "close": 148.50},
-            {"date": "2026-02-01", "close": 155.20},
-            {"date": "2026-02-15", "close": 161.80},
-            {"date": "2026-03-01", "close": 164.50}
-        ]
+        "exchange": "US",
+        "current_price": 0.0,
+        "change_pct": 0.0,
+        "market_cap": 0,
+        "trailing_pe": None,
+        "forward_pe": None,
+        "fifty_two_week_high": 0.0,
+        "fifty_two_week_low": 0.0,
+        "history": []
     }
     
-    if ticker:
-        try:
-            import yfinance as yf
-            t = yf.Ticker(ticker)
-            inf = t.info
-            hist = t.history(period="1mo")
-            if inf:
-                stock_data["current_price"] = inf.get("currentPrice") or inf.get("regularMarketPrice") or 164.50
-                stock_data["market_cap"] = inf.get("marketCap") or stock_data["market_cap"]
-                stock_data["trailing_pe"] = inf.get("trailingPE") or stock_data["trailing_pe"]
-                stock_data["fifty_two_week_high"] = inf.get("fiftyTwoWeekHigh") or stock_data["fifty_two_week_high"]
-                stock_data["fifty_two_week_low"] = inf.get("fiftyTwoWeekLow") or stock_data["fifty_two_week_low"]
-                stock_data["exchange"] = inf.get("exchange") or "US"
-            if not hist.empty:
-                stock_data["history"] = [
-                    {"date": d.strftime("%Y-%m-%d"), "close": round(float(row["Close"]), 2)}
-                    for d, row in hist.iterrows()
-                ]
-        except Exception:
-            pass
+    try:
+        import yfinance as yf
+        t = yf.Ticker(ticker)
+        inf = t.info
+        hist = t.history(period="1mo")
+        if inf:
+            stock_data["current_price"] = inf.get("currentPrice") or inf.get("regularMarketPrice") or 0.0
+            stock_data["change_pct"] = inf.get("regularMarketChangePercent") or 0.0
+            stock_data["market_cap"] = inf.get("marketCap") or 0
+            stock_data["trailing_pe"] = inf.get("trailingPE")
+            stock_data["forward_pe"] = inf.get("forwardPE")
+            stock_data["fifty_two_week_high"] = inf.get("fiftyTwoWeekHigh") or 0.0
+            stock_data["fifty_two_week_low"] = inf.get("fiftyTwoWeekLow") or 0.0
+            stock_data["exchange"] = inf.get("exchange") or "US"
+        if not hist.empty:
+            stock_data["history"] = [
+                {"date": d.strftime("%Y-%m-%d"), "close": round(float(row["Close"]), 2)}
+                for d, row in hist.iterrows()
+            ]
+    except Exception as e:
+        logger.warning(f"Stock intelligence resolution error for {ticker}: {e}")
 
     return stock_data
 

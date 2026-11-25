@@ -45,7 +45,7 @@ import {
   XCircle,
   HelpCircle
 } from "lucide-react";
-import { API_BASE } from "@/lib/utils";
+import { API_BASE, safeJson } from "@/lib/utils";
 import LivingKnowledgeGraph, { GraphNode, GraphEdge, INSTITUTIONAL_CATEGORIES } from "@/components/LivingKnowledgeGraph";
 import { ReactFlowKnowledgeGraph } from "@/components/ReactFlowKnowledgeGraph";
 
@@ -150,16 +150,17 @@ export default function FlagshipDemoPage() {
       fetch(`${API_BASE}/providers/status`)
         .then(async res => {
           if (!res.ok) return null;
-          return res.json();
+          return safeJson(res);
         })
         .then(data => { if (data) setProvidersData(data); })
         .catch(err => console.error("Could not fetch provider status:", err));
 
       const res = await fetch(`${API_BASE}/demo/flagship`);
-      if (!res.ok) {
-        throw new Error(`Failed to initialize flagship demo: HTTP ${res.status}`);
+      const data = await safeJson(res);
+      if (!data || !data.investigation_id) {
+        console.warn("Flagship demo initialization pending or server unreachable.");
+        return;
       }
-      const data = await res.json();
       setDemoData(data);
       setToken(data.access_token);
       setMandateText(data.company?.research_question || "");
@@ -234,47 +235,64 @@ export default function FlagshipDemoPage() {
   const fetchAllSubsystems = async (invId: string, jwt: string) => {
     try {
       const [detailRes, graphRes, agentsRes, interRes, claimsRes, debatesRes, evRes, reportsRes, hypoRes, evStreamRes, dossierRes] = await Promise.all([
-        fetch(`${API_BASE}/investigations/${invId}`, { headers: { Authorization: `Bearer ${jwt}` } }),
-        fetch(`${API_BASE}/investigations/${invId}/graph`, { headers: { Authorization: `Bearer ${jwt}` } }),
-        fetch(`${API_BASE}/investigations/${invId}/society/agents`, { headers: { Authorization: `Bearer ${jwt}` } }),
-        fetch(`${API_BASE}/investigations/${invId}/society/interactions`, { headers: { Authorization: `Bearer ${jwt}` } }),
-        fetch(`${API_BASE}/investigations/${invId}/claims`, { headers: { Authorization: `Bearer ${jwt}` } }),
-        fetch(`${API_BASE}/investigations/${invId}/debates`, { headers: { Authorization: `Bearer ${jwt}` } }),
-        fetch(`${API_BASE}/investigations/${invId}/evidence`, { headers: { Authorization: `Bearer ${jwt}` } }),
-        fetch(`${API_BASE}/investigations/${invId}/reports`, { headers: { Authorization: `Bearer ${jwt}` } }),
-        fetch(`${API_BASE}/investigations/${invId}/society/hypotheticals`, { headers: { Authorization: `Bearer ${jwt}` } }),
+        fetch(`${API_BASE}/investigations/${invId}`, { headers: { Authorization: `Bearer ${jwt}` } }).catch(() => null),
+        fetch(`${API_BASE}/investigations/${invId}/graph`, { headers: { Authorization: `Bearer ${jwt}` } }).catch(() => null),
+        fetch(`${API_BASE}/investigations/${invId}/society/agents`, { headers: { Authorization: `Bearer ${jwt}` } }).catch(() => null),
+        fetch(`${API_BASE}/investigations/${invId}/society/interactions`, { headers: { Authorization: `Bearer ${jwt}` } }).catch(() => null),
+        fetch(`${API_BASE}/investigations/${invId}/claims`, { headers: { Authorization: `Bearer ${jwt}` } }).catch(() => null),
+        fetch(`${API_BASE}/investigations/${invId}/debates`, { headers: { Authorization: `Bearer ${jwt}` } }).catch(() => null),
+        fetch(`${API_BASE}/investigations/${invId}/evidence`, { headers: { Authorization: `Bearer ${jwt}` } }).catch(() => null),
+        fetch(`${API_BASE}/investigations/${invId}/reports`, { headers: { Authorization: `Bearer ${jwt}` } }).catch(() => null),
+        fetch(`${API_BASE}/investigations/${invId}/society/hypotheticals`, { headers: { Authorization: `Bearer ${jwt}` } }).catch(() => null),
         fetch(`${API_BASE}/investigations/${invId}/events`, { headers: { Authorization: `Bearer ${jwt}` } }).catch(() => null),
         fetch(`${API_BASE}/investigations/${invId}/dossier`, { headers: { Authorization: `Bearer ${jwt}` } }).catch(() => null)
       ]);
 
-      if (detailRes.ok) setInvDetail(await detailRes.json());
-      if (graphRes.ok) {
-        const g = await graphRes.json();
+      const detail = await safeJson(detailRes);
+      if (detail) setInvDetail(detail);
+
+      const g = await safeJson(graphRes);
+      if (g) {
         setGraphData(g);
         if (g.nodes?.length > 0) setSelectedNode(g.nodes[0]);
       }
-      if (agentsRes.ok) {
-        const ags = await agentsRes.json();
+
+      const ags = await safeJson(agentsRes);
+      if (ags) {
         setSocietyAgents(ags);
         if (ags.length > 0) setSelectedAgent(ags[0]);
       }
-      if (interRes.ok) setInteractions(await interRes.json());
-      if (claimsRes.ok) {
-        const cls = await claimsRes.json();
+
+      const inter = await safeJson(interRes, []);
+      if (inter) setInteractions(inter);
+
+      const cls = await safeJson(claimsRes, []);
+      if (cls) {
         setClaims(cls);
         if (cls.length > 0) setSelectedClaim(cls[0]);
       }
-      if (debatesRes.ok) setDebates(await debatesRes.json());
-      if (evRes.ok) setEvidence(await evRes.json());
-      if (reportsRes.ok) setReports(await reportsRes.json());
-      if (dossierRes && dossierRes.ok) setDossierData(await dossierRes.json());
-      if (hypoRes.ok) {
-        const hypos = await hypoRes.json();
+
+      const dbs = await safeJson(debatesRes, []);
+      if (dbs) setDebates(dbs);
+
+      const evs = await safeJson(evRes, []);
+      if (evs) setEvidence(evs);
+
+      const reps = await safeJson(reportsRes, []);
+      if (reps) setReports(reps);
+
+      const dossier = await safeJson(dossierRes);
+      if (dossier) setDossierData(dossier);
+
+      const hypos = await safeJson(hypoRes, []);
+      if (hypos) {
         setHypotheticals(hypos);
         if (hypos.length > 0) setActiveHypoResult(hypos[0]);
       }
-      if (evStreamRes && evStreamRes.ok) {
-        setEvents(await evStreamRes.json());
+
+      const evStream = await safeJson(evStreamRes, []);
+      if (evStream) {
+        setEvents(evStream);
       }
     } catch (err) {
       console.error("Failed loading Meridian subsystems", err);
@@ -321,21 +339,22 @@ export default function FlagshipDemoPage() {
           message: interventionQuery
         })
       });
-      if (!res.ok) throw new Error(`Intervene failed: HTTP ${res.status}`);
-      const data = await res.json();
-      if (res.ok) {
+      const data = await safeJson(res);
+      if (res.ok && data) {
         setInterventionHistory(prev => [...prev, data]);
         setInterventionQuery("");
         const [interRes, agRes] = await Promise.all([
           fetch(`${API_BASE}/investigations/${demoData.investigation_id}/society/interactions`, {
             headers: { Authorization: `Bearer ${token}` }
-          }),
+          }).catch(() => null),
           fetch(`${API_BASE}/investigations/${demoData.investigation_id}/society/agents/${selectedAgent.agent_id}`, {
             headers: { Authorization: `Bearer ${token}` }
-          })
+          }).catch(() => null)
         ]);
-        if (interRes.ok) setInteractions(await interRes.json());
-        if (agRes.ok) setSelectedAgent(await agRes.json());
+        const inter = await safeJson(interRes);
+        if (inter) setInteractions(inter);
+        const ag = await safeJson(agRes);
+        if (ag) setSelectedAgent(ag);
       }
     } catch (err) {
       console.error(err);
@@ -359,15 +378,15 @@ export default function FlagshipDemoPage() {
         },
         body: JSON.stringify({ question: societyQuestion })
       });
-      if (!res.ok) throw new Error(`Interrogate-all failed: HTTP ${res.status}`);
-      const data = await res.json();
-      if (res.ok) {
+      const data = await safeJson(res);
+      if (res.ok && data) {
         setSocietyAnswers(prev => [data, ...prev]);
         setSocietyQuestion("");
         const interRes = await fetch(`${API_BASE}/investigations/${demoData.investigation_id}/society/interactions`, {
           headers: { Authorization: `Bearer ${token}` }
-        });
-        if (interRes.ok) setInteractions(await interRes.json());
+        }).catch(() => null);
+        const inter = await safeJson(interRes);
+        if (inter) setInteractions(inter);
       }
     } catch (err) {
       console.error(err);
@@ -392,22 +411,23 @@ export default function FlagshipDemoPage() {
         },
         body: JSON.stringify({ event_description: eventToInject })
       });
-      if (!res.ok) throw new Error(`Hypothetical failed: HTTP ${res.status}`);
-      const data = await res.json();
-      if (res.ok) {
+      const data = await safeJson(res);
+      if (res.ok && data) {
         setActiveHypoResult(data);
         setHypotheticals(prev => [data, ...prev]);
         setHypoEvent("");
         const [interRes, graphRes] = await Promise.all([
           fetch(`${API_BASE}/investigations/${demoData.investigation_id}/society/interactions`, {
             headers: { Authorization: `Bearer ${token}` }
-          }),
+          }).catch(() => null),
           fetch(`${API_BASE}/investigations/${demoData.investigation_id}/graph`, {
             headers: { Authorization: `Bearer ${token}` }
-          })
+          }).catch(() => null)
         ]);
-        if (interRes.ok) setInteractions(await interRes.json());
-        if (graphRes.ok) setGraphData(await graphRes.json());
+        const inter = await safeJson(interRes);
+        if (inter) setInteractions(inter);
+        const g = await safeJson(graphRes);
+        if (g) setGraphData(g);
       }
     } catch (err) {
       console.error(err);
@@ -477,11 +497,13 @@ export default function FlagshipDemoPage() {
         setChallengeModalClaim(null);
         setChallengeText("");
         const [debRes, clRes] = await Promise.all([
-          fetch(`${API_BASE}/investigations/${demoData.investigation_id}/debates`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`${API_BASE}/investigations/${demoData.investigation_id}/claims`, { headers: { Authorization: `Bearer ${token}` } })
+          fetch(`${API_BASE}/investigations/${demoData.investigation_id}/debates`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
+          fetch(`${API_BASE}/investigations/${demoData.investigation_id}/claims`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => null)
         ]);
-        if (debRes.ok) setDebates(await debRes.json());
-        if (clRes.ok) setClaims(await clRes.json());
+        const dbs = await safeJson(debRes);
+        if (dbs) setDebates(dbs);
+        const cls = await safeJson(clRes);
+        if (cls) setClaims(cls);
       }
     } catch (err) {
       console.error(err);
