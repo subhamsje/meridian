@@ -2376,11 +2376,11 @@ export default function WorkspaceApp() {
                 <div className="h-full flex flex-col overflow-hidden">
                   {/* Mobile Segmented Switcher */}
                   <div className="lg:hidden shrink-0 p-2 bg-[#F4F1E9] border-b border-[#D6D0C3] flex items-center justify-center">
-                    <div className="flex rounded bg-[#F4F1E9] p-0.5 border border-[#D6D0C3] text-xs font-mono">
+                    <div className="flex rounded bg-[#E8E3D7] p-0.5 border border-[#D6D0C3] text-xs font-mono">
                       <button
                         onClick={() => setDebateMobileView("thread")}
                         className={`px-3 py-1 rounded transition-colors ${
-                          debateMobileView === "thread" ? "bg-[#F4F1E9] text-[#172B27] font-medium" : "text-[#79756C]"
+                          debateMobileView === "thread" ? "bg-white text-[#172B27] font-semibold shadow-xs border border-[#D6D0C3]" : "text-[#79756C] hover:text-[#172B27]"
                         }`}
                       >
                         Live Debate ({interactions.length})
@@ -2388,7 +2388,7 @@ export default function WorkspaceApp() {
                       <button
                         onClick={() => setDebateMobileView("specialists")}
                         className={`px-3 py-1 rounded transition-colors ${
-                          debateMobileView === "specialists" ? "bg-[#F4F1E9] text-[#172B27] font-medium" : "text-[#79756C]"
+                          debateMobileView === "specialists" ? "bg-white text-[#172B27] font-semibold shadow-xs border border-[#D6D0C3]" : "text-[#79756C] hover:text-[#172B27]"
                         }`}
                       >
                         Specialists ({societyAgents.length})
