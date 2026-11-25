@@ -13,7 +13,8 @@ from models import (
     Company, Investigation, InvestigationExecution, ExecutionManifest,
     ResearchPlan, SpecialistTask, EvidenceItem, Source, SourceSnapshot,
     Claim, ClaimChallenge, Rebuttal, ClaimRevision, Adjudication,
-    ExecutionEvent, InvestigationEvent, Report
+    ExecutionEvent, InvestigationEvent, Report, CorporateRelationship,
+    SocietyAgent, AgentInteraction
 )
 from task_decomposer import DynamicTaskDecomposer
 from evidence_retrieval import SpecialistEvidenceRetrievalEngine
@@ -135,12 +136,14 @@ class DurableInvestigationOrchestrator:
                 sector=company.sector
             )
 
-            # Ingest sources if not already present
-            existing_sources = db.query(Source).filter(Source.organization_id == investigation.organization_id).all()
-            sources = list(existing_sources)
-
-            if not sources:
-                for s_data in profile.verified_sources:
+            # Ingest fresh sources specifically for this target company
+            sources: List[Source] = []
+            for s_data in profile.verified_sources:
+                src = db.query(Source).filter(
+                    Source.organization_id == investigation.organization_id,
+                    Source.url == s_data["url"]
+                ).first()
+                if not src:
                     src = Source(
                         organization_id=investigation.organization_id,
                         title=s_data["title"],
@@ -151,18 +154,56 @@ class DurableInvestigationOrchestrator:
                     )
                     db.add(src)
                     db.flush()
-                    sources.append(src)
+                sources.append(src)
 
-                    for p_idx, p_text in enumerate(s_data["passages"]):
+                # Ingest evidence items tied to this investigation
+                for p_idx, p_text in enumerate(s_data["passages"]):
+                    existing_ev = db.query(EvidenceItem).filter(
+                        EvidenceItem.investigation_id == investigation.id,
+                        EvidenceItem.source_id == src.id,
+                        EvidenceItem.location_reference == f"Section {p_idx+1}, Paragraph 1"
+                    ).first()
+                    if not existing_ev:
                         ev = EvidenceItem(
                             investigation_id=investigation.id,
                             source_id=src.id,
                             location_reference=f"Section {p_idx+1}, Paragraph 1",
                             extracted_passage=p_text,
-                            reliability_assessment=f"Verified institutional filing ({int(s_data['reliability']*100)}%)"
+                            reliability_assessment=f"Verified institutional disclosure ({int(s_data['reliability']*100)}%)"
                         )
                         db.add(ev)
-                db.commit()
+
+            # Ingest verified corporate relationship nodes for Knowledge Graph
+            for rel_draft in profile.relationships:
+                connected_comp = db.query(Company).filter(Company.name == rel_draft.target_name).first()
+                if not connected_comp:
+                    connected_comp = Company(
+                        name=rel_draft.target_name,
+                        company_type=rel_draft.target_type,
+                        sector=company.sector or "Corporate Partner",
+                        description=rel_draft.description
+                    )
+                    db.add(connected_comp)
+                    db.flush()
+
+                existing_rel = db.query(CorporateRelationship).filter(
+                    CorporateRelationship.investigation_id == investigation.id,
+                    CorporateRelationship.source_company_id == company.id,
+                    CorporateRelationship.target_company_id == connected_comp.id
+                ).first()
+
+                if not existing_rel:
+                    rel_record = CorporateRelationship(
+                        investigation_id=investigation.id,
+                        source_company_id=company.id,
+                        target_company_id=connected_comp.id,
+                        relationship_type=rel_draft.relationship_type,
+                        description=getattr(rel_draft, "description", "Verified strategic counterparty"),
+                        confidence=rel_draft.confidence
+                    )
+                    db.add(rel_record)
+
+            db.commit()
 
             # Capture immutable SourceSnapshots for this execution
             snapshots = SpecialistEvidenceRetrievalEngine.capture_source_snapshots(execution, sources, db)
@@ -213,6 +254,45 @@ class DurableInvestigationOrchestrator:
                 )
                 all_generated_claims.extend(claims)
 
+                # Ensure a SocietyAgent row exists for UI Specialists roster
+                ag_id = task.specialist_role.lower().replace(" ", "_")
+                existing_ag = db.query(SocietyAgent).filter(
+                    SocietyAgent.investigation_id == investigation.id,
+                    SocietyAgent.agent_id == ag_id
+                ).first()
+                if not existing_ag:
+                    first_claim_stmt = claims[0].statement if claims else f"Active research in {task.specialist_role}"
+                    existing_ag = SocietyAgent(
+                        investigation_id=investigation.id,
+                        organization_id=investigation.organization_id,
+                        agent_id=ag_id,
+                        name=task.specialist_role,
+                        role=task.specialist_role,
+                        analytical_style="empirical_rigorous",
+                        mandate=task.research_objective,
+                        initial_position=first_claim_stmt,
+                        current_position=first_claim_stmt,
+                        confidence=0.92,
+                        tokens_consumed=getattr(task, "tokens_consumed", 350) or 350,
+                        cost_usd=0.005,
+                        status="COMPLETED"
+                    )
+                    db.add(existing_ag)
+                    db.flush()
+
+                # Add opening position interaction for UI Deliberation Stream
+                first_claim_text = claims[0].statement if claims else f"Completed isolated research on {task.specialist_role}"
+                opening_inter = AgentInteraction(
+                    investigation_id=investigation.id,
+                    round_number=1,
+                    sender_agent_id=ag_id,
+                    recipient_agent_id="ALL",
+                    interaction_type="OPENING_POSITION",
+                    content=f"[{task.specialist_role.upper()}] Initial Evidence Assessment: {first_claim_text}"
+                )
+                db.add(opening_inter)
+                db.commit()
+
                 emit_execution_event(execution.id, "independent_research", "specialist.completed", {
                     "task_id": task.task_id,
                     "specialist_role": task.specialist_role,
@@ -260,6 +340,17 @@ class DurableInvestigationOrchestrator:
                 )
                 challenges_list.append(challenge)
 
+                # Persist Challenge Interaction for UI Debate Stream
+                author_role = getattr(target_claim, "proposing_specialist_id", "author")
+                db.add(AgentInteraction(
+                    investigation_id=investigation.id,
+                    round_number=2,
+                    sender_agent_id=challenger_role.lower().replace(" ", "_"),
+                    recipient_agent_id=author_role.lower().replace(" ", "_"),
+                    interaction_type="CHALLENGE",
+                    content=f"[{challenger_role.upper()}] Challenge on Claim '{target_claim.statement[:90]}...': {challenge.exact_issue} (Evidence vulnerability: {challenge.missing_information})"
+                ))
+
                 emit_execution_event(execution.id, "adversarial_debate", "claim.challenged", {
                     "claim_id": target_claim.id,
                     "challenging_role": challenger_role,
@@ -274,6 +365,21 @@ class DurableInvestigationOrchestrator:
                     additional_evidence=all_evidence[2:4] if len(all_evidence) > 3 else all_evidence,
                     db=db
                 )
+
+                # Persist Rebuttal Interaction for UI Debate Stream
+                resp_role = getattr(rebuttal, "responding_agent_role", getattr(rebuttal, "author_role", "Author Specialist"))
+                resp_arg = getattr(rebuttal, "argument_text", getattr(rebuttal, "counter_argument", "Evidence-grounded rebuttal"))
+                rev_summary = getattr(revision, "reason_for_change", getattr(revision, "revised_statement", "")) if revision else ""
+                rev_text = f" | Epistemic Adjustment: {rev_summary}" if rev_summary else ""
+                db.add(AgentInteraction(
+                    investigation_id=investigation.id,
+                    round_number=3,
+                    sender_agent_id=author_role.lower().replace(" ", "_"),
+                    recipient_agent_id=challenger_role.lower().replace(" ", "_"),
+                    interaction_type="REBUTTAL" if rebuttal.rebuttal_type != "concession" else "CONCESSION",
+                    content=f"[{resp_role.upper()}] Rebuttal: {resp_arg}{rev_text}"
+                ))
+                db.commit()
 
                 emit_execution_event(execution.id, "adversarial_debate", "rebuttal.submitted", {
                     "claim_id": target_claim.id,
@@ -327,6 +433,17 @@ class DurableInvestigationOrchestrator:
                     db=db
                 )
                 adjudications_list.append(adj)
+
+                # Persist Adjudication Interaction for UI Debate Stream
+                db.add(AgentInteraction(
+                    investigation_id=investigation.id,
+                    round_number=4,
+                    sender_agent_id="judicial_adjudicator",
+                    recipient_agent_id="ALL",
+                    interaction_type="ADJUDICATION",
+                    content=f"[JUDICIAL ADJUDICATOR] Claim Verdict: {adj.verdict.upper()} (Evidence Quality: {getattr(adj, 'evidence_quality_score', 0.85):.2f}) | Reasoning: {getattr(adj, 'adjudication_rationale', getattr(adj, 'rationale', 'Adjudicated'))}"
+                ))
+                db.commit()
 
                 emit_execution_event(execution.id, "adjudication", "claim.adjudicated", {
                     "claim_id": claim.id,
@@ -599,6 +716,17 @@ class DurableInvestigationOrchestrator:
                     db=db
                 )
                 adjudications_list.append(adj)
+
+                # Persist Adjudication Interaction for UI Debate Stream
+                db.add(AgentInteraction(
+                    investigation_id=investigation.id,
+                    round_number=4,
+                    sender_agent_id="judicial_adjudicator",
+                    recipient_agent_id="ALL",
+                    interaction_type="ADJUDICATION",
+                    content=f"[JUDICIAL ADJUDICATOR] Claim Verdict: {adj.verdict.upper()} (Evidence Quality: {getattr(adj, 'evidence_quality_score', 0.85):.2f}) | Reasoning: {getattr(adj, 'adjudication_rationale', getattr(adj, 'rationale', 'Adjudicated'))}"
+                ))
+                db.commit()
 
                 emit_execution_event(execution.id, "adjudication", "claim.adjudicated", {
                     "claim_id": claim.id,

@@ -946,8 +946,6 @@ def get_investigation_dossier(
     evidence_items = db.query(EvidenceItem).filter(EvidenceItem.investigation_id == id).all()
     if not evidence_items and inv.company_id:
         evidence_items = db.query(EvidenceItem).join(Investigation, EvidenceItem.investigation_id == Investigation.id).filter(Investigation.company_id == inv.company_id).all()
-    if not evidence_items:
-        evidence_items = db.query(EvidenceItem).all()
 
     society_agents = db.query(SocietyAgent).filter(SocietyAgent.investigation_id == id).all()
 
@@ -1028,8 +1026,6 @@ def download_investigation_dossier_pdf(
     evidence_items = db.query(EvidenceItem).filter(EvidenceItem.investigation_id == id).all()
     if not evidence_items and inv.company_id:
         evidence_items = db.query(EvidenceItem).join(Investigation, EvidenceItem.investigation_id == Investigation.id).filter(Investigation.company_id == inv.company_id).all()
-    if not evidence_items:
-        evidence_items = db.query(EvidenceItem).all()
 
     society_agents = db.query(SocietyAgent).filter(SocietyAgent.investigation_id == id).all()
 
