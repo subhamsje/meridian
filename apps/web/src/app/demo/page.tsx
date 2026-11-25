@@ -986,7 +986,7 @@ export default function FlagshipDemoPage() {
               </div>
 
               {/* Dual-Engine Toolbar Pill */}
-              <div className="absolute top-3 right-3 z-30 hidden md:flex items-center space-x-1.5 bg-white/95 px-2.5 py-1.5 rounded border border-[#D6D0C3] text-xs shadow-xs">
+              <div className="absolute bottom-4 right-4 z-30 hidden md:flex items-center space-x-1.5 bg-white/95 px-2.5 py-1.5 rounded border border-[#D6D0C3] text-xs shadow-md backdrop-blur-sm">
                 <span className="text-[10px] font-mono uppercase text-[#79756C]">Engine:</span>
                 <button
                   onClick={() => setGraphEngine("canvas")}
