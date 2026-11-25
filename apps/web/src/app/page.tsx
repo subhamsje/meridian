@@ -297,7 +297,11 @@ export default function LandingPage() {
             </div>
 
             {/* Preview View Mode Switcher */}
-            <div className="flex items-center space-x-1 bg-white p-0.5 rounded-[3px] border border-[#D6D0C3] text-[11px]">
+            <div 
+              role="tablist" 
+              aria-label="Interactive Architecture Previews"
+              className="flex items-center space-x-1 bg-white p-0.5 rounded-[3px] border border-[#D6D0C3] text-[11px]"
+            >
               {[
                 { key: "graph", label: "Knowledge Graph", icon: Network },
                 { key: "debate", label: "Adversarial Debate", icon: MessageSquare },
@@ -309,6 +313,9 @@ export default function LandingPage() {
                 return (
                   <button
                     key={tab.key}
+                    role="tab"
+                    aria-selected={active}
+                    aria-controls={`preview-panel-${tab.key}`}
                     onClick={() => setActivePreviewTab(tab.key as any)}
                     className={`px-2.5 py-1 rounded-[3px] flex items-center space-x-1.5 transition-colors cursor-pointer ${
                       active ? "bg-[#172B27] text-white font-medium" : "text-[#79756C] hover:text-[#172B27]"
