@@ -51,22 +51,13 @@ class InvestmentDossierGenerator:
         """
         now = datetime.utcnow().strftime("%B %d, %Y")
         ticker_sym = ticker or "PRIVATE"
-        is_nvda = "NVDA" in ticker_sym.upper() or "NVIDIA" in company_name.upper()
         ev_count = max(len(evidence_items), 6)
-        
-        # Financial metrics defaults
-        if is_nvda:
-            rev_m = financial_stats.get("revenue_ltm_m") or 115000.0
-            gm = financial_stats.get("gross_margin_pct") or 75.1
-            cash_m = financial_stats.get("cash_reserves_m") or 34800.0
-            capex_m = financial_stats.get("capex_m") or 3100.0
-            fcf_m = financial_stats.get("free_cash_flow_m") or 58000.0
-        else:
-            rev_m = financial_stats.get("revenue_ltm_m") or 2500.0
-            gm = financial_stats.get("gross_margin_pct") or 72.0
-            cash_m = financial_stats.get("cash_reserves_m") or 1200.0
-            capex_m = financial_stats.get("capex_m") or 150.0
-            fcf_m = financial_stats.get("free_cash_flow_m") or 600.0
+        # Dynamic financial metrics from actual resolution (no hardcoded overrides)
+        rev_m = float(financial_stats.get("revenue_ltm_m") or 0.0)
+        gm = float(financial_stats.get("gross_margin_pct") or 0.0)
+        cash_m = float(financial_stats.get("cash_reserves_m") or 0.0)
+        capex_m = float(financial_stats.get("capex_m") or (rev_m * 0.05 if rev_m > 0 else 0.0))
+        fcf_m = float(financial_stats.get("free_cash_flow_m") or (rev_m * 0.15 if rev_m > 0 else 0.0))
 
         # Clean claim statements of duplicate consecutive qualifiers
         def clean_statement(stmt: str) -> str:

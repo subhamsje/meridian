@@ -294,116 +294,129 @@ class CompanyResearchResolver:
                 hist = t.history(period="5d")
                 if hist.empty and not info.get("shortName"):
                     return None
-
-            company_name = info.get("shortName") or info.get("longName") or display_name
-            sector = info.get("sector") or sector_hint or "Public Corporate Equity"
-            country = info.get("country") or "International"
-            city = info.get("city") or "Global HQ"
-            jurisdiction = f"{city}, {country}"
-            currency = info.get("currency") or "USD"
-
-            # Raw financial metrics
-            total_rev = info.get("totalRevenue") or 0.0
-            gross_margin_raw = info.get("grossMargins") or 0.50
-            ocf_raw = info.get("operatingCashflow") or (total_rev * 0.15)
-            cash_raw = info.get("totalCash") or (total_rev * 0.20)
-            market_cap = info.get("marketCap")
-
-            # Convert to Millions
-            rev_m = round(float(total_rev) / 1_000_000.0, 1)
-            gm_pct = round(float(gross_margin_raw) * 100.0, 1)
-            ocf_m = round(float(ocf_raw) / 1_000_000.0, 1)
-            cash_m = round(float(cash_raw) / 1_000_000.0, 1)
-
-            # Industry-specific concentration baseline
-            conc_pct = 14.5
-            nrr_pct = 112.0
-            cycle_days = 60
-
-            # Verified public regulatory filings
-            sec_url = f"https://www.sec.gov/edgar/browse/?CIK={symbol}" if country == "United States" else f"https://finance.yahoo.com/quote/{symbol}"
-            verified_sources = [
-                {
-                    "title": f"{company_name} Audited Annual Statutory Filing ({symbol})",
-                    "publisher": "Securities & Exchange Commission / Institutional Regulatory Archive",
-                    "category": "sec_filing",
-                    "url": sec_url,
-                    "reliability": 0.99,
-                    "passages": [
-                        f"{company_name} reported LTM gross revenue of {currency} {rev_m:,.1f}M with verified gross margin of {gm_pct}%.",
-                        f"Operating cash flow reached {currency} {ocf_m:,.1f}M, with total liquid reserves of {currency} {cash_m:,.1f}M.",
-                        f"Audited statutory statements filed under exchange compliance rules ({info.get('exchange', 'GLOBAL')})."
-                    ]
-                },
-                {
-                    "title": f"{company_name} Market Position & Capital Structure Benchmark",
-                    "publisher": "Institutional Financial Research Consortium",
-                    "category": "market_data",
-                    "url": f"https://finance.yahoo.com/quote/{symbol}/key-statistics",
-                    "reliability": 0.92,
-                    "passages": [
-                        f"Market Capitalization stands at {currency} {round(float(market_cap or 0)/1_000_000, 1):,.1f}M.",
-                        f"Business Summary: {info.get('longBusinessSummary', 'Publicly traded corporate entity.')[:250]}...",
-                        f"Trading exchange: {info.get('exchange', 'Global Equity Exchange')} under ticker symbol {symbol}."
-                    ]
-                }
-            ]
-
-            primary_risks = [
-                {
-                    "category": "Market Valuation Volatility",
-                    "severity": "HIGH" if (info.get("trailingPE") or 0) > 40 else "MEDIUM",
-                    "detail": f"Trailing P/E ratio of {round(info.get('trailingPE') or 0, 1)}x reflects high multiple sensitivity to macro discount rates."
-                },
-                {
-                    "category": "Operational Working Capital Discipline",
-                    "severity": "MEDIUM",
-                    "detail": f"Operating cash conversion ratio of {round((ocf_m / max(1.0, rev_m))*100, 1)}% against {currency} {cash_m:,.0f}M in cash reserves."
-                }
-            ]
-
-            # Construct verified relationships
-            relationships = [
-                CorporateRelationshipDraft(
-                    f"{country} Statutory Exchange ({info.get('exchange', 'EXCHANGE')})",
-                    "regulatory_body",
-                    "regulator",
-                    f"Statutory exchange listing authority overseeing continuous disclosure for {symbol}.",
-                    0.99
-                ),
-                CorporateRelationshipDraft(
-                    f"{company_name} Primary Banking & Liquidity Syndicate",
-                    "financial_institution",
-                    "partner",
-                    f"Provides institutional credit facilities, cash clearing, and corporate liquidity management.",
-                    0.95
-                )
-            ]
-
-            return cls._build_profile(
-                name=company_name,
-                ticker=symbol,
-                domain=info.get("website", f"{company_name.lower().replace(' ', '')}.com"),
-                sector=sector,
-                jurisdiction=jurisdiction,
-                rev=rev_m,
-                gm=gm_pct,
-                ocf=ocf_m,
-                cash=cash_m,
-                conc=conc_pct,
-                nrr=nrr_pct,
-                cycle=cycle_days,
-                risks=primary_risks,
-                relationships=relationships,
-                data_availability="HIGH",
-                currency=currency,
-                market_cap_usd=market_cap,
-                is_unreported=False,
-                sources=verified_sources
-            )
+            return cls._build_yfinance_profile(symbol, info, display_name, sector_hint)
         except Exception as e:
             logger.warning(f"yfinance resolution failed for {symbol}: {e}")
+            # Resilient retry once after brief backoff if network transient failure
+            if "curl" in str(e).lower() or "connect" in str(e).lower() or "timeout" in str(e).lower():
+                try:
+                    time.sleep(0.5)
+                    t_retry = yf.Ticker(symbol)
+                    info_retry = t_retry.info
+                    if info_retry and (info_retry.get("totalRevenue") or info_retry.get("marketCap") or info_retry.get("shortName")):
+                        return cls._build_yfinance_profile(symbol, info_retry, display_name, sector_hint)
+                except Exception as retry_err:
+                    logger.warning(f"yfinance retry failed for {symbol}: {retry_err}")
             return None
+
+    @classmethod
+    def _build_yfinance_profile(cls, symbol: str, info: Dict[str, Any], display_name: str, sector_hint: Optional[str]) -> ResolvedCompanyProfile:
+        company_name = info.get("shortName") or info.get("longName") or display_name
+        sector = info.get("sector") or sector_hint or "Public Corporate Equity"
+        country = info.get("country") or "International"
+        city = info.get("city") or "Global HQ"
+        jurisdiction = f"{city}, {country}"
+        currency = info.get("currency") or "USD"
+
+        # Raw financial metrics
+        total_rev = info.get("totalRevenue") or 0.0
+        gross_margin_raw = info.get("grossMargins") or 0.50
+        ocf_raw = info.get("operatingCashflow") or (total_rev * 0.15)
+        cash_raw = info.get("totalCash") or (total_rev * 0.20)
+        market_cap = info.get("marketCap")
+
+        # Convert to Millions
+        rev_m = round(float(total_rev) / 1_000_000.0, 1)
+        gm_pct = round(float(gross_margin_raw) * 100.0, 1)
+        ocf_m = round(float(ocf_raw) / 1_000_000.0, 1)
+        cash_m = round(float(cash_raw) / 1_000_000.0, 1)
+
+        # Industry-specific concentration baseline
+        conc_pct = 14.5
+        nrr_pct = 112.0
+        cycle_days = 60
+
+        # Verified public regulatory filings
+        sec_url = f"https://www.sec.gov/edgar/browse/?CIK={symbol}" if country == "United States" else f"https://finance.yahoo.com/quote/{symbol}"
+        verified_sources = [
+            {
+                "title": f"{company_name} Audited Annual Statutory Filing ({symbol})",
+                "publisher": "Securities & Exchange Commission / Institutional Regulatory Archive",
+                "category": "sec_filing",
+                "url": sec_url,
+                "reliability": 0.99,
+                "passages": [
+                    f"{company_name} reported LTM gross revenue of {currency} {rev_m:,.1f}M with verified gross margin of {gm_pct}%.",
+                    f"Operating cash flow reached {currency} {ocf_m:,.1f}M, with total liquid reserves of {currency} {cash_m:,.1f}M.",
+                    f"Audited statutory statements filed under exchange compliance rules ({info.get('exchange', 'GLOBAL')})."
+                ]
+            },
+            {
+                "title": f"{company_name} Market Position & Capital Structure Benchmark",
+                "publisher": "Institutional Financial Research Consortium",
+                "category": "market_data",
+                "url": f"https://finance.yahoo.com/quote/{symbol}/key-statistics",
+                "reliability": 0.92,
+                "passages": [
+                    f"Market Capitalization stands at {currency} {round(float(market_cap or 0)/1_000_000, 1):,.1f}M.",
+                    f"Business Summary: {info.get('longBusinessSummary', 'Publicly traded corporate entity.')[:250]}...",
+                    f"Trading exchange: {info.get('exchange', 'Global Equity Exchange')} under ticker symbol {symbol}."
+                ]
+            }
+        ]
+
+        primary_risks = [
+            {
+                "category": "Market Valuation Volatility",
+                "severity": "HIGH" if (info.get("trailingPE") or 0) > 40 else "MEDIUM",
+                "detail": f"Trailing P/E ratio of {round(info.get('trailingPE') or 0, 1)}x reflects high multiple sensitivity to macro discount rates."
+            },
+            {
+                "category": "Operational Working Capital Discipline",
+                "severity": "MEDIUM",
+                "detail": f"Operating cash conversion ratio of {round((ocf_m / max(1.0, rev_m))*100, 1)}% against {currency} {cash_m:,.0f}M in cash reserves."
+            }
+        ]
+
+        # Construct verified relationships
+        relationships = [
+            CorporateRelationshipDraft(
+                f"{country} Statutory Exchange ({info.get('exchange', 'EXCHANGE')})",
+                "regulatory_body",
+                "regulator",
+                f"Statutory exchange listing authority overseeing continuous disclosure for {symbol}.",
+                0.99
+            ),
+            CorporateRelationshipDraft(
+                f"{company_name} Primary Banking & Liquidity Syndicate",
+                "financial_institution",
+                "partner",
+                f"Provides institutional credit facilities, cash clearing, and corporate liquidity management.",
+                0.95
+            )
+        ]
+
+        return cls._build_profile(
+            name=company_name,
+            ticker=symbol,
+            domain=info.get("website", f"{company_name.lower().replace(' ', '')}.com"),
+            sector=sector,
+            jurisdiction=jurisdiction,
+            rev=rev_m,
+            gm=gm_pct,
+            ocf=ocf_m,
+            cash=cash_m,
+            conc=conc_pct,
+            nrr=nrr_pct,
+            cycle=cycle_days,
+            risks=primary_risks,
+            relationships=relationships,
+            data_availability="HIGH",
+            currency=currency,
+            market_cap_usd=market_cap,
+            is_unreported=False,
+            sources=verified_sources
+        )
 
     @classmethod
     def _discover_and_resolve_yfinance(cls, query: str, sector_hint: Optional[str]) -> Optional[ResolvedCompanyProfile]:

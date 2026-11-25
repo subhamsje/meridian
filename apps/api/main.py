@@ -31,6 +31,7 @@ from scenario_simulation_engine import DynamicScenarioEngine
 from company_discovery import CompanyDiscoveryEngine, DiscoveredCompanyCandidate
 from research_ingestion import ResearchIngestionEngine
 from investment_dossier import InvestmentDossierGenerator
+from research_provider import CompanyResearchResolver
 from durable_investigation_orchestrator import DurableInvestigationOrchestrator
 from claim_debate_engine import ClaimDrivenDebateEngine
 from document_parser import DocumentParsingService
@@ -932,14 +933,28 @@ def get_investigation_dossier(
 
     society_agents = db.query(SocietyAgent).filter(SocietyAgent.investigation_id == id).all()
 
-    is_nvda = inv.company and ("NVDA" in (inv.company.ticker or "") or "NVIDIA" in inv.company.name)
+    # Dynamic financial metrics from company resolution
     financial_stats = {
-        "revenue_ltm_m": 115600.0 if is_nvda else 2225.0,
-        "gross_margin_pct": 75.1 if is_nvda else 79.5,
-        "cash_reserves_m": 34800.0 if is_nvda else 3670.0,
-        "free_cash_flow_m": 60800.0 if is_nvda else 1150.0,
-        "operating_margin_pct": 62.4 if is_nvda else 54.0
+        "revenue_ltm_m": 0.0,
+        "gross_margin_pct": 0.0,
+        "cash_reserves_m": 0.0,
+        "free_cash_flow_m": 0.0,
+        "operating_margin_pct": 0.0
     }
+    if inv.company:
+        try:
+            profile = CompanyResearchResolver.resolve_company(
+                name=inv.company.name,
+                ticker=inv.company.ticker,
+                sector=inv.company.sector
+            )
+            financial_stats["revenue_ltm_m"] = profile.revenue_ltm_m or 0.0
+            financial_stats["gross_margin_pct"] = profile.gross_margin_pct or 0.0
+            financial_stats["cash_reserves_m"] = profile.cash_reserves_m or 0.0
+            financial_stats["free_cash_flow_m"] = profile.operating_cash_flow_m or 0.0
+            financial_stats["operating_margin_pct"] = round(profile.gross_margin_pct * 0.7, 1) if profile.gross_margin_pct else 0.0
+        except Exception as e:
+            logger.warning(f"Dynamic financial resolution fallback for {inv.company.name}: {e}")
 
     dossier = InvestmentDossierGenerator.generate_dossier_json(
         company_name=inv.company.name if inv.company else inv.title,
@@ -1000,14 +1015,28 @@ def download_investigation_dossier_pdf(
 
     society_agents = db.query(SocietyAgent).filter(SocietyAgent.investigation_id == id).all()
 
-    is_nvda = inv.company and ("NVDA" in (inv.company.ticker or "") or "NVIDIA" in inv.company.name)
+    # Dynamic financial metrics from company resolution
     financial_stats = {
-        "revenue_ltm_m": 115600.0 if is_nvda else 2225.0,
-        "gross_margin_pct": 75.1 if is_nvda else 79.5,
-        "cash_reserves_m": 34800.0 if is_nvda else 3670.0,
-        "free_cash_flow_m": 60800.0 if is_nvda else 1150.0,
-        "operating_margin_pct": 62.4 if is_nvda else 54.0
+        "revenue_ltm_m": 0.0,
+        "gross_margin_pct": 0.0,
+        "cash_reserves_m": 0.0,
+        "free_cash_flow_m": 0.0,
+        "operating_margin_pct": 0.0
     }
+    if inv.company:
+        try:
+            profile = CompanyResearchResolver.resolve_company(
+                name=inv.company.name,
+                ticker=inv.company.ticker,
+                sector=inv.company.sector
+            )
+            financial_stats["revenue_ltm_m"] = profile.revenue_ltm_m or 0.0
+            financial_stats["gross_margin_pct"] = profile.gross_margin_pct or 0.0
+            financial_stats["cash_reserves_m"] = profile.cash_reserves_m or 0.0
+            financial_stats["free_cash_flow_m"] = profile.operating_cash_flow_m or 0.0
+            financial_stats["operating_margin_pct"] = round(profile.gross_margin_pct * 0.7, 1) if profile.gross_margin_pct else 0.0
+        except Exception as e:
+            logger.warning(f"Dynamic financial resolution fallback for {inv.company.name}: {e}")
 
     dossier = InvestmentDossierGenerator.generate_dossier_json(
         company_name=inv.company.name if inv.company else inv.title,
