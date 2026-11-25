@@ -228,7 +228,7 @@ export default function LandingPage() {
               <div className="space-y-0.5">
                 <div className="font-serif font-bold text-[#172B27] text-xs">Adjudicated Intelligence Memo</div>
                 <p className="text-[#5C5850] text-[11px] leading-relaxed">
-                  Deterministic ratios, committee conviction verdict, and 12-section report.
+                  Deterministic ratios, committee conviction verdict, and 19-section institutional report.
                 </p>
                 <div className="text-[10px] font-mono text-[#172B27] font-semibold pt-0.5">
                   📄 Institutional PDF Export
@@ -525,6 +525,11 @@ export default function LandingPage() {
             <p className="text-xs text-[#79756C] font-mono mt-3 md:mt-0">
               DUAL-ENGINE: HTML5 CANVAS (60 FPS) + REACT FLOW v13
             </p>
+          </div>
+
+          {/* Interactive Corporate Knowledge Graph Showcase */}
+          <div className="mb-10 shadow-sm rounded-lg overflow-hidden border border-[#D6D0C3]">
+            <AnimatedRelationshipGraph />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">

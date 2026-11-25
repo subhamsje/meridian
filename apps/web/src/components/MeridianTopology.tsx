@@ -292,7 +292,7 @@ export const TOPOLOGY_NODES: TopologyNode[] = [
     id: "stage_dossier",
     stage: "dossier",
     title: "Final Institutional Intelligence Dossier",
-    subtitle: "12-Section Memorandum & PDF Export",
+    subtitle: "19-Section Institutional Memorandum & PDF Export",
     icon: Award,
     x: 1040,
     y: 200,
@@ -412,143 +412,308 @@ export default function MeridianTopology() {
           </div>
 
           {/* Main SVG Visualization */}
-          <div className="w-full aspect-[16/7] max-h-[520px] relative select-none">
-            <svg viewBox="0 0 1140 420" className="w-full h-full">
-              <defs>
-                {/* Linear Gradients for Flow Connectors */}
-                <linearGradient id="streamGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#789487" stopOpacity="0.3" />
-                  <stop offset="50%" stopColor="#B58A4F" stopOpacity="0.8" />
-                  <stop offset="100%" stopColor="#153B32" stopOpacity="0.9" />
-                </linearGradient>
+          {viewMode === "graph" && (
+            <div className="w-full aspect-[16/7] max-h-[520px] relative select-none">
+              <svg viewBox="0 0 1140 420" className="w-full h-full">
+                <defs>
+                  {/* Linear Gradients for Flow Connectors */}
+                  <linearGradient id="streamGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#789487" stopOpacity="0.3" />
+                    <stop offset="50%" stopColor="#B58A4F" stopOpacity="0.8" />
+                    <stop offset="100%" stopColor="#153B32" stopOpacity="0.9" />
+                  </linearGradient>
 
-                {/* Subtle Glow Filter for Central Research Director */}
-                <filter id="subtleGlow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="3" result="blur" />
-                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                </filter>
-              </defs>
+                  {/* Subtle Glow Filter for Central Research Director */}
+                  <filter id="subtleGlow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  </filter>
+                </defs>
 
-              {/* Connecting Geometric Lines with Animated SVG Markers */}
-              <g>
-                {TOPOLOGY_CONNECTORS.map((c, i) => {
-                  const src = TOPOLOGY_NODES.find(n => n.id === c.from)!;
-                  const dst = TOPOLOGY_NODES.find(n => n.id === c.to)!;
-                  const isHighlighted = hoveredNode === c.from || hoveredNode === c.to || selectedNode.id === c.from || selectedNode.id === c.to;
+                {/* Connecting Geometric Lines with Animated SVG Markers */}
+                <g>
+                  {TOPOLOGY_CONNECTORS.map((c, i) => {
+                    const src = TOPOLOGY_NODES.find(n => n.id === c.from)!;
+                    const dst = TOPOLOGY_NODES.find(n => n.id === c.to)!;
+                    const isHighlighted = hoveredNode === c.from || hoveredNode === c.to || selectedNode.id === c.from || selectedNode.id === c.to;
 
-                  // Render path based on viewMode
-                  const isDirectorConnection = c.from === "stage_director" || c.to === "stage_director";
-                  const pathD = `M ${src.x} ${src.y} C ${(src.x + dst.x) / 2} ${src.y}, ${(src.x + dst.x) / 2} ${dst.y}, ${dst.x} ${dst.y}`;
+                    // Render path based on viewMode
+                    const isDirectorConnection = c.from === "stage_director" || c.to === "stage_director";
+                    const pathD = `M ${src.x} ${src.y} C ${(src.x + dst.x) / 2} ${src.y}, ${(src.x + dst.x) / 2} ${dst.y}, ${dst.x} ${dst.y}`;
+
+                    return (
+                      <g key={i}>
+                        {/* Underlying Fine Connecting Wire */}
+                        <path
+                          d={pathD}
+                          fill="none"
+                          stroke={isHighlighted ? "#B58A4F" : "#D6D0C3"}
+                          strokeWidth={isHighlighted ? 2.0 : 1.1}
+                          strokeDasharray={isDirectorConnection ? "3,3" : undefined}
+                          className="transition-colors duration-300"
+                        />
+                        {/* Animated Evidence Particle along the wire */}
+                        <circle r={isHighlighted ? "2.5" : "1.8"} fill={isHighlighted ? "#B58A4F" : "#1D4D40"}>
+                          <animateMotion
+                            path={pathD}
+                            dur={`${2.8 + (i % 4) * 0.7}s`}
+                            repeatCount="indefinite"
+                          />
+                        </circle>
+                      </g>
+                    );
+                  })}
+                </g>
+
+                {/* Interactive Topology Nodes */}
+                {TOPOLOGY_NODES.map((node) => {
+                  const isSelected = selectedNode.id === node.id;
+                  const isHovered = hoveredNode === node.id;
+                  const isDirector = node.stage === "director";
+                  const isSpecialist = node.stage === "specialist";
+                  const isDossier = node.stage === "dossier";
+                  const Icon = node.icon;
+
+                  // Radius calculations based on institutional hierarchy
+                  const radius = isDirector ? 40 : (isDossier ? 34 : (isSpecialist ? 26 : 22));
 
                   return (
-                    <g key={i}>
-                      {/* Underlying Fine Connecting Wire */}
-                      <path
-                        d={pathD}
-                        fill="none"
-                        stroke={isHighlighted ? "#B58A4F" : "#D6D0C3"}
-                        strokeWidth={isHighlighted ? 2.0 : 1.1}
-                        strokeDasharray={isDirectorConnection ? "3,3" : undefined}
-                        className="transition-colors duration-300"
-                      />
-                      {/* Animated Evidence Particle along the wire */}
-                      <circle r={isHighlighted ? "2.5" : "1.8"} fill={isHighlighted ? "#B58A4F" : "#1D4D40"}>
-                        <animateMotion
-                          path={pathD}
-                          dur={`${2.8 + (i % 4) * 0.7}s`}
-                          repeatCount="indefinite"
+                    <g
+                      key={node.id}
+                      transform={`translate(${node.x}, ${node.y})`}
+                      className="cursor-pointer transition-transform duration-200"
+                      onClick={() => setSelectedNode(node)}
+                      onMouseEnter={() => setHoveredNode(node.id)}
+                      onMouseLeave={() => setHoveredNode(null)}
+                    >
+                      {/* Concentric Orbital Halo on Selected or Hovered Node */}
+                      {(isSelected || isHovered) && (
+                        <circle
+                          r={radius + 8}
+                          fill="none"
+                          stroke={node.borderColor}
+                          strokeWidth="1.5"
+                          strokeDasharray="4,4"
+                          className="opacity-70 animate-spin-slow"
                         />
-                      </circle>
+                      )}
+
+                      {/* Node Core Geometry */}
+                      <circle
+                        r={radius}
+                        fill={node.bg}
+                        stroke={isSelected ? "#B58A4F" : node.borderColor}
+                        strokeWidth={isSelected ? 2.5 : 1.5}
+                        filter={isDirector ? "url(#subtleGlow)" : undefined}
+                        className="transition-all duration-200"
+                      />
+
+                      {/* Concentric Ring for Central Research Director */}
+                      {isDirector && (
+                        <circle
+                          r={radius - 8}
+                          fill="none"
+                          stroke="#B58A4F"
+                          strokeWidth="1"
+                          strokeOpacity="0.6"
+                        />
+                      )}
+
+                      {/* Node Centered Icon */}
+                      <foreignObject
+                        x={-10}
+                        y={-10}
+                        width={20}
+                        height={20}
+                        className="pointer-events-none"
+                      >
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Icon
+                            className="w-4 h-4"
+                            style={{ color: isDirector || isDossier ? "#FCFBF8" : node.categoryColor }}
+                          />
+                        </div>
+                      </foreignObject>
+
+                      {/* Node Micro-Label */}
+                      <text
+                        y={radius + 15}
+                        textAnchor="middle"
+                        className={`text-[9.5px] font-mono ${
+                          isSelected ? "font-bold fill-[#153B32]" : "fill-[#5C5850]"
+                        }`}
+                      >
+                        {node.title.length > 20 ? `${node.title.slice(0, 19)}…` : node.title}
+                      </text>
                     </g>
                   );
                 })}
-              </g>
+              </svg>
+            </div>
+          )}
 
-              {/* Interactive Topology Nodes */}
-              {TOPOLOGY_NODES.map((node) => {
-                const isSelected = selectedNode.id === node.id;
-                const isHovered = hoveredNode === node.id;
-                const isDirector = node.stage === "director";
-                const isSpecialist = node.stage === "specialist";
-                const isDossier = node.stage === "dossier";
-                const Icon = node.icon;
-
-                // Radius calculations based on institutional hierarchy
-                const radius = isDirector ? 40 : (isDossier ? 34 : (isSpecialist ? 26 : 22));
-
-                return (
-                  <g
-                    key={node.id}
-                    transform={`translate(${node.x}, ${node.y})`}
-                    className="cursor-pointer transition-transform duration-200"
-                    onClick={() => setSelectedNode(node)}
-                    onMouseEnter={() => setHoveredNode(node.id)}
-                    onMouseLeave={() => setHoveredNode(null)}
-                  >
-                    {/* Concentric Orbital Halo on Selected or Hovered Node */}
-                    {(isSelected || isHovered) && (
-                      <circle
-                        r={radius + 8}
-                        fill="none"
-                        stroke={node.borderColor}
-                        strokeWidth="1.5"
-                        strokeDasharray="4,4"
-                        className="opacity-70 animate-spin-slow"
-                      />
-                    )}
-
-                    {/* Node Core Geometry */}
-                    <circle
-                      r={radius}
-                      fill={node.bg}
-                      stroke={isSelected ? "#B58A4F" : node.borderColor}
-                      strokeWidth={isSelected ? 2.5 : 1.5}
-                      filter={isDirector ? "url(#subtleGlow)" : undefined}
-                      className="transition-all duration-200"
-                    />
-
-                    {/* Concentric Ring for Central Research Director */}
-                    {isDirector && (
-                      <circle
-                        r={radius - 8}
-                        fill="none"
-                        stroke="#B58A4F"
-                        strokeWidth="1"
-                        strokeOpacity="0.6"
-                      />
-                    )}
-
-                    {/* Node Centered Icon */}
-                    <foreignObject
-                      x={-10}
-                      y={-10}
-                      width={20}
-                      height={20}
-                      className="pointer-events-none"
-                    >
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Icon
-                          className="w-4 h-4"
-                          style={{ color: isDirector || isDossier ? "#FCFBF8" : node.categoryColor }}
-                        />
-                      </div>
-                    </foreignObject>
-
-                    {/* Node Micro-Label */}
-                    <text
-                      y={radius + 15}
-                      textAnchor="middle"
-                      className={`text-[9.5px] font-mono ${
-                        isSelected ? "font-bold fill-[#153B32]" : "fill-[#5C5850]"
+          {/* FLOW VIEW: Sequential Pipeline Architecture */}
+          {viewMode === "flow" && (
+            <div className="w-full py-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 text-xs font-mono">
+                {[
+                  {
+                    step: "01",
+                    nodeId: "src_filings",
+                    title: "Primary Data Ingestion",
+                    subtitle: "SEC 10-K, 10-Q & Transcripts",
+                    badge: "SHA-256 Checksums",
+                    detail: "Captures immutable source snapshots with line-level offsets, zero-copy table extraction, and delimiter sanitization.",
+                    icon: FileText
+                  },
+                  {
+                    step: "02",
+                    nodeId: "stage_director",
+                    title: "Research Director DAG",
+                    subtitle: "Epistemic Decomposition",
+                    badge: "Anti-Anchoring",
+                    detail: "Decomposes investigation into specialized tasks with blind-first boundaries and dynamic budget management.",
+                    icon: Compass
+                  },
+                  {
+                    step: "03",
+                    nodeId: "spec_financial",
+                    title: "Independent Research",
+                    subtitle: "Domain Specialists in Isolation",
+                    badge: "Parallel Ingestion",
+                    detail: "Financial, Forensic, Competitive, and Bear specialists evaluate disclosures without seeing peer positions.",
+                    icon: Users
+                  },
+                  {
+                    step: "04",
+                    nodeId: "stage_claims",
+                    title: "Claims & Proposition Ledger",
+                    subtitle: "Falsifiable Evidence Binding",
+                    badge: "Immutable Citations",
+                    detail: "Every proposition is registered with cryptographic evidence fingerprints before debate opens.",
+                    icon: Layers
+                  },
+                  {
+                    step: "05",
+                    nodeId: "stage_debate",
+                    title: "Adversarial Debate Engine",
+                    subtitle: "3-Round Falsification Protocol",
+                    badge: "No Echo Chambers",
+                    detail: "Cross-examines claims using adversarial challenge categories without majority voting.",
+                    icon: Scale
+                  },
+                  {
+                    step: "06",
+                    nodeId: "stage_adjudication",
+                    title: "Judicial Adjudication",
+                    subtitle: "Anti-Majority Epistemic Rule",
+                    badge: "Evidentiary Weight",
+                    detail: "Assesses claims strictly on documentary provenance and logic, rejecting consensus voting.",
+                    icon: ShieldCheck
+                  },
+                  {
+                    step: "07",
+                    nodeId: "stage_dossier",
+                    title: "Institutional Dossier",
+                    subtitle: "19-Section Memorandum & PDF",
+                    badge: "INR Presentation",
+                    detail: "Synthesizes final investment thesis, 4-scenario valuation stress test, and thesis invalidation radar.",
+                    icon: Award
+                  }
+                ].map((item) => {
+                  const node = TOPOLOGY_NODES.find(n => n.id === item.nodeId) || selectedNode;
+                  const isSelected = selectedNode.id === item.nodeId;
+                  const Icon = item.icon;
+                  return (
+                    <div
+                      key={item.step}
+                      onClick={() => setSelectedNode(node)}
+                      className={`p-4 rounded border transition-all cursor-pointer space-y-2 select-none active:scale-[0.99] ${
+                        isSelected
+                          ? "bg-[#153B32] text-white border-[#B58A4F] ring-1 ring-[#B58A4F] shadow-sm"
+                          : "bg-white text-[#172B27] border-[#D6D0C3] hover:border-[#153B32] hover:bg-[#FAF8F5]"
                       }`}
                     >
-                      {node.title.length > 20 ? `${node.title.slice(0, 19)}…` : node.title}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
+                      <div className="flex items-center justify-between">
+                        <span className={`text-[10px] font-bold ${isSelected ? "text-[#E5B842]" : "text-[#A47B48]"}`}>
+                          PHASE {item.step}
+                        </span>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded border ${
+                          isSelected ? "bg-[#1D4D40] text-[#D6D0C3] border-[#2F5E52]" : "bg-[#F7F5EF] text-[#79756C] border-[#D6D0C3]"
+                        }`}>
+                          {item.badge}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2 pt-1">
+                        <Icon className={`w-4 h-4 shrink-0 ${isSelected ? "text-[#E5B842]" : "text-[#153B32]"}`} />
+                        <div className="font-serif font-bold text-sm truncate">{item.title}</div>
+                      </div>
+                      <p className={`text-[11px] leading-relaxed line-clamp-3 font-sans ${
+                        isSelected ? "text-[#D6D0C3]" : "text-[#5C5850]"
+                      }`}>
+                        {item.detail}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* RESEARCH VIEW: Institutional Deep-Research Matrix */}
+          {viewMode === "research" && (
+            <div className="w-full py-2 overflow-x-auto text-xs font-mono">
+              <table className="w-full text-left border border-[#D6D0C3] bg-white rounded overflow-hidden">
+                <thead>
+                  <tr className="bg-[#153B32] text-[#F7F5EF] text-[10px] uppercase tracking-wider border-b border-[#233F3A]">
+                    <th className="py-2.5 px-3">Stage & ID</th>
+                    <th className="py-2.5 px-3">System Operator / Specialist</th>
+                    <th className="py-2.5 px-3">Methodology & Execution Standard</th>
+                    <th className="py-2.5 px-3">Primary Inputs & Ingestion</th>
+                    <th className="py-2.5 px-3">Institutional Deliverable</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#D6D0C3]/60 text-[#303633]">
+                  {TOPOLOGY_NODES.map((node) => {
+                    const isSelected = selectedNode.id === node.id;
+                    const Icon = node.icon;
+                    return (
+                      <tr
+                        key={node.id}
+                        onClick={() => setSelectedNode(node)}
+                        className={`cursor-pointer transition-colors ${
+                          isSelected
+                            ? "bg-[#153B32]/10 font-semibold"
+                            : "hover:bg-[#FAF8F5]"
+                        }`}
+                      >
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <span className="text-[10px] text-[#A47B48] font-bold uppercase">{node.stage}</span>
+                          <div className="text-[11px] font-bold text-[#172B27]">{node.id}</div>
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center space-x-1.5">
+                            <Icon className="w-3.5 h-3.5 text-[#153B32] shrink-0" />
+                            <span className="font-serif font-bold text-[#172B27]">{node.title}</span>
+                          </div>
+                          {node.subtitle && <div className="text-[10px] text-[#79756C]">{node.subtitle}</div>}
+                        </td>
+                        <td className="py-2.5 px-3 text-[#5C5850]">
+                          {node.methodology}
+                        </td>
+                        <td className="py-2.5 px-3 text-[#5C5850]">
+                          {node.primarySources.join(" • ")}
+                        </td>
+                        <td className="py-2.5 px-3 font-semibold text-[#153B32]">
+                          {node.keyDeliverable}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* =========================================================================
               ACTIVE NODE INSPECTION PANEL (Deep Analytical Context)
