@@ -51,60 +51,79 @@ export default function LandingPage() {
           TOP INSTITUTIONAL NAVIGATION (Executive Forest & Gold Masthead)
          ========================================================================= */}
       <header className="fixed top-0 inset-x-0 z-50 bg-[#0B1E18]/95 text-[#F7F5EF] border-b border-[#1C4135] shadow-lg backdrop-blur-xl h-16 transition-all">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between gap-3">
+        <div className="w-full max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between gap-3">
           {/* Masthead Logo & Institutional Indicator */}
-          <div className="flex items-center space-x-3 shrink-0">
-            <Link href="/" className="flex items-center space-x-2.5 group whitespace-nowrap">
-              <div className="w-8 h-8 rounded-[4px] bg-[#14392E] border border-[#B58A4F]/80 flex items-center justify-center font-serif font-bold text-[#F7F5EF] text-sm shadow-inner group-hover:border-[#E5B842] transition-colors">
+          <div className="flex items-center space-x-2.5 sm:space-x-3 shrink-0">
+            <Link href="/" className="flex items-center space-x-2 sm:space-x-2.5 group whitespace-nowrap">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-[4px] bg-[#14392E] border border-[#B58A4F]/80 flex items-center justify-center font-serif font-bold text-[#F7F5EF] text-xs sm:text-sm shadow-inner group-hover:border-[#E5B842] transition-colors">
                 M
               </div>
-              <span className="font-serif font-extrabold text-base tracking-[0.2em] uppercase text-[#F7F5EF] group-hover:text-white transition-colors">
+              <span className="font-serif font-extrabold text-sm sm:text-base tracking-[0.2em] uppercase text-[#F7F5EF] group-hover:text-white transition-colors">
                 MERIDIAN
               </span>
             </Link>
-            <div className="hidden lg:flex items-center space-x-2 pl-3 border-l border-[#224A3D] text-[10px] font-mono text-[#8BB8A8] whitespace-nowrap">
+            <div className="hidden 2xl:flex items-center space-x-1.5 pl-3 border-l border-[#224A3D] text-[10px] font-mono text-[#8BB8A8] whitespace-nowrap">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)] shrink-0"></span>
               <span className="tracking-widest uppercase font-semibold">Institutional Intelligence</span>
             </div>
           </div>
 
-          {/* Institutional Navigation Links — Clean, Single-Line, Pristine Spacing */}
-          <nav className="hidden xl:flex items-center space-x-5 2xl:space-x-6 text-xs font-mono text-[#D6D0C3] shrink-0">
-            <Link href="#process" className="whitespace-nowrap hover:text-white transition-colors py-1 hover:border-b-2 hover:border-[#B58A4F]">Forensic Thesis</Link>
-            <Link href="#graph" className="whitespace-nowrap hover:text-white transition-colors py-1 hover:border-b-2 hover:border-[#B58A4F]">Knowledge Graph</Link>
-            <Link href="#society" className="whitespace-nowrap hover:text-white transition-colors py-1 hover:border-b-2 hover:border-[#B58A4F]">Specialist Society</Link>
-            <Link href="#provenance" className="whitespace-nowrap hover:text-white transition-colors py-1 hover:border-b-2 hover:border-[#B58A4F]">Evidence Standard</Link>
-            <Link href="#financials" className="whitespace-nowrap hover:text-white transition-colors py-1 hover:border-b-2 hover:border-[#B58A4F]">Valuation Engine</Link>
-            <Link href="#architecture" className="whitespace-nowrap hover:text-white transition-colors py-1 hover:border-b-2 hover:border-[#B58A4F]">Architecture</Link>
-            <Link href="#tiers" className="whitespace-nowrap hover:text-white transition-colors py-1 hover:border-b-2 hover:border-[#B58A4F]">Tiers</Link>
+          {/* Institutional Navigation Links — Adaptive, Elegant, No Overflow */}
+          <nav className="hidden lg:flex items-center space-x-3.5 xl:space-x-4 2xl:space-x-5 text-xs font-mono text-[#D6D0C3] shrink-0" aria-label="Main Navigation">
+            <Link href="#process" className="whitespace-nowrap hover:text-white transition-colors py-1 hover:border-b-2 hover:border-[#B58A4F]">
+              <span className="2xl:hidden">Thesis</span>
+              <span className="hidden 2xl:inline">Forensic Thesis</span>
+            </Link>
+            <Link href="#graph" className="whitespace-nowrap hover:text-white transition-colors py-1 hover:border-b-2 hover:border-[#B58A4F]">
+              <span className="2xl:hidden">Graph</span>
+              <span className="hidden 2xl:inline">Knowledge Graph</span>
+            </Link>
+            <Link href="#society" className="whitespace-nowrap hover:text-white transition-colors py-1 hover:border-b-2 hover:border-[#B58A4F]">
+              <span className="2xl:hidden">Specialists</span>
+              <span className="hidden 2xl:inline">Specialist Society</span>
+            </Link>
+            <Link href="#provenance" className="whitespace-nowrap hover:text-white transition-colors py-1 hover:border-b-2 hover:border-[#B58A4F]">
+              <span className="2xl:hidden">Evidence</span>
+              <span className="hidden 2xl:inline">Evidence Standard</span>
+            </Link>
+            <Link href="#financials" className="whitespace-nowrap hover:text-white transition-colors py-1 hover:border-b-2 hover:border-[#B58A4F]">
+              <span className="2xl:hidden">Valuation</span>
+              <span className="hidden 2xl:inline">Valuation Engine</span>
+            </Link>
+            <Link href="#architecture" className="whitespace-nowrap hover:text-white transition-colors py-1 hover:border-b-2 hover:border-[#B58A4F]">
+              Architecture
+            </Link>
+            <Link href="#tiers" className="whitespace-nowrap hover:text-white transition-colors py-1 hover:border-b-2 hover:border-[#B58A4F]">
+              Tiers
+            </Link>
           </nav>
 
-          {/* Compact 4-Pillar Navigation for Mid-Screen Viewports */}
-          <nav className="hidden md:flex xl:hidden items-center space-x-3.5 text-xs font-mono text-[#D6D0C3] shrink-0">
+          {/* Compact 4-Pillar Navigation for Mid-Screen Viewports (md to lg) */}
+          <nav className="hidden md:flex lg:hidden items-center space-x-3 text-xs font-mono text-[#D6D0C3] shrink-0">
             <Link href="#process" className="whitespace-nowrap hover:text-white transition-colors">Thesis</Link>
             <Link href="#graph" className="whitespace-nowrap hover:text-white transition-colors">Graph</Link>
             <Link href="#provenance" className="whitespace-nowrap hover:text-white transition-colors">Evidence</Link>
             <Link href="#financials" className="whitespace-nowrap hover:text-white transition-colors">Valuation</Link>
           </nav>
 
-          {/* Action CTAs */}
-          <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
+          {/* Action CTAs — Always Fully Visible */}
+          <div className="flex items-center space-x-2 sm:space-x-2.5 shrink-0">
             <Link 
               href="/demo"
-              className="whitespace-nowrap text-xs px-3.5 py-1.5 rounded-[4px] bg-[#14392E] hover:bg-[#1C4D3E] text-[#F7F5EF] border border-[#B58A4F]/70 font-mono transition-all flex items-center space-x-1.5 shadow-xs hover:border-[#E5B842]"
+              className="whitespace-nowrap text-xs px-3 sm:px-3.5 py-1.5 rounded-[4px] bg-[#14392E] hover:bg-[#1C4D3E] text-[#F7F5EF] border border-[#B58A4F]/70 font-mono transition-all flex items-center space-x-1.5 shadow-xs hover:border-[#E5B842] shrink-0"
             >
               <span>Demo</span>
               <ArrowRight className="w-3.5 h-3.5 text-[#B58A4F]" />
             </Link>
             <Link 
               href="/app"
-              className="whitespace-nowrap text-xs px-4 py-1.5 rounded-[4px] bg-gradient-to-r from-[#B58A4F] to-[#C79C5E] hover:from-[#A47B42] hover:to-[#B88E50] text-[#0A1C16] font-semibold transition-all shadow-md active:scale-[0.98]"
+              className="whitespace-nowrap text-xs px-3 sm:px-4 py-1.5 rounded-[4px] bg-gradient-to-r from-[#B58A4F] to-[#C79C5E] hover:from-[#A47B42] hover:to-[#B88E50] text-[#0A1C16] font-semibold transition-all shadow-md active:scale-[0.98] shrink-0"
             >
               Launch Workspace
             </Link>
             <button
               onClick={() => setMobileMenuOpen(prev => !prev)}
-              className="md:hidden p-1.5 rounded-[4px] text-[#D6D0C3] hover:text-white hover:bg-[#14392E] transition-colors cursor-pointer"
+              className="md:hidden p-1.5 rounded-[4px] text-[#D6D0C3] hover:text-white hover:bg-[#14392E] transition-colors cursor-pointer shrink-0"
               aria-label="Toggle mobile navigation menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
