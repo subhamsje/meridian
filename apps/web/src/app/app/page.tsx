@@ -363,10 +363,10 @@ export default function WorkspaceApp() {
         fetch(`${API_BASE}/investigations/${id}/reports`, { headers: { Authorization: `Bearer ${t}` } }),
         fetch(`${API_BASE}/investigations/${id}/graph`, { headers: { Authorization: `Bearer ${t}` } }),
         fetch(`${API_BASE}/scenarios/${id}/analytics`, { headers: { Authorization: `Bearer ${t}` } }),
-        fetch(`${API_BASE}/investigations/${id}/stock`, { headers: { Authorization: `Bearer ${t}` } }).catch(() => null),
-        fetch(`${API_BASE}/investigations/${id}/dossier`, { headers: { Authorization: `Bearer ${t}` } }).catch(() => null),
-        fetch(`${API_BASE}/investigations/${id}/documents`, { headers: { Authorization: `Bearer ${t}` } }).catch(() => null),
-        fetch(`${API_BASE}/investigations/${id}/evidence`, { headers: { Authorization: `Bearer ${t}` } }).catch(() => null)
+        fetch(`${API_BASE}/investigations/${id}/stock`, { headers: { Authorization: `Bearer ${t}` } }).catch(err => { console.warn("Stock data fetch warning:", err); return null; }),
+        fetch(`${API_BASE}/investigations/${id}/dossier`, { headers: { Authorization: `Bearer ${t}` } }).catch(err => { console.warn("Dossier fetch warning:", err); return null; }),
+        fetch(`${API_BASE}/investigations/${id}/documents`, { headers: { Authorization: `Bearer ${t}` } }).catch(err => { console.warn("Documents fetch warning:", err); return null; }),
+        fetch(`${API_BASE}/investigations/${id}/evidence`, { headers: { Authorization: `Bearer ${t}` } }).catch(err => { console.warn("Evidence fetch warning:", err); return null; })
       ]);
 
       if (detailRes.ok) {
@@ -376,16 +376,16 @@ export default function WorkspaceApp() {
         if (compId) {
           fetch(`${API_BASE}/companies/${compId}/hypotheses`).then(r => r.ok ? r.json() : null).then(data => {
             if (data?.hypotheses) setHypothesesData(data.hypotheses);
-          }).catch(() => null);
+          }).catch(err => console.warn("Hypotheses fetch warning:", err));
           fetch(`${API_BASE}/companies/${compId}/thesis`).then(r => r.ok ? r.json() : null).then(data => {
             if (data) setThesisData(data);
-          }).catch(() => null);
+          }).catch(err => console.warn("Thesis fetch warning:", err));
           fetch(`${API_BASE}/companies/${compId}/credibility`).then(r => r.ok ? r.json() : null).then(data => {
             if (data) setCredibilityData(data);
-          }).catch(() => null);
+          }).catch(err => console.warn("Credibility fetch warning:", err));
           fetch(`${API_BASE}/companies/${compId}/anomalies`).then(r => r.ok ? r.json() : null).then(data => {
             if (data?.anomalies) setAnomaliesData(data.anomalies);
-          }).catch(() => null);
+          }).catch(err => console.warn("Anomalies fetch warning:", err));
         }
       }
       if (agentsRes.ok) {
@@ -418,7 +418,7 @@ export default function WorkspaceApp() {
       try {
         const execsRes = await fetch(`${API_BASE}/investigations/${id}/executions`, {
           headers: { Authorization: `Bearer ${t}` }
-        }).catch(() => null);
+        }).catch(err => { console.warn("Executions fetch warning:", err); return null; });
         if (execsRes && execsRes.ok) {
           const execsData = await execsRes.json();
           setExecutionsList(execsData);
