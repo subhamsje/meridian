@@ -899,6 +899,15 @@ def resolve_company_entity(
         "domain": company.domain
     }
 
+def sanitize_claim_statement(stmt: str) -> str:
+    if not stmt or not isinstance(stmt, str):
+        return stmt or ""
+    qual = "(Qualified: Subject to enterprise contract renewal timing and customer concentration)."
+    if qual in stmt and stmt.count(qual) > 1:
+        idx = stmt.find(qual)
+        stmt = stmt[:idx + len(qual)].strip()
+    return stmt
+
 @app.get("/api/v1/investigations/{id}/dossier")
 def get_investigation_dossier(
     id: str,
@@ -932,7 +941,7 @@ def get_investigation_dossier(
         investigation_depth=inv.depth or "comprehensive",
         debate_mode=inv.debate_mode or "adversarial",
         society_agents_count=len(society_agents) or 6,
-        claims=[{"id": c.id, "statement": c.statement, "verdict": c.verdict} for c in claims],
+        claims=[{"id": c.id, "statement": sanitize_claim_statement(c.statement), "verdict": c.verdict} for c in claims],
         interactions=[{"id": i.id, "content": i.content} for i in interactions],
         evidence_items=[{"id": e.id} for e in evidence_items],
         financial_stats=financial_stats
@@ -1660,7 +1669,7 @@ def get_claims(
             "id": c.id,
             "specialist_id": c.proposing_specialist_id,
             "category": c.category,
-            "statement": c.statement,
+            "statement": sanitize_claim_statement(c.statement),
             "confidence": c.confidence,
             "materiality": c.materiality or "high",
             "status": c.status or "proposed",
