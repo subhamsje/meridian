@@ -532,10 +532,10 @@ export default function FlagshipDemoPage() {
               </span>
             </Link>
 
-            <div className="h-4 w-px bg-white/20 hidden md:block"></div>
+            <div className="h-4 w-px bg-white/20 hidden 2xl:block"></div>
 
-            <div className="hidden md:flex items-center space-x-2">
-              <span className="text-xs font-serif font-bold text-white tracking-tight truncate max-w-[220px] 2xl:max-w-none">
+            <div className="hidden 2xl:flex items-center space-x-2">
+              <span className="text-xs font-serif font-bold text-white tracking-tight truncate max-w-[160px] 2xl:max-w-none">
                 {demoData?.company?.name || "NVIDIA Corporation"}{" "}
                 <span className="text-white/60 text-[11px] font-sans font-normal hidden 2xl:inline">
                   ({demoData?.company?.ticker ? `NASDAQ: ${demoData.company.ticker}` : "NASDAQ: NVDA"})
@@ -579,7 +579,7 @@ export default function FlagshipDemoPage() {
                 <button
                   key={item.stage}
                   onClick={() => setCurrentStage(item.stage as any)}
-                  className={`px-2.5 md:px-3 py-1 text-xs font-medium transition-all flex items-center space-x-1.5 cursor-pointer rounded-full ${
+                  className={`px-2 sm:px-2.5 2xl:px-3 py-1 text-xs font-medium transition-all flex items-center space-x-1.5 cursor-pointer rounded-full ${
                     isActive
                       ? "liquid-glass-tab-active"
                       : "liquid-glass-tab-inactive"
@@ -596,10 +596,10 @@ export default function FlagshipDemoPage() {
           </nav>
 
           {/* Telemetry & Workspace Exit Group */}
-          <div className="flex items-center space-x-2 shrink-0">
+          <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
             <button
               onClick={() => setShowEventDrawer(prev => !prev)}
-              className={`text-xs px-2.5 py-1 font-mono flex items-center space-x-1.5 transition-all cursor-pointer rounded-full border whitespace-nowrap shrink-0 ${
+              className={`text-xs px-2 sm:px-2.5 py-1 font-mono flex items-center space-x-1.5 transition-all cursor-pointer rounded-full border whitespace-nowrap shrink-0 ${
                 showEventDrawer 
                   ? "bg-blue-500/25 border-blue-400/40 text-white font-medium shadow-[0_0_12px_rgba(59,130,246,0.3)]" 
                   : "bg-white/5 border-white/15 text-white/80 hover:bg-white/10 hover:text-white"
@@ -607,15 +607,15 @@ export default function FlagshipDemoPage() {
               title="Toggle Live Event Stream Drawer"
             >
               <Activity className="w-3.5 h-3.5 text-white/70" />
-              <span className="hidden sm:inline">Event Telemetry</span>
+              <span className="hidden md:inline">Telemetry</span>
               {showEventDrawer ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
             </button>
 
             <Link
               href="/app?demo=nvda"
-              className="text-xs px-3 py-1 font-medium transition-all flex items-center space-x-1.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-full shadow-xs backdrop-blur-md whitespace-nowrap shrink-0"
+              className="text-xs px-2.5 sm:px-3 py-1 font-medium transition-all flex items-center space-x-1 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-full shadow-xs backdrop-blur-md whitespace-nowrap shrink-0"
             >
-              <span className="hidden sm:inline">Custom Workspace</span>
+              <span className="hidden sm:inline">Workspace</span>
               <ArrowRight className="w-3 h-3 text-white/90" />
             </Link>
           </div>
@@ -1993,21 +1993,23 @@ export default function FlagshipDemoPage() {
                   </div>
                 )}
 
-                {/* 9 Structured Institutional Sections */}
+                {/* 19 Structured Institutional Sections */}
                 <div className="space-y-6">
                   {(dossierData.sections || []).map((sec: any) => (
-                    <section key={sec.number} className="p-5 rounded bg-white border border-[#D6D0C3] space-y-2.5">
-                      <div className="flex items-center space-x-2 text-xs font-mono uppercase text-[#A47B48] font-semibold">
-                        <span>Section 0{sec.number}</span>
+                    <section key={sec.number} className="p-5 sm:p-6 rounded bg-white border border-[#D6D0C3] space-y-3 shadow-xs">
+                      <div className="flex items-center space-x-2 text-xs font-mono uppercase text-[#A47B48] font-semibold border-b border-[#E5E0D5] pb-2">
+                        <span>Section {String(sec.number).padStart(2, '0')}</span>
                         <span>•</span>
                         <span className="text-[#172B27] font-bold">{sec.title}</span>
                       </div>
                       <div className="text-xs text-[#303633] font-serif leading-relaxed whitespace-pre-line">
                         {sec.content || sec.summary}
                       </div>
+
+                      {/* Key Takeaways */}
                       {sec.key_takeaways && (
-                        <div className="mt-3 p-3 rounded bg-[#F4F1E9] border border-[#D6D0C3]">
-                          <div className="text-[10px] font-mono uppercase text-[#172B27] font-bold mb-1.5">Key Analytical Takeaways</div>
+                        <div className="mt-3 p-3.5 rounded bg-[#F4F1E9] border border-[#D6D0C3]">
+                          <div className="text-[10px] font-mono uppercase text-[#172B27] font-bold mb-1.5 tracking-wider">Key Analytical Takeaways</div>
                           <ul className="list-disc list-inside text-xs text-[#303633] space-y-1 font-serif">
                             {sec.key_takeaways.map((takeaway: string, idx: number) => (
                               <li key={idx}>{takeaway}</li>
@@ -2015,9 +2017,23 @@ export default function FlagshipDemoPage() {
                           </ul>
                         </div>
                       )}
+
+                      {/* Financial & Corporate Model Metrics */}
+                      {sec.metrics && (
+                        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                          {Object.entries(sec.metrics).map(([k, v]: [string, any]) => (
+                            <div key={k} className="p-2.5 rounded bg-[#F4F1E9] border border-[#D6D0C3]">
+                              <div className="text-[10px] font-mono uppercase text-[#79756C] font-semibold">{k}</div>
+                              <div className="text-xs font-mono font-bold text-[#172B27] mt-0.5">{String(v)}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Supply Chain Chokepoints */}
                       {sec.chokepoints && (
-                        <div className="mt-3 p-3 rounded bg-[#F4F1E9] border border-[#D6D0C3]">
-                          <div className="text-[10px] font-mono uppercase text-[#94671A] font-bold mb-1.5">Identified Supply Chain Chokepoints</div>
+                        <div className="mt-3 p-3.5 rounded bg-[#F4F1E9] border border-[#D6D0C3]">
+                          <div className="text-[10px] font-mono uppercase text-[#94671A] font-bold mb-1.5 tracking-wider">Identified Supply Chain Chokepoints</div>
                           <ul className="list-disc list-inside text-xs text-[#303633] space-y-1 font-serif">
                             {sec.chokepoints.map((cp: string, idx: number) => (
                               <li key={idx}>{cp}</li>
@@ -2025,96 +2041,66 @@ export default function FlagshipDemoPage() {
                           </ul>
                         </div>
                       )}
+
+                      {/* Verified Claims List */}
+                      {sec.verified_claims_list && (
+                        <div className="mt-3 p-3.5 rounded bg-[#F4F1E9] border border-[#D6D0C3] space-y-2">
+                          <div className="text-[10px] font-mono uppercase text-[#172B27] font-bold tracking-wider">Verified Forensic Assertions</div>
+                          <div className="space-y-1.5">
+                            {sec.verified_claims_list.map((c: string, idx: number) => (
+                              <div key={idx} className="flex items-start space-x-2 text-xs font-serif text-[#172B27]">
+                                <span className="text-emerald-700 font-bold shrink-0 font-mono">✓</span>
+                                <span>{c}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Multi-Scenario Sensitivity Stress Testing */}
+                      {sec.scenarios && (
+                        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {Object.entries(sec.scenarios).map(([scName, scData]: [string, any]) => (
+                            <div key={scName} className="p-3 rounded bg-[#F4F1E9] border border-[#D6D0C3] space-y-1 text-xs">
+                              <div className="flex items-center justify-between font-mono">
+                                <span className="font-bold text-[#172B27]">{scName.split('(')[0]}</span>
+                                <span className="px-1.5 py-0.5 rounded bg-[#172B27] text-white text-[10px] font-bold">{scData["Valuation (INR)"]?.split('(')[0]}</span>
+                              </div>
+                              <p className="text-[11px] text-[#555046] font-serif">{scData.Narrative}</p>
+                              <div className="flex items-center space-x-3 text-[10px] font-mono text-[#79756C] pt-1">
+                                <span>Growth: {scData["Rev Growth"]}</span>
+                                <span>Margin: {scData["Gross Margin"]}</span>
+                                <span>Prob: {scData.Probability}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Committee Verdict Callout */}
+                      {sec.committee_verdict && (
+                        <div className="mt-3 p-4 rounded bg-[#102A22] text-[#F7F5EF] space-y-1.5">
+                          <div className="text-[10px] font-mono uppercase text-[#D6B575] font-bold tracking-wider">Formal Investment Committee Mandate</div>
+                          <div className="text-sm font-serif font-bold text-white">{sec.committee_verdict.Action} • Conviction {sec.committee_verdict["Conviction Score"]}</div>
+                          <div className="text-xs text-[#D6D0C3] font-serif">Holding Horizon: {sec.committee_verdict["Target Holding Horizon"]} • Hedge: {sec.committee_verdict["Primary Hedge"]}</div>
+                        </div>
+                      )}
+
+                      {/* Evidence Audit Ledger */}
+                      {sec.evidence_audit_ledger && (
+                        <div className="mt-3 p-3.5 rounded bg-[#F4F1E9] border border-[#D6D0C3] space-y-1.5">
+                          <div className="text-[10px] font-mono uppercase text-[#172B27] font-bold tracking-wider">Cryptographic Proof & SHA-256 Ledger</div>
+                          <div className="space-y-1">
+                            {sec.evidence_audit_ledger.map((ledgerItem: string, idx: number) => (
+                              <div key={idx} className="text-[11px] font-mono text-[#555046] truncate">
+                                {ledgerItem}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </section>
                   ))}
-
-                  {/* Section 10: Final Claims Adjudication & Debate Synthesis */}
-                  <section className="p-5 rounded bg-white border border-[#D6D0C3] space-y-3">
-                    <div className="flex items-center space-x-2 text-xs font-mono uppercase text-[#A47B48] font-semibold">
-                      <span>Section 10</span>
-                      <span>•</span>
-                      <span className="text-[#172B27] font-bold">Multi-Agent Claims Adjudication & Formal Disputes</span>
-                    </div>
-                    <p className="text-xs text-[#303633] font-serif leading-relaxed">
-                      Audited ledger of forensic claims submitted by independent specialists, subjected to cross-examination and judicial committee resolution.
-                    </p>
-                    <div className="space-y-2 pt-1">
-                      {(claims || []).map((c: any, cIdx: number) => (
-                        <div key={c.id || cIdx} className="p-3 rounded bg-[#F4F1E9] border border-[#D6D0C3] space-y-1.5">
-                          <div className="flex items-center justify-between text-[10px] font-mono">
-                            <span className="px-1.5 py-0.5 rounded bg-[#172B27] text-white uppercase font-bold">
-                              {String(c.proposing_specialist_id || c.specialist_id || c.agent_id || "specialist").replace(/_/g, " ")}
-                            </span>
-                            <span className={`px-2 py-0.5 rounded font-bold ${
-                              c.verdict === "AFFIRMED" || c.status === "VERIFIED"
-                                ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                                : c.verdict === "PARTIALLY_AFFIRMED"
-                                ? "bg-amber-100 text-amber-800 border border-amber-300"
-                                : "bg-blue-100 text-blue-800 border border-blue-300"
-                            }`}>
-                              VERDICT: {c.verdict || c.status || "AFFIRMED"} • {c.confidence_score ? `${(c.confidence_score * 100).toFixed(0)}%` : "88%"}
-                            </span>
-                          </div>
-                          <div className="font-serif text-xs font-semibold text-[#172B27]">
-                            {c.statement}
-                          </div>
-                          {c.challenge_summary && (
-                            <div className="text-[11px] text-[#79756C] italic font-serif">
-                              Challenge note: {c.challenge_summary}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-
-                  {/* Section 11: Confidence, Limitations & Risk Disclosures */}
-                  <section className="p-5 rounded bg-white border border-[#D6D0C3] space-y-2.5">
-                    <div className="flex items-center space-x-2 text-xs font-mono uppercase text-[#A47B48] font-semibold">
-                      <span>Section 11</span>
-                      <span>•</span>
-                      <span className="text-[#172B27] font-bold">Analytical Scope, Confidence Coverage & Methodological Limitations</span>
-                    </div>
-                    <div className="p-3.5 rounded bg-[#F4F1E9] border border-[#D6D0C3] text-xs font-serif leading-relaxed space-y-2 text-[#303633]">
-                      <p>
-                        This intelligence memorandum was compiled via deterministic multi-agent forensic analysis of official regulatory filings, earnings call transcripts, and supply chain trade data. Findings reflect conditions as of the research date.
-                      </p>
-                      <ul className="list-disc list-inside space-y-1 text-[11px] font-mono text-[#79756C]">
-                        <li>Primary Grounding: SEC Form 10-K, Form 10-Q, and Bureau of Industry & Security (BIS) export rules.</li>
-                        <li>Exclusions: Unaudited social sentiment, unverified broker leaks, and synthetic market models.</li>
-                        <li>Gating Factors: Taiwan Strait geopolitical disruption and TSMC packaging yield curves remain non-deterministic exogenous variables.</li>
-                      </ul>
-                    </div>
-                  </section>
-
-                  {/* Section 12: Primary Documentary Sources & Evidence Trace */}
-                  <section className="p-5 rounded bg-white border border-[#D6D0C3] space-y-2.5">
-                    <div className="flex items-center space-x-2 text-xs font-mono uppercase text-[#A47B48] font-semibold">
-                      <span>Section 12</span>
-                      <span>•</span>
-                      <span className="text-[#172B27] font-bold">Primary Documentary Sources & Audit Provenance ({evidence.length || 6} Disclosures)</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                      {(evidence.length > 0 ? evidence : [
-                        { id: "e1", title: "SEC Form 10-K (Item 1 & Item 7 MD&A)", source_type: "SEC_10K", verified: true, snippet: "Comprehensive annual report detailing Data Center revenue, CoWoS supply agreements, and customer concentration." },
-                        { id: "e2", title: "Form 10-Q Quarterly Report (Q3 Disclosures)", source_type: "SEC_10Q", verified: true, snippet: "Quarterly segment breakdown verifying gross margin progression and hyperscaler purchase commitments." },
-                        { id: "e3", title: "DoC BIS Export Controls Rule 15 CFR 744", source_type: "REGULATORY", verified: true, snippet: "Updated advanced computing foreign direct product rules and interconnect bandwidth thresholds." },
-                        { id: "e4", title: "TSMC Annual Supply Chain Disclosures", source_type: "SUPPLY_CHAIN", verified: true, snippet: "Advanced packaging (CoWoS) allocation schedule and 3nm/4NP foundry wafer volumes." }
-                      ]).map((ev: any, evIdx: number) => (
-                        <div key={ev.id || evIdx} className="p-2.5 rounded bg-[#F4F1E9] border border-[#D6D0C3] space-y-1 text-xs">
-                          <div className="flex items-center justify-between text-[10px] font-mono">
-                            <span className="font-bold text-[#172B27] truncate max-w-[200px]">{ev.title}</span>
-                            <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold">
-                              VERIFIED
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-[#79756C] font-serif line-clamp-2">
-                            "{ev.snippet || ev.content || "Primary disclosure document verified via SHA-256 integrity hash."}"
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
                 </div>
               </article>
             ) : primaryReport ? (
