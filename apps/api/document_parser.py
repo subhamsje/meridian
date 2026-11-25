@@ -63,7 +63,7 @@ class DocumentParsingService:
     def parse_document(cls, filename: str, file_bytes: bytes, content_type: Optional[str] = None) -> Dict[str, Any]:
         """
         Parses document bytes into extracted text, page/sheet count, and structured metadata.
-        Supports PDF, DOCX, XLSX, CSV, PPTX, TXT, MD, HTML, JSON.
+        Supports PDF, DOCX, XLSX, CSV, PPTX, TXT, MD, HTML, JSON with zero-crash resilience.
         """
         file_type = cls.detect_file_type(filename, content_type)
         checksum = cls.compute_sha256(file_bytes)
@@ -79,6 +79,20 @@ class DocumentParsingService:
             "sections": [],
             "tables": []
         }
+
+        # Guard against zero-byte files
+        if file_size == 0:
+            return {
+                "filename": filename,
+                "file_type": file_type,
+                "file_size_bytes": 0,
+                "page_or_sheet_count": 0,
+                "checksum_sha256": checksum,
+                "extraction_status": "empty",
+                "extracted_text": "",
+                "extracted_metadata": {**metadata, "is_empty": True},
+                "error_message": "Document file is empty (0 bytes)."
+            }
 
         try:
             if file_type == "pdf":
@@ -124,12 +138,16 @@ class DocumentParsingService:
                 extracted_text = "\n\n".join(sheets_text)
 
             elif file_type == "csv":
-                df = pd.read_csv(io.BytesIO(file_bytes))
-                page_or_sheet_count = 1
-                metadata["row_count"] = len(df)
-                metadata["column_count"] = len(df.columns)
-                metadata["columns"] = list(df.columns)
-                extracted_text = df.to_string(max_rows=200, max_cols=25)
+                try:
+                    df = pd.read_csv(io.BytesIO(file_bytes), sep=None, engine="python")
+                    page_or_sheet_count = 1
+                    metadata["row_count"] = len(df)
+                    metadata["column_count"] = len(df.columns)
+                    metadata["columns"] = list(df.columns)
+                    extracted_text = df.to_string(max_rows=200, max_cols=25)
+                except Exception:
+                    extracted_text = cls._decode_text_safely(file_bytes)
+                    page_or_sheet_count = 1
 
             elif file_type == "pptx":
                 bio = io.BytesIO(file_bytes)
@@ -147,20 +165,20 @@ class DocumentParsingService:
                 metadata["slide_count"] = page_or_sheet_count
 
             elif file_type == "html":
-                soup = BeautifulSoup(file_bytes.decode("utf-8", errors="replace"), "html.parser")
+                soup = BeautifulSoup(cls._decode_text_safely(file_bytes), "html.parser")
                 for s in soup(["script", "style", "nav", "footer"]):
                     s.decompose()
                 extracted_text = soup.get_text(separator="\n", strip=True)
                 page_or_sheet_count = max(1, len(extracted_text) // 2000)
 
             elif file_type == "json":
-                parsed = json.loads(file_bytes.decode("utf-8", errors="replace"))
+                parsed = json.loads(cls._decode_text_safely(file_bytes))
                 extracted_text = json.dumps(parsed, indent=2)
                 page_or_sheet_count = 1
                 metadata["is_valid_json"] = True
 
             else:  # txt, md, etc.
-                extracted_text = file_bytes.decode("utf-8", errors="replace")
+                extracted_text = cls._decode_text_safely(file_bytes)
                 page_or_sheet_count = max(1, len(extracted_text) // 2000)
 
             status = "processed"
@@ -169,7 +187,7 @@ class DocumentParsingService:
         except Exception as e:
             status = "failed"
             error_message = str(e)
-            extracted_text = file_bytes.decode("utf-8", errors="replace")[:1000]
+            extracted_text = cls._decode_text_safely(file_bytes)[:1000]
 
         return {
             "filename": filename,
@@ -182,6 +200,18 @@ class DocumentParsingService:
             "extracted_metadata": metadata,
             "error_message": error_message
         }
+
+    @staticmethod
+    def _decode_text_safely(raw_bytes: bytes) -> str:
+        """
+        Attempts multiple encodings (UTF-8, UTF-8-SIG, Latin-1, CP1252) before falling back to replacement.
+        """
+        for enc in ("utf-8", "utf-8-sig", "latin-1", "cp1252"):
+            try:
+                return raw_bytes.decode(enc)
+            except (UnicodeDecodeError, LookupError):
+                continue
+        return raw_bytes.decode("utf-8", errors="replace")
 
     @classmethod
     def ingest_and_store_document(
