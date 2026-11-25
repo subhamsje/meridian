@@ -76,7 +76,7 @@ export const INSTITUTIONAL_CATEGORIES: Record<string, {
   description: string;
 }> = {
   target_entity: {
-    label: "Subject Entity (PLTR)",
+    label: "Subject Entity",
     fill: "#172B27",
     border: "#A47B48",
     text: "#FFFFFF",
@@ -817,11 +817,12 @@ export default function LivingKnowledgeGraph({
 
         // Node Monogram or Center Dot
         if (n.type === "target_entity") {
-          ctx.font = "bold 9.5px monospace";
+          const tickerOrLabel = (n.ticker || n.label.split(" ")[0] || "TARGET").slice(0, 5).toUpperCase();
+          ctx.font = "bold 9px monospace";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillStyle = "#FFFFFF";
-          ctx.fillText("PLTR", nx, ny);
+          ctx.fillText(tickerOrLabel, nx, ny);
         } else if (radius >= 16) {
           const initials = n.label
             .split(" ")

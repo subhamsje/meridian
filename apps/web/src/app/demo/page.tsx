@@ -148,11 +148,17 @@ export default function FlagshipDemoPage() {
     setLoading(true);
     try {
       fetch(`${API_BASE}/providers/status`)
-        .then(res => res.json())
-        .then(data => setProvidersData(data))
+        .then(async res => {
+          if (!res.ok) return null;
+          return res.json();
+        })
+        .then(data => { if (data) setProvidersData(data); })
         .catch(err => console.error("Could not fetch provider status:", err));
 
       const res = await fetch(`${API_BASE}/demo/flagship`);
+      if (!res.ok) {
+        throw new Error(`Failed to initialize flagship demo: HTTP ${res.status}`);
+      }
       const data = await res.json();
       setDemoData(data);
       setToken(data.access_token);
@@ -315,6 +321,7 @@ export default function FlagshipDemoPage() {
           message: interventionQuery
         })
       });
+      if (!res.ok) throw new Error(`Intervene failed: HTTP ${res.status}`);
       const data = await res.json();
       if (res.ok) {
         setInterventionHistory(prev => [...prev, data]);
@@ -352,6 +359,7 @@ export default function FlagshipDemoPage() {
         },
         body: JSON.stringify({ question: societyQuestion })
       });
+      if (!res.ok) throw new Error(`Interrogate-all failed: HTTP ${res.status}`);
       const data = await res.json();
       if (res.ok) {
         setSocietyAnswers(prev => [data, ...prev]);
@@ -384,6 +392,7 @@ export default function FlagshipDemoPage() {
         },
         body: JSON.stringify({ event_description: eventToInject })
       });
+      if (!res.ok) throw new Error(`Hypothetical failed: HTTP ${res.status}`);
       const data = await res.json();
       if (res.ok) {
         setActiveHypoResult(data);
@@ -955,7 +964,7 @@ export default function FlagshipDemoPage() {
               </div>
 
               {/* Dual-Engine Toolbar Pill */}
-              <div className="absolute top-3 left-3 z-30 hidden md:flex items-center space-x-1.5 bg-white/95 px-2.5 py-1.5 rounded border border-[#D6D0C3] text-xs shadow-xs">
+              <div className="absolute top-3 right-3 z-30 hidden md:flex items-center space-x-1.5 bg-white/95 px-2.5 py-1.5 rounded border border-[#D6D0C3] text-xs shadow-xs">
                 <span className="text-[10px] font-mono uppercase text-[#79756C]">Engine:</span>
                 <button
                   onClick={() => setGraphEngine("canvas")}
@@ -1901,9 +1910,13 @@ export default function FlagshipDemoPage() {
                     </div>
 
                     <div className="mt-3 p-3 rounded bg-[#F4F1E9] border border-[#D6D0C3] space-y-1.5 text-xs">
-                      <div className="text-[#264D3B] font-mono text-[11px] font-semibold">CRS Defense Modernization Review</div>
+                      <div className="text-[#264D3B] font-mono text-[11px] font-semibold">
+                        {(demoData?.company?.ticker || "").toUpperCase() === "NVDA" ? "TSMC Fab 18 & CoWoS-L Advanced Packaging Audit" : "CRS Defense Modernization Review"}
+                      </div>
                       <p className="text-[#303633] italic text-[11px] font-serif leading-relaxed">
-                        "TITAN prime software phase guarantees vehicle fielding across Army ground stations with multi-year appropriations."
+                        {(demoData?.company?.ticker || "").toUpperCase() === "NVDA" 
+                          ? "\"TSMC CoWoS capacity allocations expanded to 45,000 wafers/month, with Blackwell architecture substrates prioritized across Taiwan foundries through CY2026.\""
+                          : "\"Prime software phase guarantees vehicle fielding across institutional ground stations with multi-year appropriations.\""}
                       </p>
                     </div>
                   </div>
