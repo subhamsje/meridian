@@ -201,7 +201,8 @@ export default function WorkspaceApp() {
     try {
       const res = await fetch(`${API_BASE}/demo/flagship`);
       if (res.ok) {
-        const data = await res.json();
+        const data = await safeJson(res);
+        if (!data) throw new Error("Empty response from demonstration gateway.");
         const demoToken = data.access_token;
         setToken(demoToken);
         localStorage.setItem("meridian_token", demoToken);
@@ -252,8 +253,8 @@ export default function WorkspaceApp() {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
-          const data = await res.json();
-          setDiscoveryResults(data);
+          const data = await safeJson(res, []);
+          setDiscoveryResults(Array.isArray(data) ? data : []);
         }
       } catch (err) {
         console.error("Discovery search error:", err);
@@ -304,9 +305,13 @@ export default function WorkspaceApp() {
         headers: { Authorization: `Bearer ${authToken}` }
       });
       if (res.ok) {
-        const data = await res.json();
-        setUser(data);
-        fetchInvestigations(authToken);
+        const data = await safeJson(res);
+        if (data) {
+          setUser(data);
+          fetchInvestigations(authToken);
+        } else {
+          handleLogout();
+        }
       } else {
         handleLogout();
       }
@@ -321,12 +326,14 @@ export default function WorkspaceApp() {
         headers: { Authorization: `Bearer ${authToken}` }
       });
       if (res.ok) {
-        const data = await res.json();
-        setInvestigations(data);
-        if (data.length > 0 && !selectedInvId) {
-          const savedInvId = typeof window !== "undefined" ? localStorage.getItem("meridian_active_inv_id") : null;
-          const target = (savedInvId && data.find((x: any) => x.id === savedInvId)) || data[0];
-          selectInvestigation(target.id, authToken);
+        const data = await safeJson<any[]>(res, []);
+        if (Array.isArray(data)) {
+          setInvestigations(data);
+          if (data.length > 0 && !selectedInvId) {
+            const savedInvId = typeof window !== "undefined" ? localStorage.getItem("meridian_active_inv_id") : null;
+            const target = (savedInvId && data.find((x: any) => x.id === savedInvId)) || data[0];
+            selectInvestigation(target.id, authToken);
+          }
         }
       }
     } catch (err) {
@@ -465,14 +472,14 @@ export default function WorkspaceApp() {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (docsRes.ok) {
-          const d = await docsRes.json();
+          const d = await safeJson<any>(docsRes, {});
           setInvestigationDocs(d.documents || []);
         }
         const evRes = await fetch(`${API_BASE}/investigations/${selectedInvId}/evidence`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (evRes.ok) {
-          setEvidenceItems(await evRes.json());
+          setEvidenceItems(await safeJson<any[]>(evRes, []));
         }
       }
     } catch (err) {
@@ -520,8 +527,8 @@ export default function WorkspaceApp() {
         })
       });
 
-      const data = await res.json();
-      if (res.ok) {
+      const data = await safeJson(res);
+      if (res.ok && data) {
         setShowScenarioModal(false);
         // Start simulation immediately
         await fetch(`${API_BASE}/scenarios/${data.scenario_id}/start`, {
@@ -561,8 +568,8 @@ export default function WorkspaceApp() {
         })
       });
 
-      const data = await res.json();
-      if (res.ok && data.investigation_id) {
+      const data = await safeJson(res);
+      if (res.ok && data?.investigation_id) {
         setShowScenarioModal(false);
 
         // Upload attached documents if any
@@ -668,7 +675,7 @@ export default function WorkspaceApp() {
             headers: { Authorization: `Bearer ${authToken}` }
           });
           if (execRes.ok) {
-            const list = await execRes.json();
+            const list = await safeJson<any[]>(execRes, []);
             if (Array.isArray(list) && list.length > 0) {
               const latest = list[0];
               setActiveExecution(latest);
@@ -718,11 +725,12 @@ export default function WorkspaceApp() {
       });
 
       if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
+        const errJson = await safeJson<any>(res, {});
         throw new Error(errJson.detail || `Server returned ${res.status}`);
       }
 
-      const execData = await res.json();
+      const execData = await safeJson(res);
+      if (!execData) throw new Error("Received empty execution payload");
       setActiveExecution(execData);
       setExecutionsList((prev) => [execData, ...prev.filter((x) => x.id !== execData.id)]);
       attachExecutionStream(selectedInvId, token);
@@ -806,8 +814,8 @@ export default function WorkspaceApp() {
         },
         body: JSON.stringify({ question })
       });
-      const data = await res.json();
-      if (res.ok) {
+      const data = await safeJson(res);
+      if (res.ok && data) {
         setInterviewHistory(prev => [
           ...prev,
           { q: question, a: data.response, time: new Date().toLocaleTimeString() }
@@ -816,7 +824,10 @@ export default function WorkspaceApp() {
         const interRes = await fetch(`${API_BASE}/investigations/${selectedInvId}/society/interactions`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (interRes.ok) setInteractions(await interRes.json());
+        if (interRes.ok) {
+          const interData = await safeJson(interRes, []);
+          setInteractions(interData);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -844,8 +855,8 @@ export default function WorkspaceApp() {
         })
       });
       if (res.ok) {
-        const data = await res.json();
-        setSurveyResult(data);
+        const data = await safeJson(res);
+        if (data) setSurveyResult(data);
       }
     } catch (err) {
       console.error(err);
