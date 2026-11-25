@@ -168,6 +168,7 @@ export default function WorkspaceApp() {
   const [executionError, setExecutionError] = useState<string | null>(null);
   const [liveEvents, setLiveEvents] = useState<any[]>([]);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Mobile / Tablet Responsive States
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -336,6 +337,18 @@ export default function WorkspaceApp() {
   const selectInvestigation = async (id: string, authToken?: string) => {
     const t = authToken || token;
     if (!t) return;
+
+    // Clean up active streams and polling from prior investigation
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+    setIsExecuting(false);
+
     setSelectedInvId(id);
     if (typeof window !== "undefined") {
       localStorage.setItem("meridian_active_inv_id", id);
@@ -583,10 +596,14 @@ export default function WorkspaceApp() {
       const es = new EventSource(sseUrl);
       eventSourceRef.current = es;
 
-      es.onmessage = (event) => {
+      const handleRawMessage = (rawEvent: MessageEvent) => {
         try {
-          const payload = JSON.parse(event.data);
-          setLiveEvents((prev) => [payload, ...prev].slice(0, 50));
+          const envelope = JSON.parse(rawEvent.data);
+          const payload = envelope.payload || envelope;
+          const eventType = envelope.event_type || rawEvent.type || "message";
+
+          setLiveEvents((prev) => [{ ...envelope, event_type: eventType }, ...prev].slice(0, 50));
+
           if (payload.stage || payload.progress_percentage !== undefined) {
             setActiveExecution((prev: any) => ({
               ...prev,
@@ -596,10 +613,12 @@ export default function WorkspaceApp() {
               estimated_cost_usd: payload.estimated_cost_usd !== undefined ? payload.estimated_cost_usd : prev?.estimated_cost_usd,
             }));
           }
+
           if (
+            eventType === "stream.ended" ||
+            eventType === "exec.completed" ||
+            eventType === "execution.completed" ||
             payload.type === "stream.ended" || 
-            payload.type === "execution.completed" || 
-            payload.type === "execution.cancelled" ||
             payload.status === "completed" ||
             payload.status === "failed"
           ) {
@@ -611,6 +630,56 @@ export default function WorkspaceApp() {
           // ignore keep-alive
         }
       };
+
+      // Standard onmessage (unnamed events)
+      es.onmessage = handleRawMessage;
+
+      // EventSource custom event listeners
+      const customEvents = [
+        "stream.ended",
+        "exec.execution.started",
+        "exec.source.snapshot",
+        "exec.plan.created",
+        "exec.specialist.completed",
+        "exec.gate.awaiting_approval",
+        "exec.claim.challenged",
+        "exec.rebuttal.submitted",
+        "exec.claim.adjudicated",
+        "exec.completed",
+        "execution.completed"
+      ];
+      customEvents.forEach((evt) => {
+        es.addEventListener(evt, handleRawMessage as EventListener);
+      });
+
+      // Robust fallback polling interval in case SSE drops or stream finishes instantly
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+      pollTimerRef.current = setInterval(async () => {
+        try {
+          const execRes = await fetch(`${API_BASE}/investigations/${invId}/executions`, {
+            headers: { Authorization: `Bearer ${authToken}` }
+          });
+          if (execRes.ok) {
+            const list = await execRes.json();
+            if (Array.isArray(list) && list.length > 0) {
+              const latest = list[0];
+              setActiveExecution(latest);
+              setExecutionsList(list);
+              if (latest.status === "completed" || latest.status === "failed") {
+                if (pollTimerRef.current) {
+                  clearInterval(pollTimerRef.current);
+                  pollTimerRef.current = null;
+                }
+                setIsExecuting(false);
+                es.close();
+                selectInvestigation(invId, authToken);
+              }
+            }
+          }
+        } catch (e) {
+          // ignore polling error
+        }
+      }, 1500);
 
       es.onerror = () => {
         es.close();
@@ -666,6 +735,11 @@ export default function WorkspaceApp() {
       });
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
       }
       setIsExecuting(false);
       selectInvestigation(selectedInvId, token);
@@ -1608,9 +1682,9 @@ export default function WorkspaceApp() {
                             }}
                             className="bg-[#14392E] text-white border border-[#235748] rounded px-2 py-1 text-[11px] font-mono"
                           >
-                            {executionsList.map((ex: any) => (
-                              <option key={ex.id} value={ex.id}>
-                                Run #{ex.execution_number || 1} • {ex.status} ({ex.progress_percentage || 0}%)
+                            {executionsList.map((ex: any, idx: number) => (
+                              <option key={ex.id || `exec-${idx}`} value={ex.id || ""}>
+                                Run #{ex.execution_number || (executionsList.length - idx)} • {ex.status} ({ex.progress_percentage || 0}%)
                               </option>
                             ))}
                           </select>

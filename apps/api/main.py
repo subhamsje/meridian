@@ -569,8 +569,22 @@ def trigger_investigation_execution(
         }
 
     if req.run_async:
+        # Pre-create execution record so frontend has a genuine ID immediately
+        async_execution = InvestigationExecution(
+            investigation_id=inv.id,
+            execution_type="rerun" if req.parent_execution_id else "fresh_run",
+            parent_execution_id=req.parent_execution_id,
+            status="in_progress",
+            current_stage="01_initialization",
+            progress_percentage=5,
+            model_provider="litellm",
+            model_name=req.model_name or "gpt-4o-mini"
+        )
+        db.add(async_execution)
+        db.commit()
+
         # Launch asynchronously in background task
-        def run_async_execution(inv_id: str, model: str, obj: Optional[str], p_id: Optional[str], pause_g: bool):
+        def run_async_execution(inv_id: str, model: str, obj: Optional[str], p_id: Optional[str], pause_g: bool, exec_id: str):
             from database import SessionLocal
             bg_db = SessionLocal()
             try:
@@ -580,7 +594,8 @@ def trigger_investigation_execution(
                     model_name=model,
                     user_objective=obj,
                     parent_execution_id=p_id,
-                    pause_at_gates=pause_g
+                    pause_at_gates=pause_g,
+                    execution_id=exec_id
                 )
             finally:
                 bg_db.close()
@@ -591,10 +606,13 @@ def trigger_investigation_execution(
             req.model_name or "gpt-4o-mini",
             req.user_objective,
             req.parent_execution_id,
-            bool(req.pause_at_gates)
+            bool(req.pause_at_gates),
+            async_execution.id
         )
 
         return {
+            "id": async_execution.id,
+            "execution_id": async_execution.id,
             "status": "in_progress",
             "investigation_id": inv.id,
             "stage": "01_initialization",

@@ -67,7 +67,8 @@ class DurableInvestigationOrchestrator:
         model_name: str = "gpt-4o-mini",
         user_objective: Optional[str] = None,
         parent_execution_id: Optional[str] = None,
-        pause_at_gates: bool = False
+        pause_at_gates: bool = False,
+        execution_id: Optional[str] = None
     ) -> InvestigationExecution:
         """
         Executes a genuine fresh autonomous investigation:
@@ -80,18 +81,40 @@ class DurableInvestigationOrchestrator:
         
         company = investigation.company
 
-        # 1. Initialize fresh InvestigationExecution record
-        execution = InvestigationExecution(
-            investigation_id=investigation.id,
-            execution_type="rerun" if parent_execution_id else "fresh_run",
-            parent_execution_id=parent_execution_id,
-            status="in_progress",
-            current_stage="01_initialization",
-            progress_percentage=5,
-            model_provider="litellm",
-            model_name=model_name
-        )
-        db.add(execution)
+        # 1. Initialize or load pre-created InvestigationExecution record
+        if execution_id:
+            execution = db.query(InvestigationExecution).filter(InvestigationExecution.id == execution_id).first()
+            if not execution:
+                execution = InvestigationExecution(
+                    id=execution_id,
+                    investigation_id=investigation.id,
+                    execution_type="rerun" if parent_execution_id else "fresh_run",
+                    parent_execution_id=parent_execution_id,
+                    status="in_progress",
+                    current_stage="01_initialization",
+                    progress_percentage=5,
+                    model_provider="litellm",
+                    model_name=model_name
+                )
+                db.add(execution)
+                db.commit()
+        else:
+            execution = InvestigationExecution(
+                investigation_id=investigation.id,
+                execution_type="rerun" if parent_execution_id else "fresh_run",
+                parent_execution_id=parent_execution_id,
+                status="in_progress",
+                current_stage="01_initialization",
+                progress_percentage=5,
+                model_provider="litellm",
+                model_name=model_name
+            )
+            db.add(execution)
+            db.commit()
+
+        # Update parent investigation status
+        investigation.status = "in_progress"
+        investigation.progress_percentage = 5
         db.commit()
 
         emit_execution_event(execution.id, "initialization", "execution.started", {
