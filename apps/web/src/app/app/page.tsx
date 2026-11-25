@@ -1048,6 +1048,7 @@ export default function WorkspaceApp() {
               onClick={() => setShowScenarioModal(true)}
               className="px-2.5 py-1 rounded bg-[#172B27] hover:bg-[#233F3A] text-white transition-colors text-xs flex items-center space-x-1 cursor-pointer shadow-sm font-medium"
               title="Create New Investigation or Scenario"
+              aria-label="Create New Investigation or Scenario"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>New</span>
@@ -1147,6 +1148,7 @@ export default function WorkspaceApp() {
                       setMobileSidebarOpen(false);
                     }}
                     className="px-2.5 py-1 rounded bg-[#172B27] text-white text-xs flex items-center space-x-1"
+                    aria-label="Create New Investigation or Scenario"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>New</span>
@@ -1154,6 +1156,7 @@ export default function WorkspaceApp() {
                   <button 
                     onClick={() => setMobileSidebarOpen(false)}
                     className="p-1.5 rounded text-[#79756C] hover:text-white"
+                    aria-label="Close navigation drawer"
                   >
                     <X className="w-4 h-4" />
                   </button>
