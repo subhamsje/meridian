@@ -48,6 +48,8 @@ class ModelOrchestrationService:
         """
         Dynamically selects the best operational model based on active environment credentials.
         """
+        if os.getenv("ANTHROPIC_BASE_URL"):
+            return "anthropic/claude-3-5-sonnet-20241022"
         if os.getenv("OPENAI_API_KEY"):
             return "gpt-4o-mini"
         if os.getenv("ANTHROPIC_API_KEY"):
@@ -70,7 +72,16 @@ class ModelOrchestrationService:
         Executes a specialist agent prompt using LiteLLM with structured fallbacks.
         If an API key is not present in the environment or fails, returns a grounded empirical synthesis.
         """
-        chosen_model = model or cls.get_active_model()
+        active_default = cls.get_active_model()
+        # If gpt-4o-mini is requested but no OpenAI key exists, use the active default (e.g. Claude proxy)
+        if model == "gpt-4o-mini" and not os.getenv("OPENAI_API_KEY"):
+            chosen_model = active_default
+        else:
+            chosen_model = model or active_default
+
+        api_base = os.getenv("ANTHROPIC_BASE_URL") if "anthropic" in chosen_model else None
+        api_key = os.getenv("ANTHROPIC_AUTH_TOKEN") or os.getenv("ANTHROPIC_API_KEY") or "dummy-token" if "anthropic" in chosen_model else None
+
         messages = [
             {
                 "role": "system",
@@ -90,16 +101,25 @@ class ModelOrchestrationService:
 
         try:
             # LiteLLM standard dispatch
-            response = litellm.completion(
-                model=chosen_model,
-                messages=messages,
-                temperature=0.2,
-                max_tokens=600
-            )
+            kwargs = {
+                "model": chosen_model,
+                "messages": messages,
+                "temperature": 0.2,
+                "max_tokens": 600
+            }
+            if api_base:
+                kwargs["api_base"] = api_base
+            if api_key:
+                kwargs["api_key"] = api_key
+
+            response = litellm.completion(**kwargs)
             content = response.choices[0].message.content
             usage = response.usage
             tokens = usage.total_tokens if usage else 450
-            cost = litellm.completion_cost(completion_response=response) if hasattr(litellm, "completion_cost") else 0.002
+            try:
+                cost = litellm.completion_cost(completion_response=response)
+            except Exception:
+                cost = round(tokens * 0.000003, 5)
             
             return {
                 "status": "success",

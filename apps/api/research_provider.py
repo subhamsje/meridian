@@ -10,6 +10,8 @@ except ImportError:
     yf = None
 
 from company_discovery import HIGH_PROFILE_COMPANIES
+from web_research_engine import WebResearchEngine
+import urllib.parse
 
 logger = logging.getLogger("meridian.research_provider")
 
@@ -552,20 +554,35 @@ class CompanyResearchResolver:
             }
         ]
 
-        verified_sources = [
-            {
-                "title": f"{clean_name} Corporate Existence & Digital Footprint Verification",
-                "publisher": "Corporate Registry & Public Domain Records",
-                "category": "corporate_registry",
-                "url": f"https://{domain}",
-                "reliability": 0.72,
-                "passages": [
-                    f"Entity '{clean_name}' recorded under jurisdiction: Enterprise Technology Organization.",
-                    f"Primary operating domain: https://{domain}.",
-                    f"Audit note: Entity does not maintain audited Form 10-K public disclosures. Analysis conducted under sparse disclosure protocol."
-                ]
-            }
-        ]
+        # Genuinely query live web (DuckDuckGo, Wikipedia REST API, and destination pages)
+        try:
+            live_sources = WebResearchEngine.search_and_retrieve_sources(clean_name, sector=resolved_sector, max_sources=5)
+        except Exception as e:
+            logger.warning(f"Web research engine fallback: {e}")
+            live_sources = []
+
+        if live_sources:
+            verified_sources = live_sources
+            first_url = live_sources[0].get("url", "")
+            if first_url and "http" in first_url:
+                parsed_netloc = urllib.parse.urlparse(first_url).netloc
+                if parsed_netloc and "duckduckgo" not in parsed_netloc and "wikipedia" not in parsed_netloc:
+                    domain = parsed_netloc
+        else:
+            verified_sources = [
+                {
+                    "title": f"{clean_name} Corporate Existence & Digital Footprint Verification",
+                    "publisher": "Corporate Registry & Public Domain Records",
+                    "category": "corporate_registry",
+                    "url": f"https://{domain}",
+                    "reliability": 0.72,
+                    "passages": [
+                        f"Entity '{clean_name}' recorded under jurisdiction: Enterprise Technology Organization.",
+                        f"Primary operating domain: https://{domain}.",
+                        f"Audit note: Entity does not maintain audited Form 10-K public disclosures. Analysis conducted under sparse disclosure protocol."
+                    ]
+                }
+            ]
 
         relationships = [
             CorporateRelationshipDraft(
