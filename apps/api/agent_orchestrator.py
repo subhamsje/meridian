@@ -12,7 +12,10 @@ if not hasattr(typing, "NotRequired"):
 import os
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
-import litellm
+try:
+    import litellm
+except (ImportError, Exception):
+    litellm = None
 
 class AgentMandateSchema(BaseModel):
     agent_id: str
@@ -89,6 +92,8 @@ class ModelOrchestrationService:
         ]
 
         try:
+            if litellm is None:
+                raise RuntimeError("LiteLLM not available in offline environment")
             # LiteLLM standard dispatch
             response = litellm.completion(
                 model=chosen_model,

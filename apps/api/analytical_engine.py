@@ -5,7 +5,10 @@ Executes deterministic unit economics aggregations, scenario forecasts, and sens
 """
 
 from typing import Dict, Any, List
-import duckdb
+try:
+    import duckdb
+except (ImportError, Exception):
+    import sqlite3 as duckdb
 import numpy as np
 
 class InstitutionalAnalyticalEngine:
